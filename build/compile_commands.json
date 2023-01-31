@@ -1,0 +1,22 @@
+[
+{
+  "directory": "/home/onlymind/mine/cpp/projects/transpiler/build",
+  "command": "/usr/bin/g++ -I/home/onlymind/mine/cpp/projects/transpiler/src -g -std=gnu++20 -o CMakeFiles/transpiler.dir/src/lexer/lexer.cpp.o -c /home/onlymind/mine/cpp/projects/transpiler/src/lexer/lexer.cpp",
+  "file": "/home/onlymind/mine/cpp/projects/transpiler/src/lexer/lexer.cpp"
+},
+{
+  "directory": "/home/onlymind/mine/cpp/projects/transpiler/build",
+  "command": "/usr/bin/g++ -I/home/onlymind/mine/cpp/projects/transpiler/src -g -std=gnu++20 -o CMakeFiles/transpiler.dir/src/parser/parser.cpp.o -c /home/onlymind/mine/cpp/projects/transpiler/src/parser/parser.cpp",
+  "file": "/home/onlymind/mine/cpp/projects/transpiler/src/parser/parser.cpp"
+},
+{
+  "directory": "/home/onlymind/mine/cpp/projects/transpiler/build",
+  "command": "/usr/bin/g++ -I/home/onlymind/mine/cpp/projects/transpiler/src -g -std=gnu++20 -o CMakeFiles/transpiler.dir/src/util/util.cpp.o -c /home/onlymind/mine/cpp/projects/transpiler/src/util/util.cpp",
+  "file": "/home/onlymind/mine/cpp/projects/transpiler/src/util/util.cpp"
+},
+{
+  "directory": "/home/onlymind/mine/cpp/projects/transpiler/build",
+  "command": "/usr/bin/g++ -I/home/onlymind/mine/cpp/projects/transpiler/src -g -std=gnu++20 -o CMakeFiles/transpiler.dir/src/main.cpp.o -c /home/onlymind/mine/cpp/projects/transpiler/src/main.cpp",
+  "file": "/home/onlymind/mine/cpp/projects/transpiler/src/main.cpp"
+}
+]

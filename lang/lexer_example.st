@@ -1,0 +1,74 @@
+var dfhsf;
+
+type Foo u32;
+
+type;
+
+type Foo12;
+
+type 1231 u32;
+
+type Foo324 roieuwr;
+
+//type Iface interface {
+//    Foo(u32, u32) bool;
+//    Bar(*u32, const u64) u16;
+//}
+
+type Bar struct {
+    x: u32;
+    y: u32;
+}
+
+type En enum<u8> {
+    Foo = 1;
+    Bar = 10;
+    Bars = 20;
+    Count = 3;
+}
+
+type Variant union<u8, u16, u32>;
+
+type Tup<T, U, V> tuple<u8, u16, u32, T, U, V>;
+
+type Result<T: Iface, E> union<T, E>;
+
+func Foo(b: *Bar, lhs: u32, rhs: u32) bool {
+    return  lhs == rhs;
+}
+
+func Bar(b: ?*Bar, ptr: *u32, const constant: u64) u16 {
+    if b == nil {
+        return 0;
+    }
+    *ptr = (b.x * b.y + *ptr) / u32(constant);
+    return u16(*ptr);
+}
+
+// comment, comment \n
+
+
+func foo(x: i32, y: u32) u64 {
+    return u64(y + u32(x));
+}
+
+func main() int {
+
+    _ = foo(1000, 999);
+
+    var x: bool;
+    var bar := example::Bar{y = 10, x = 111};
+
+    x = bar.Foo(1984, 1984);
+
+    if x {
+        var y: *u32 = new<u32>(10);
+        defer delete(y);
+
+        std::println(bar.Bar(y, u64(*y)));
+    }
+
+
+
+    return 0;
+}
