@@ -1,4 +1,4 @@
-var dfhsf;
+var dfhsf:Foo;
 
 type Foo u32;
 

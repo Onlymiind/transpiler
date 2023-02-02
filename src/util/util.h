@@ -29,6 +29,17 @@ namespace util {
     template<typename T>
     using Result = std::variant<T, Error>;
 
+    // template<typename T, typename Variant>
+    // consteval inline std::optional<size_t> get_index() {
+    //     for(size_t i = 0; i < std::variant_size_v<Variant>; i++) {
+    //         if(std::is_same_v<T, std::variant_alternative_t<i, Variant>>) {
+    //             return i;
+    //         }
+    //     }
+
+    //     return {};
+    // }
+
     enum class Category : uint8_t {
         NONE,
 

@@ -54,14 +54,14 @@ namespace parser {
         return it - tokens.begin();
     }
 
-    std::vector<util::Result<Declaration>> split(Tokens tokens) {
+    std::vector<util::Result<std::variant<TypeInfo, NamedField>>> split(Tokens tokens) {
         static const std::unordered_set<util::Category> decl_tokens {
             util::Category::TYPE,
             util::Category::FUNC,
             util::Category::VAR
         };
 
-        std::vector<util::Result<Declaration>> result;
+        std::vector<util::Result<std::variant<TypeInfo, NamedField>>> result;
         auto assert_only_comments = [&result](Tokens tokens) {
             if(tokens.size() == 0) {
                 return;
@@ -75,24 +75,19 @@ namespace parser {
             }
         };
 
+        auto unwrap = [] <typename T> (util::Result<T> res) -> util::Result<std::variant<TypeInfo, NamedField>>{
+            if(auto ptr = std::get_if<util::Error>(&res)) {
+                return *ptr;
+            } else {
+                return std::get<0>(res);
+            }
+        };
+
         auto decl_start = find_in_current_scope(tokens, decl_tokens);
         while(decl_start) {
             if(decl_start->second != 0) {
                 assert_only_comments(tokens.subspan(0, decl_start->second));
                 tokens = tokens.subspan(decl_start->second);
-            } 
-
-            Declaration decl;
-            switch(decl_start->first) {
-            case util::Category::TYPE:
-                decl.type = DeclarationType::TYPE;
-                break;
-            case util::Category::FUNC:
-                decl.type = DeclarationType::FUNCTION;
-                break;
-            case util::Category::VAR:
-                decl.type = DeclarationType::VARIABLE;
-                break;
             }
 
             if(tokens.size() < 3) {
@@ -107,9 +102,7 @@ namespace parser {
                 util::Category::SEMICOLON
             };
 
-            if((decl.type != DeclarationType::VARIABLE)
-                && (tokens[2].category != util::Category::IDENTIFIER)
-                && (tokens[2].category != util::Category::ASSIGN)) {
+            if((decl_start->first != util::Category::VAR) && (tokens[2].category != util::Category::IDENTIFIER)) {
 
                 decl_end_categories.insert(util::Category::RBRACE);
             }
@@ -123,9 +116,17 @@ namespace parser {
                 return result;
             }
 
-            decl.tokens = tokens.subspan(0, decl_end->second + 1);
-
-            result.emplace_back(decl);
+            switch(decl_start->first) {
+            case util::Category::TYPE:
+                result.emplace_back(unwrap(parse_type_declaration(tokens.subspan(0, decl_end->second + 1))));
+                break;
+            case util::Category::FUNC:
+                //decl.type = Type_::FUNCTION;
+                break;
+            case util::Category::VAR:
+                result.emplace_back(unwrap(parse_variable(tokens.subspan(1, decl_end->second - 1))));
+                break;
+            }
 
             tokens = tokens.subspan(decl_end->second + 1);
             decl_start = find_in_current_scope(tokens, decl_tokens);
@@ -157,7 +158,7 @@ namespace parser {
         return result;
     }
 
-    util::Result<Field> parse_field(Tokens tokens) {
+    util::Result<NamedField> parse_variable(Tokens tokens) {
         if(tokens.empty()) {
             return util::Error{0, "empty field declaration, possibly a bug in a compiler"};
         }
@@ -165,7 +166,7 @@ namespace parser {
             return util::Error{tokens[0].line, "field declaration: expected \"field_name : field_type\""};
         }
 
-        std::pair<std::string_view, TypeDeclaration> result;
+        NamedField result;
         auto& [name, decl] = result;
 
         if(tokens[0].category != util::Category::IDENTIFIER) {
@@ -179,16 +180,16 @@ namespace parser {
             return util::Error{tokens[2].line, "field declaration: expected type_name, got: " + std::string{util::to_string(tokens[2].category)}};
         }
 
-        decl.name = tokens[2].value;
+        decl.type.name = tokens[2].value;
         auto rest = tokens.subspan(3);
         auto generic_params = parse_generic_params(rest);
-        decl.generic_params.reserve(generic_params.size());
+        decl.type.generic_params.reserve(generic_params.size());
         for(auto& p : generic_params) {
             if(auto ptr = std::get_if<util::Error>(&p)) {
                 return *ptr;
             }
 
-            decl.generic_params.push_back(std::get<GenericParam>(p));
+            decl.type.generic_params.push_back(std::get<GenericParam>(p));
         }
 
         if(!rest.empty()) {
@@ -199,15 +200,15 @@ namespace parser {
         return result;
     }
 
-    util::Result<TypeInfo> parse_alias(TypeDeclaration decl, Tokens definition) {
-        static const std::unordered_map<util::Category, Type> definition_to_type{
-            {util::Category::IDENTIFIER, Type::UNKNOWN},
-            {util::Category::TUPLE, Type::TUPLE},
-            {util::Category::UNION, Type::UNION}
+    util::Result<TypeInfo> parse_alias(Declaration decl, Tokens definition) {
+        static const std::unordered_map<util::Category, DeclarationType> definition_to_type{
+            {util::Category::IDENTIFIER, DeclarationType::UNKNOWN},
+            {util::Category::TUPLE, DeclarationType::TUPLE},
+            {util::Category::UNION, DeclarationType::UNION}
         };
 
         TypeInfo result {.declaration = std::move(decl)};
-        TypeDeclaration underlying_type;
+        Declaration underlying_type;
 
         underlying_type.type = definition_to_type.at(definition[0].category);
         if(definition[0].category == util::Category::IDENTIFIER) {
@@ -229,7 +230,7 @@ namespace parser {
         return result;
     }
 
-    util::Result<TypeInfo> parse_struct(TypeDeclaration decl, Tokens definition) {
+    util::Result<TypeInfo> parse_struct(Declaration decl, Tokens definition) {
         if(definition.empty()) {
             return util::Error{0, "struct declaration: empty definition, possibly a bug in a compiler"};
         }
@@ -261,37 +262,37 @@ namespace parser {
         };
 
         for(Tokens field_def = next_definition(); !field_def.empty(); field_def = next_definition()) {
-            auto field = parse_field(field_def);
+            auto field = parse_variable(field_def);
             if(auto ptr = std::get_if<util::Error>(&field)) {
                 return *ptr;
             }
 
-            struct_definition.fields.insert(std::get<Field>(field));
+            struct_definition.fields.insert(std::get<NamedField>(field));
         }
         
         return result;
     }
 
-    util::Result<TypeInfo> parse_type_declaration(const Declaration& decl) {
-        static const std::unordered_map<util::Category, Type> definition_to_type{
-            {util::Category::IDENTIFIER, Type::ALIAS},
-            {util::Category::INTERFACE, Type::INTERFACE},
-            {util::Category::STRUCT, Type::STRUCT},
-            {util::Category::TUPLE, Type::ALIAS},
-            {util::Category::UNION, Type::ALIAS},
-            {util::Category::ENUM, Type::ENUM}
+    util::Result<TypeInfo> parse_type_declaration(Tokens decl) {
+        static const std::unordered_map<util::Category, DeclarationType> definition_to_type{
+            {util::Category::IDENTIFIER, DeclarationType::ALIAS},
+            {util::Category::INTERFACE, DeclarationType::INTERFACE},
+            {util::Category::STRUCT, DeclarationType::STRUCT},
+            {util::Category::TUPLE, DeclarationType::ALIAS},
+            {util::Category::UNION, DeclarationType::ALIAS},
+            {util::Category::ENUM, DeclarationType::ENUM}
         };
 
-        TypeDeclaration info;
-        Tokens tokens = decl.tokens.subspan(1);
-        if(tokens.empty() || tokens[0].category != util::Category::IDENTIFIER) {
-            return util::Error{decl.tokens[0].line, "type declaration: expected a type name after a \"type\" keyword"};
+        Declaration info;
+        decl = decl.subspan(1);
+        if(decl.empty() || decl[0].category != util::Category::IDENTIFIER) {
+            return util::Error{decl[0].line, "type declaration: expected a type name after a \"type\" keyword"};
         }
 
-        info.name = tokens[0].value;
-        tokens = tokens.subspan(1);
+        info.name = decl[0].value;
+        decl = decl.subspan(1);
 
-        auto generic_params = parse_generic_params(tokens);
+        auto generic_params = parse_generic_params(decl);
         info.generic_params.reserve(generic_params.size());
         for(auto& p : generic_params) {
             if(std::holds_alternative<util::Error>(p)) {
@@ -299,57 +300,44 @@ namespace parser {
             }
             info.generic_params.push_back(std::get<GenericParam>(p));
         }
-        if(tokens.empty()) {
-            return util::Error{tokens[0].line, "type declaration: expected type definition after a type name"};
+        if(decl.empty()) {
+            return util::Error{decl[0].line, "type declaration: expected type definition after a type name"};
         }
 
-        auto it = definition_to_type.find(tokens[0].category);
+        auto it = definition_to_type.find(decl[0].category);
         if(it == definition_to_type.end()) {
             return util::Error{
-                tokens[0].line,
-                "type declaration: expected one of the: type_name, tuple, union, enum, struct, got " + std::string{util::to_string(tokens[0].category)}
+                decl[0].line,
+                "type declaration: expected one of the: type_name, tuple, union, enum, struct, got " + std::string{util::to_string(decl[0].category)}
             };
         }
         info.type = it->second;
 
-        if(info.type != Type::ALIAS) {
-            tokens = tokens.subspan(1);
+        if(info.type != DeclarationType::ALIAS) {
+            decl = decl.subspan(1);
         }
 
         switch(info.type) {
-        case Type::ALIAS:
-            return parse_alias(std::move(info), tokens);
-        case Type::STRUCT:
-            return parse_struct(std::move(info), tokens);
+        case DeclarationType::ALIAS:
+            return parse_alias(std::move(info), decl);
+        case DeclarationType::STRUCT:
+            return parse_struct(std::move(info), decl);
         }
 
-        return TypeInfo{.declaration = std::move(info), .definition = tokens};
+        return TypeInfo{.declaration = std::move(info), .definition = decl};
     }
 
     void parse(std::vector<util::Token> tokens) {
         auto decls_and_errs = split(tokens);
         std::vector<util::Error> errs;
-        std::vector<Declaration> decls;
+        std::vector<std::variant<TypeInfo, NamedField>> decls;
 
         for(auto& v : decls_and_errs) {
-            if(auto ptr = std::get_if<util::Error>(&v); ptr) {
+            if(auto ptr = std::get_if<util::Error>(&v)) {
                 errs.emplace_back(std::move(*ptr));
-            } else if(auto ptr = std::get_if<Declaration>(&v); ptr) {
-                decls.emplace_back(std::move(*ptr));
+            } else {
+                decls.emplace_back(std::move(std::get<std::variant<TypeInfo, NamedField>>(v)));
             }
-        }
-
-        std::vector<TypeInfo> types;
-        for(const auto& decl : decls) {
-            if(decl.type != DeclarationType::TYPE) {
-                continue;
-            }
-            auto type = parse_type_declaration(decl);
-            if(std::holds_alternative<util::Error>(type)) {
-                std::cout << std::get<util::Error>(type) << '\n';
-                continue;
-            }
-            types.push_back(std::move(std::get<TypeInfo>(type)));
         }
 
         std::cout << "Done\n";

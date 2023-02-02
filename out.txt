@@ -1,5 +1,7 @@
 category: VAR line: 1
 value: dfhsf, category: IDENTIFIER line: 1
+category: COLON line: 1
+value: Foo, category: IDENTIFIER line: 1
 category: SEMICOLON line: 1
 category: TYPE line: 3
 value: Foo, category: IDENTIFIER line: 3

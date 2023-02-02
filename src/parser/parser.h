@@ -15,14 +15,14 @@ namespace parser {
 
     using Tokens = std::span<const util::Token>;
 
-    enum class DeclarationType {
+    enum class Type_ {
         ERROR,
         TYPE,
         FUNCTION,
         VARIABLE
     };
 
-    enum class Type {
+    enum class DeclarationType {
         UNKNOWN,
         ALIAS,
         STRUCT,
@@ -33,8 +33,8 @@ namespace parser {
         BUILTIN
     };
 
-    struct Declaration {
-        DeclarationType type = DeclarationType::ERROR;
+    struct Declaration_ {
+        Type_ type = Type_::ERROR;
         Tokens tokens;
     };
 
@@ -51,27 +51,31 @@ namespace parser {
         std::string_view name;
     };
 
-    struct TypeDeclaration {
-        Type type = Type::UNKNOWN;
+    struct Declaration {
+        DeclarationType type = DeclarationType::UNKNOWN;
         std::string_view name;
         std::vector<GenericParam> generic_params;
     };
 
-    using Field = std::pair<std::string_view, TypeDeclaration>;
+    struct Field {
+        Declaration type;
+        Tokens value;
+    };
+
+    using NamedField = std::pair<std::string_view, Field>;
 
     struct StructInfo {
-        std::unordered_map<std::string_view, TypeDeclaration> fields;
+        std::unordered_map<std::string_view, Field> fields;
+    };
+
+    struct FunctionInfo {
+        std::unordered_map<std::string_view, Declaration> params;
+        std::optional<Declaration> return_type;
     };
 
     struct TypeInfo {
-        TypeDeclaration declaration;
-        std::variant<TypeDeclaration, StructInfo, Tokens> definition;
-    };
-
-
-    struct FunctionInfo : public TypeInfo {
-        std::unordered_map<std::string_view, TypeDeclaration> params;
-        TypeInfo* return_type;
+        Declaration declaration;
+        std::variant<Declaration, StructInfo, FunctionInfo, Tokens> definition;
     };
 
     using TypeID = size_t;
@@ -92,13 +96,19 @@ namespace parser {
 
     std::optional<size_t> first_not_comment(Tokens tokens);
 
-    std::vector<util::Result<Declaration>> split(Tokens tokens);
+    std::vector<util::Result<std::variant<TypeInfo, NamedField>>> split(Tokens tokens);
 
     std::vector<util::Result<GenericParam>> parse_generic_params(Tokens& tokens);
 
+    util::Result<TypeInfo> parse_type_declaration(Tokens decl);
+
+    util::Result<NamedField> parse_variable(Tokens decl);
+
+    util::Result<TypeInfo> parse_function(Tokens decl);
+
     void parse(std::vector<util::Token> tokens);
 
-    inline void print_declaration_error(std::ostream& out, const Declaration& decl, std::string_view msg) {
+    inline void print_declaration_error(std::ostream& out, const Declaration_& decl, std::string_view msg) {
         out << "Type declaration on line " << decl.tokens[0].line << ' ' << msg << '\n';
     }
 }
