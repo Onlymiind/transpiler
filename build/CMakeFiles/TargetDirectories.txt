@@ -1,3 +1,0 @@
-/home/onlymind/mine/cpp/projects/transpiler/build/CMakeFiles/transpiler.dir
-/home/onlymind/mine/cpp/projects/transpiler/build/CMakeFiles/edit_cache.dir
-/home/onlymind/mine/cpp/projects/transpiler/build/CMakeFiles/rebuild_cache.dir
