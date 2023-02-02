@@ -36,281 +36,317 @@ value: u32, category: IDENTIFIER line: 20
 category: SEMICOLON line: 20
 category: RBRACE line: 21
 category: TYPE line: 23
-value: En, category: IDENTIFIER line: 23
-category: ENUM line: 23
+value: Barz, category: IDENTIFIER line: 23
 category: LESS line: 23
-value: u8, category: IDENTIFIER line: 23
+value: T, category: IDENTIFIER line: 23
+category: COMMA line: 23
+value: U, category: IDENTIFIER line: 23
+category: COMMA line: 23
+value: V, category: IDENTIFIER line: 23
 category: GREATER line: 23
+category: STRUCT line: 23
 category: LBRACE line: 23
-value: Foo, category: IDENTIFIER line: 24
-category: ASSIGN line: 24
-value: 1, category: INTEGER line: 24
+value: abc, category: IDENTIFIER line: 24
+category: COLON line: 24
+value: a_type, category: IDENTIFIER line: 24
+category: LESS line: 24
+value: T, category: IDENTIFIER line: 24
+category: COMMA line: 24
+value: u32, category: IDENTIFIER line: 24
+category: GREATER line: 24
 category: SEMICOLON line: 24
-value: Bar, category: IDENTIFIER line: 25
-category: ASSIGN line: 25
-value: 10, category: INTEGER line: 25
+value: un, category: IDENTIFIER line: 25
+category: COLON line: 25
+value: U, category: IDENTIFIER line: 25
 category: SEMICOLON line: 25
-value: Bars, category: IDENTIFIER line: 26
-category: ASSIGN line: 26
-value: 20, category: INTEGER line: 26
+value: dask, category: IDENTIFIER line: 26
+category: COLON line: 26
+value: Tup, category: IDENTIFIER line: 26
+category: LESS line: 26
+value: V, category: IDENTIFIER line: 26
+category: COMMA line: 26
+value: V, category: IDENTIFIER line: 26
+category: COMMA line: 26
+value: V, category: IDENTIFIER line: 26
+category: GREATER line: 26
 category: SEMICOLON line: 26
-value: Count, category: IDENTIFIER line: 27
-category: ASSIGN line: 27
-value: 3, category: INTEGER line: 27
-category: SEMICOLON line: 27
-category: RBRACE line: 28
-category: TYPE line: 30
-value: Variant, category: IDENTIFIER line: 30
-category: UNION line: 30
-category: LESS line: 30
-value: u8, category: IDENTIFIER line: 30
-category: COMMA line: 30
-value: u16, category: IDENTIFIER line: 30
-category: COMMA line: 30
-value: u32, category: IDENTIFIER line: 30
-category: GREATER line: 30
+category: RBRACE line: 27
+category: TYPE line: 29
+value: En, category: IDENTIFIER line: 29
+category: ENUM line: 29
+category: LESS line: 29
+value: u8, category: IDENTIFIER line: 29
+category: GREATER line: 29
+category: LBRACE line: 29
+value: Foo, category: IDENTIFIER line: 30
+category: ASSIGN line: 30
+value: 1, category: INTEGER line: 30
 category: SEMICOLON line: 30
-category: TYPE line: 32
-value: Tup, category: IDENTIFIER line: 32
-category: LESS line: 32
-value: T, category: IDENTIFIER line: 32
-category: COMMA line: 32
-value: U, category: IDENTIFIER line: 32
-category: COMMA line: 32
-value: V, category: IDENTIFIER line: 32
-category: GREATER line: 32
-category: TUPLE line: 32
-category: LESS line: 32
-value: u8, category: IDENTIFIER line: 32
-category: COMMA line: 32
-value: u16, category: IDENTIFIER line: 32
-category: COMMA line: 32
-value: u32, category: IDENTIFIER line: 32
-category: COMMA line: 32
-value: T, category: IDENTIFIER line: 32
-category: COMMA line: 32
-value: U, category: IDENTIFIER line: 32
-category: COMMA line: 32
-value: V, category: IDENTIFIER line: 32
-category: GREATER line: 32
+value: Bar, category: IDENTIFIER line: 31
+category: ASSIGN line: 31
+value: 10, category: INTEGER line: 31
+category: SEMICOLON line: 31
+value: Bars, category: IDENTIFIER line: 32
+category: ASSIGN line: 32
+value: 20, category: INTEGER line: 32
 category: SEMICOLON line: 32
-category: TYPE line: 34
-value: Result, category: IDENTIFIER line: 34
-category: LESS line: 34
-value: T, category: IDENTIFIER line: 34
-category: COLON line: 34
-value: Iface, category: IDENTIFIER line: 34
-category: COMMA line: 34
-value: E, category: IDENTIFIER line: 34
-category: GREATER line: 34
-category: UNION line: 34
-category: LESS line: 34
-value: T, category: IDENTIFIER line: 34
-category: COMMA line: 34
-value: E, category: IDENTIFIER line: 34
-category: GREATER line: 34
-category: SEMICOLON line: 34
-category: FUNC line: 36
-value: Foo, category: IDENTIFIER line: 36
-category: LPAREN line: 36
-value: b, category: IDENTIFIER line: 36
-category: COLON line: 36
-category: MULTIPLY line: 36
-value: Bar, category: IDENTIFIER line: 36
+value: Count, category: IDENTIFIER line: 33
+category: ASSIGN line: 33
+value: 3, category: INTEGER line: 33
+category: SEMICOLON line: 33
+category: RBRACE line: 34
+category: TYPE line: 36
+value: Variant, category: IDENTIFIER line: 36
+category: UNION line: 36
+category: LESS line: 36
+value: u8, category: IDENTIFIER line: 36
 category: COMMA line: 36
-value: lhs, category: IDENTIFIER line: 36
-category: COLON line: 36
-value: u32, category: IDENTIFIER line: 36
+value: u16, category: IDENTIFIER line: 36
 category: COMMA line: 36
-value: rhs, category: IDENTIFIER line: 36
-category: COLON line: 36
 value: u32, category: IDENTIFIER line: 36
-category: RPAREN line: 36
-value: bool, category: IDENTIFIER line: 36
-category: LBRACE line: 36
-category: RETURN line: 37
-value: lhs, category: IDENTIFIER line: 37
-category: EQUALS line: 37
-value: rhs, category: IDENTIFIER line: 37
-category: SEMICOLON line: 37
-category: RBRACE line: 38
-category: FUNC line: 40
-value: Bar, category: IDENTIFIER line: 40
-category: LPAREN line: 40
-value: b, category: IDENTIFIER line: 40
+category: GREATER line: 36
+category: SEMICOLON line: 36
+category: TYPE line: 38
+value: Tup, category: IDENTIFIER line: 38
+category: LESS line: 38
+value: T, category: IDENTIFIER line: 38
+category: COMMA line: 38
+value: U, category: IDENTIFIER line: 38
+category: COMMA line: 38
+value: V, category: IDENTIFIER line: 38
+category: GREATER line: 38
+category: TUPLE line: 38
+category: LESS line: 38
+value: u8, category: IDENTIFIER line: 38
+category: COMMA line: 38
+value: u16, category: IDENTIFIER line: 38
+category: COMMA line: 38
+value: u32, category: IDENTIFIER line: 38
+category: COMMA line: 38
+value: T, category: IDENTIFIER line: 38
+category: COMMA line: 38
+value: U, category: IDENTIFIER line: 38
+category: COMMA line: 38
+value: V, category: IDENTIFIER line: 38
+category: GREATER line: 38
+category: SEMICOLON line: 38
+category: TYPE line: 40
+value: Result, category: IDENTIFIER line: 40
+category: LESS line: 40
+value: T, category: IDENTIFIER line: 40
 category: COLON line: 40
-category: OPTIONAL line: 40
-category: MULTIPLY line: 40
-value: Bar, category: IDENTIFIER line: 40
+value: Iface, category: IDENTIFIER line: 40
 category: COMMA line: 40
-value: ptr, category: IDENTIFIER line: 40
-category: COLON line: 40
-category: MULTIPLY line: 40
-value: u32, category: IDENTIFIER line: 40
+value: E, category: IDENTIFIER line: 40
+category: GREATER line: 40
+category: UNION line: 40
+category: LESS line: 40
+value: T, category: IDENTIFIER line: 40
 category: COMMA line: 40
-category: CONST line: 40
-value: constant, category: IDENTIFIER line: 40
-category: COLON line: 40
-value: u64, category: IDENTIFIER line: 40
-category: RPAREN line: 40
-value: u16, category: IDENTIFIER line: 40
-category: LBRACE line: 40
-value: if, category: IDENTIFIER line: 41
-value: b, category: IDENTIFIER line: 41
-category: EQUALS line: 41
-value: nil, category: IDENTIFIER line: 41
-category: LBRACE line: 41
-category: RETURN line: 42
-value: 0, category: INTEGER line: 42
-category: SEMICOLON line: 42
-category: RBRACE line: 43
-category: MULTIPLY line: 44
-value: ptr, category: IDENTIFIER line: 44
-category: ASSIGN line: 44
-category: LPAREN line: 44
-value: b, category: IDENTIFIER line: 44
-category: DOT line: 44
-value: x, category: IDENTIFIER line: 44
-category: MULTIPLY line: 44
-value: b, category: IDENTIFIER line: 44
-category: DOT line: 44
-value: y, category: IDENTIFIER line: 44
-category: PLUS line: 44
-category: MULTIPLY line: 44
-value: ptr, category: IDENTIFIER line: 44
-category: RPAREN line: 44
-category: DIVIDE line: 44
-value: u32, category: IDENTIFIER line: 44
-category: LPAREN line: 44
-value: constant, category: IDENTIFIER line: 44
-category: RPAREN line: 44
-category: SEMICOLON line: 44
-category: RETURN line: 45
-value: u16, category: IDENTIFIER line: 45
-category: LPAREN line: 45
-category: MULTIPLY line: 45
-value: ptr, category: IDENTIFIER line: 45
-category: RPAREN line: 45
-category: SEMICOLON line: 45
-category: RBRACE line: 46
-value:  comment, comment \n, category: COMMENT line: 48
-category: FUNC line: 51
-value: foo, category: IDENTIFIER line: 51
+value: E, category: IDENTIFIER line: 40
+category: GREATER line: 40
+category: SEMICOLON line: 40
+category: FUNC line: 42
+value: Foo, category: IDENTIFIER line: 42
+category: LPAREN line: 42
+value: b, category: IDENTIFIER line: 42
+category: COLON line: 42
+category: MULTIPLY line: 42
+value: Bar, category: IDENTIFIER line: 42
+category: COMMA line: 42
+value: lhs, category: IDENTIFIER line: 42
+category: COLON line: 42
+value: u32, category: IDENTIFIER line: 42
+category: COMMA line: 42
+value: rhs, category: IDENTIFIER line: 42
+category: COLON line: 42
+value: u32, category: IDENTIFIER line: 42
+category: RPAREN line: 42
+value: bool, category: IDENTIFIER line: 42
+category: LBRACE line: 42
+category: RETURN line: 43
+value: lhs, category: IDENTIFIER line: 43
+category: EQUALS line: 43
+value: rhs, category: IDENTIFIER line: 43
+category: SEMICOLON line: 43
+category: RBRACE line: 44
+category: FUNC line: 46
+value: Bar, category: IDENTIFIER line: 46
+category: LPAREN line: 46
+value: b, category: IDENTIFIER line: 46
+category: COLON line: 46
+category: OPTIONAL line: 46
+category: MULTIPLY line: 46
+value: Bar, category: IDENTIFIER line: 46
+category: COMMA line: 46
+value: ptr, category: IDENTIFIER line: 46
+category: COLON line: 46
+category: MULTIPLY line: 46
+value: u32, category: IDENTIFIER line: 46
+category: COMMA line: 46
+category: CONST line: 46
+value: constant, category: IDENTIFIER line: 46
+category: COLON line: 46
+value: u64, category: IDENTIFIER line: 46
+category: RPAREN line: 46
+value: u16, category: IDENTIFIER line: 46
+category: LBRACE line: 46
+value: if, category: IDENTIFIER line: 47
+value: b, category: IDENTIFIER line: 47
+category: EQUALS line: 47
+value: nil, category: IDENTIFIER line: 47
+category: LBRACE line: 47
+category: RETURN line: 48
+value: 0, category: INTEGER line: 48
+category: SEMICOLON line: 48
+category: RBRACE line: 49
+category: MULTIPLY line: 50
+value: ptr, category: IDENTIFIER line: 50
+category: ASSIGN line: 50
+category: LPAREN line: 50
+value: b, category: IDENTIFIER line: 50
+category: DOT line: 50
+value: x, category: IDENTIFIER line: 50
+category: MULTIPLY line: 50
+value: b, category: IDENTIFIER line: 50
+category: DOT line: 50
+value: y, category: IDENTIFIER line: 50
+category: PLUS line: 50
+category: MULTIPLY line: 50
+value: ptr, category: IDENTIFIER line: 50
+category: RPAREN line: 50
+category: DIVIDE line: 50
+value: u32, category: IDENTIFIER line: 50
+category: LPAREN line: 50
+value: constant, category: IDENTIFIER line: 50
+category: RPAREN line: 50
+category: SEMICOLON line: 50
+category: RETURN line: 51
+value: u16, category: IDENTIFIER line: 51
 category: LPAREN line: 51
-value: x, category: IDENTIFIER line: 51
-category: COLON line: 51
-value: i32, category: IDENTIFIER line: 51
-category: COMMA line: 51
-value: y, category: IDENTIFIER line: 51
-category: COLON line: 51
-value: u32, category: IDENTIFIER line: 51
+category: MULTIPLY line: 51
+value: ptr, category: IDENTIFIER line: 51
 category: RPAREN line: 51
-value: u64, category: IDENTIFIER line: 51
-category: LBRACE line: 51
-category: RETURN line: 52
-value: u64, category: IDENTIFIER line: 52
-category: LPAREN line: 52
-value: y, category: IDENTIFIER line: 52
-category: PLUS line: 52
-value: u32, category: IDENTIFIER line: 52
-category: LPAREN line: 52
-value: x, category: IDENTIFIER line: 52
-category: RPAREN line: 52
-category: RPAREN line: 52
-category: SEMICOLON line: 52
-category: RBRACE line: 53
-category: FUNC line: 55
-value: main, category: IDENTIFIER line: 55
-category: LPAREN line: 55
-category: RPAREN line: 55
-value: int, category: IDENTIFIER line: 55
-category: LBRACE line: 55
-category: BLANK line: 57
-category: ASSIGN line: 57
+category: SEMICOLON line: 51
+category: RBRACE line: 52
+value:  comment, comment \n, category: COMMENT line: 54
+category: FUNC line: 57
 value: foo, category: IDENTIFIER line: 57
 category: LPAREN line: 57
-value: 1000, category: INTEGER line: 57
+value: x, category: IDENTIFIER line: 57
+category: COLON line: 57
+value: i32, category: IDENTIFIER line: 57
 category: COMMA line: 57
-value: 999, category: INTEGER line: 57
+value: y, category: IDENTIFIER line: 57
+category: COLON line: 57
+value: u32, category: IDENTIFIER line: 57
 category: RPAREN line: 57
-category: SEMICOLON line: 57
-category: VAR line: 59
-value: x, category: IDENTIFIER line: 59
-category: COLON line: 59
-value: bool, category: IDENTIFIER line: 59
-category: SEMICOLON line: 59
-category: VAR line: 60
-value: bar, category: IDENTIFIER line: 60
-category: COLON line: 60
-category: ASSIGN line: 60
-value: example, category: IDENTIFIER line: 60
-category: NAMESPACE_OP line: 60
-value: Bar, category: IDENTIFIER line: 60
-category: LBRACE line: 60
-value: y, category: IDENTIFIER line: 60
-category: ASSIGN line: 60
-value: 10, category: INTEGER line: 60
-category: COMMA line: 60
-value: x, category: IDENTIFIER line: 60
-category: ASSIGN line: 60
-value: 111, category: INTEGER line: 60
-category: RBRACE line: 60
-category: SEMICOLON line: 60
-value: x, category: IDENTIFIER line: 62
-category: ASSIGN line: 62
-value: bar, category: IDENTIFIER line: 62
-category: DOT line: 62
-value: Foo, category: IDENTIFIER line: 62
-category: LPAREN line: 62
-value: 1984, category: INTEGER line: 62
-category: COMMA line: 62
-value: 1984, category: INTEGER line: 62
-category: RPAREN line: 62
-category: SEMICOLON line: 62
-value: if, category: IDENTIFIER line: 64
-value: x, category: IDENTIFIER line: 64
-category: LBRACE line: 64
+value: u64, category: IDENTIFIER line: 57
+category: LBRACE line: 57
+category: RETURN line: 58
+value: u64, category: IDENTIFIER line: 58
+category: LPAREN line: 58
+value: y, category: IDENTIFIER line: 58
+category: PLUS line: 58
+value: u32, category: IDENTIFIER line: 58
+category: LPAREN line: 58
+value: x, category: IDENTIFIER line: 58
+category: RPAREN line: 58
+category: RPAREN line: 58
+category: SEMICOLON line: 58
+category: RBRACE line: 59
+category: FUNC line: 61
+value: main, category: IDENTIFIER line: 61
+category: LPAREN line: 61
+category: RPAREN line: 61
+value: int, category: IDENTIFIER line: 61
+category: LBRACE line: 61
+category: BLANK line: 63
+category: ASSIGN line: 63
+value: foo, category: IDENTIFIER line: 63
+category: LPAREN line: 63
+value: 1000, category: INTEGER line: 63
+category: COMMA line: 63
+value: 999, category: INTEGER line: 63
+category: RPAREN line: 63
+category: SEMICOLON line: 63
 category: VAR line: 65
-value: y, category: IDENTIFIER line: 65
+value: x, category: IDENTIFIER line: 65
 category: COLON line: 65
-category: MULTIPLY line: 65
-value: u32, category: IDENTIFIER line: 65
-category: ASSIGN line: 65
-value: new, category: IDENTIFIER line: 65
-category: LESS line: 65
-value: u32, category: IDENTIFIER line: 65
-category: GREATER line: 65
-category: LPAREN line: 65
-value: 10, category: INTEGER line: 65
-category: RPAREN line: 65
+value: bool, category: IDENTIFIER line: 65
 category: SEMICOLON line: 65
-value: defer, category: IDENTIFIER line: 66
-value: delete, category: IDENTIFIER line: 66
-category: LPAREN line: 66
+category: VAR line: 66
+value: bar, category: IDENTIFIER line: 66
+category: COLON line: 66
+category: ASSIGN line: 66
+value: example, category: IDENTIFIER line: 66
+category: NAMESPACE_OP line: 66
+value: Bar, category: IDENTIFIER line: 66
+category: LBRACE line: 66
 value: y, category: IDENTIFIER line: 66
-category: RPAREN line: 66
+category: ASSIGN line: 66
+value: 10, category: INTEGER line: 66
+category: COMMA line: 66
+value: x, category: IDENTIFIER line: 66
+category: ASSIGN line: 66
+value: 111, category: INTEGER line: 66
+category: RBRACE line: 66
 category: SEMICOLON line: 66
-value: std, category: IDENTIFIER line: 68
-category: NAMESPACE_OP line: 68
-value: println, category: IDENTIFIER line: 68
-category: LPAREN line: 68
+value: x, category: IDENTIFIER line: 68
+category: ASSIGN line: 68
 value: bar, category: IDENTIFIER line: 68
 category: DOT line: 68
-value: Bar, category: IDENTIFIER line: 68
+value: Foo, category: IDENTIFIER line: 68
 category: LPAREN line: 68
-value: y, category: IDENTIFIER line: 68
+value: 1984, category: INTEGER line: 68
 category: COMMA line: 68
-value: u64, category: IDENTIFIER line: 68
-category: LPAREN line: 68
-category: MULTIPLY line: 68
-value: y, category: IDENTIFIER line: 68
-category: RPAREN line: 68
-category: RPAREN line: 68
+value: 1984, category: INTEGER line: 68
 category: RPAREN line: 68
 category: SEMICOLON line: 68
-category: RBRACE line: 69
-category: RETURN line: 73
-value: 0, category: INTEGER line: 73
-category: SEMICOLON line: 73
-category: RBRACE line: 74
+value: if, category: IDENTIFIER line: 70
+value: x, category: IDENTIFIER line: 70
+category: LBRACE line: 70
+category: VAR line: 71
+value: y, category: IDENTIFIER line: 71
+category: COLON line: 71
+category: MULTIPLY line: 71
+value: u32, category: IDENTIFIER line: 71
+category: ASSIGN line: 71
+value: new, category: IDENTIFIER line: 71
+category: LESS line: 71
+value: u32, category: IDENTIFIER line: 71
+category: GREATER line: 71
+category: LPAREN line: 71
+value: 10, category: INTEGER line: 71
+category: RPAREN line: 71
+category: SEMICOLON line: 71
+value: defer, category: IDENTIFIER line: 72
+value: delete, category: IDENTIFIER line: 72
+category: LPAREN line: 72
+value: y, category: IDENTIFIER line: 72
+category: RPAREN line: 72
+category: SEMICOLON line: 72
+value: std, category: IDENTIFIER line: 74
+category: NAMESPACE_OP line: 74
+value: println, category: IDENTIFIER line: 74
+category: LPAREN line: 74
+value: bar, category: IDENTIFIER line: 74
+category: DOT line: 74
+value: Bar, category: IDENTIFIER line: 74
+category: LPAREN line: 74
+value: y, category: IDENTIFIER line: 74
+category: COMMA line: 74
+value: u64, category: IDENTIFIER line: 74
+category: LPAREN line: 74
+category: MULTIPLY line: 74
+value: y, category: IDENTIFIER line: 74
+category: RPAREN line: 74
+category: RPAREN line: 74
+category: RPAREN line: 74
+category: SEMICOLON line: 74
+category: RBRACE line: 75
+category: RETURN line: 79
+value: 0, category: INTEGER line: 79
+category: SEMICOLON line: 79
+category: RBRACE line: 80
 Done

@@ -20,6 +20,12 @@ type Bar struct {
     y: u32;
 }
 
+type Barz<T, U, V> struct {
+    abc : a_type<T, u32>;
+    un : U;
+    dask : Tup<V, V, V>;
+}
+
 type En enum<u8> {
     Foo = 1;
     Bar = 10;

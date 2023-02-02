@@ -157,6 +157,48 @@ namespace parser {
         return result;
     }
 
+    util::Result<Field> parse_field(Tokens tokens) {
+        if(tokens.empty()) {
+            return util::Error{0, "empty field declaration, possibly a bug in a compiler"};
+        }
+        if(tokens.size() < 3) {
+            return util::Error{tokens[0].line, "field declaration: expected \"field_name : field_type\""};
+        }
+
+        std::pair<std::string_view, TypeDeclaration> result;
+        auto& [name, decl] = result;
+
+        if(tokens[0].category != util::Category::IDENTIFIER) {
+            return util::Error{tokens[0].line, "field declaration: expected field_name, got: " + std::string{util::to_string(tokens[0].category)}};
+        }
+        name = tokens[0].value;
+
+        if(tokens[1].category != util::Category::COLON) {
+            return util::Error{tokens[1].line, "field declaration: expected \":\", got: " + std::string{util::to_string(tokens[1].category)}};
+        } else if(tokens[2].category != util::Category::IDENTIFIER) {
+            return util::Error{tokens[2].line, "field declaration: expected type_name, got: " + std::string{util::to_string(tokens[2].category)}};
+        }
+
+        decl.name = tokens[2].value;
+        auto rest = tokens.subspan(3);
+        auto generic_params = parse_generic_params(rest);
+        decl.generic_params.reserve(generic_params.size());
+        for(auto& p : generic_params) {
+            if(auto ptr = std::get_if<util::Error>(&p)) {
+                return *ptr;
+            }
+
+            decl.generic_params.push_back(std::get<GenericParam>(p));
+        }
+
+        if(!rest.empty()) {
+            return util::Error{rest[0].line, "field declaration: unexpected end"};
+        }
+
+
+        return result;
+    }
+
     util::Result<TypeInfo> parse_alias(TypeDeclaration decl, Tokens definition) {
         static const std::unordered_map<util::Category, Type> definition_to_type{
             {util::Category::IDENTIFIER, Type::UNKNOWN},
@@ -188,9 +230,46 @@ namespace parser {
     }
 
     util::Result<TypeInfo> parse_struct(TypeDeclaration decl, Tokens definition) {
-        TypeInfo result{std::move(decl)};
+        if(definition.empty()) {
+            return util::Error{0, "struct declaration: empty definition, possibly a bug in a compiler"};
+        }
 
-        StructInfo definition;
+        TypeInfo result{std::move(decl)};
+        result.definition = StructInfo{};
+        auto& struct_definition = std::get<StructInfo>(result.definition);
+        if(definition.size() == 1 && definition[0].category == util::Category::SEMICOLON) {
+            return result;
+        }
+        if(definition.size() == 2 && definition[0].category == util::Category::LBRACE && definition[1].category == util::Category::RBRACE) {
+            return result;
+        }
+        if(definition[0].category == util::Category::LBRACE) {
+            definition = definition.subspan(1);
+        }
+
+        auto next_definition = [&definition]() -> Tokens {
+            auto it = std::find_if(definition.begin(), definition.end(), [](const util::Token& token) { return token.category == util::Category::SEMICOLON; });
+            if(it == definition.end()) {
+                return Tokens{};
+            }
+
+            // not + 1 to ignore semicolon itself
+            size_t end = it - definition.begin();
+            Tokens result = definition.subspan(0, end);
+            definition = definition.subspan(end + 1);
+            return result;
+        };
+
+        for(Tokens field_def = next_definition(); !field_def.empty(); field_def = next_definition()) {
+            auto field = parse_field(field_def);
+            if(auto ptr = std::get_if<util::Error>(&field)) {
+                return *ptr;
+            }
+
+            struct_definition.fields.insert(std::get<Field>(field));
+        }
+        
+        return result;
     }
 
     util::Result<TypeInfo> parse_type_declaration(const Declaration& decl) {
@@ -235,8 +314,13 @@ namespace parser {
 
         if(info.type != Type::ALIAS) {
             tokens = tokens.subspan(1);
-        } else {
+        }
+
+        switch(info.type) {
+        case Type::ALIAS:
             return parse_alias(std::move(info), tokens);
+        case Type::STRUCT:
+            return parse_struct(std::move(info), tokens);
         }
 
         return TypeInfo{.declaration = std::move(info), .definition = tokens};

@@ -57,14 +57,17 @@ namespace parser {
         std::vector<GenericParam> generic_params;
     };
 
-    struct TypeInfo {
-        TypeDeclaration declaration;
-        std::variant<TypeDeclaration, Tokens> definition;
-    };
+    using Field = std::pair<std::string_view, TypeDeclaration>;
 
-    struct StructInfo : public TypeInfo {
+    struct StructInfo {
         std::unordered_map<std::string_view, TypeDeclaration> fields;
     };
+
+    struct TypeInfo {
+        TypeDeclaration declaration;
+        std::variant<TypeDeclaration, StructInfo, Tokens> definition;
+    };
+
 
     struct FunctionInfo : public TypeInfo {
         std::unordered_map<std::string_view, TypeDeclaration> params;
