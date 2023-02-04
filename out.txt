@@ -1,7 +1,16 @@
 category: VAR line: 1
 value: dfhsf, category: IDENTIFIER line: 1
 category: COLON line: 1
+category: UNION line: 1
+category: LESS line: 1
 value: Foo, category: IDENTIFIER line: 1
+category: COMMA line: 1
+value: Bar, category: IDENTIFIER line: 1
+category: COMMA line: 1
+value: u32, category: IDENTIFIER line: 1
+category: COMMA line: 1
+value: error, category: IDENTIFIER line: 1
+category: GREATER line: 1
 category: SEMICOLON line: 1
 category: TYPE line: 3
 value: Foo, category: IDENTIFIER line: 3

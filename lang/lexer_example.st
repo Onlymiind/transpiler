@@ -1,4 +1,4 @@
-var dfhsf:Foo;
+var dfhsf : union<Foo, Bar, u32, error>;
 
 type Foo u32;
 
