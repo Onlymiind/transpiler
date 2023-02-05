@@ -177,14 +177,24 @@ namespace util {
 #undef CASE
     }
 
-    inline constexpr bool is_type_modifier(Category cat) {
+    inline constexpr bool is_type_modifier(Category cat) noexcept {
         return cat == Category::OPTIONAL || cat == Category::MULTIPLY;
     }
 
+    struct Position {
+        size_t line {0};
+        size_t column {0};
+    };
+
     struct Token {
-        Category category;
-        size_t line;
+        Category category {Category::NONE};
+        Position pos;
+        size_t line {0};
         std::string value;
+
+        inline constexpr bool is_type_modifier() const noexcept {
+            return util::is_type_modifier(category);
+        }
     };
 
     std::ostream& operator<<(std::ostream& out, const Token& token);

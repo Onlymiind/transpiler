@@ -2,12 +2,6 @@ var dfhsf : union<Foo, Bar, u32, error>;
 
 type Foo u32;
 
-type;
-
-type Foo12;
-
-type 1231 u32;
-
 type Foo324 roieuwr;
 
 //type Iface interface {
@@ -43,7 +37,7 @@ func Foo(b: *Bar, lhs: u32, rhs: u32) bool {
     return  lhs == rhs;
 }
 
-func Bar(b: ?*Bar, ptr: *u32, const constant: u64) u16 {
+func Bar(b: ?*Bar, ptr: *u32, constant: u64) u16 {
     if b == nil {
         return 0;
     }
@@ -58,7 +52,14 @@ func foo(x: i32, y: u32) u64 {
     return u64(y + u32(x));
 }
 
-func main() int {
+func errors(option : bool) union<u32, error> {
+    if option {
+        return err();
+    }
+    return 10;
+}
+
+func main() ?error {
 
     _ = foo(1000, 999);
 
@@ -66,6 +67,12 @@ func main() int {
     var bar := example::Bar{y = 10, x = 111};
 
     x = bar.Foo(1984, 1984);
+
+    var works : u32 = { errors(false); } ? [res : u32]{ res; }, [err : error]{ return err; };
+
+    var returns : u32;
+    // do something with returns
+    returns = { errors(true); } ? [res : u32]{ res; }, [err : error]{ return err; };
 
     if x {
         var y: *u32 = new<u32>(10);
@@ -76,5 +83,5 @@ func main() int {
 
 
 
-    return 0;
+    return nil;
 }

@@ -21,6 +21,7 @@ namespace parser {
         ENUM,
         TUPLE,
         INTERFACE,
+        FUNCTION,
         BUILTIN
     };
 
@@ -62,14 +63,14 @@ namespace parser {
     };
 
     struct FunctionInfo {
-        std::unordered_map<std::string_view, Declaration> params;
+        std::unordered_map<std::string_view, Field> params;
         std::optional<Declaration> return_type;
         util::Tokens body;
     };
 
     struct TypeInfo {
         Declaration declaration;
-        std::variant<Declaration, StructInfo, FunctionInfo, util::Tokens> definition;
+        std::variant<Declaration, StructInfo, FunctionInfo> definition;
     };
 
     std::optional<std::pair<util::Category, size_t>> find_in_current_scope(util::Tokens tokens, const std::unordered_set<util::Category>& categories);
@@ -92,7 +93,7 @@ namespace parser {
 
         NamedField parse_variable(util::Tokens decl);
 
-        TypeInfo parse_function(util::Tokens decl);
+        TypeInfo parse_function(util::Tokens decl, size_t start_line = 0);
 
         TypeInfo parse_type_declaration(util::Tokens decl);
 

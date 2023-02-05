@@ -72,9 +72,13 @@ namespace util {
     }
 
     Tokens split(Tokens& tokens, Category delim) {
+        if(tokens.empty()) {
+            return tokens;
+        }
+
         auto offset = find_in_current_scope(tokens, delim);
         if(!offset) {
-            offset = tokens.size();
+            return Tokens{};
         }
 
         auto result = tokens.subspan(0, *offset);

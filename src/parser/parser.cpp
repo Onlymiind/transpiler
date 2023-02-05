@@ -87,7 +87,7 @@ namespace parser {
                     result.emplace_back(parse_type_declaration(tokens.subspan(0, decl_end->second + 1)));
                     break;
                 case util::Category::FUNC:
-                    result.emplace_back(parse_type_declaration(tokens.subspan(0, decl_end->second + 1)));
+                    result.emplace_back(parse_function(tokens.subspan(0, decl_end->second + 1)));
                     break;
                 case util::Category::VAR:
                     result.emplace_back(parse_variable(tokens.subspan(0, decl_end->second)));
@@ -131,41 +131,6 @@ namespace parser {
         return result;
     }
 
-    NamedField Parser::parse_variable(util::Tokens tokens) {
-        if(tokens.empty()) {
-            error(0, "empty field declaration, possibly a bug in a compiler");
-        }
-        if(tokens.size() < 3) {
-            error(tokens[0].line, "field declaration: expected \"field_name : field_type\"");
-        }
-
-        NamedField result;
-        auto& [name, decl] = result;
-
-        if(tokens[0].category != util::Category::IDENTIFIER) {
-            error(tokens[0].line, "field declaration: expected field_name, got: " + std::string{util::to_string(tokens[0].category)});
-        }
-        name = tokens[0].value;
-
-        if(tokens[1].category != util::Category::COLON) {
-            error(tokens[1].line, "field declaration: expected \":\", got: " + std::string{util::to_string(tokens[1].category)});
-        }
-
-        size_t line = tokens[1].line;
-        tokens = tokens.subspan(2);
-        decl.type = parse_type(tokens, line);
-
-        if(!tokens.empty()) {
-            error(tokens[0].line, "field declaration: unexpected end");
-        }
-
-        return result;
-    }
-
-    TypeInfo Parser::parse_function(util::Tokens decl) {
-        error(0, "not implemented");
-    }
-
     TypeInfo Parser::parse_type_declaration(util::Tokens decl) {
         static const std::unordered_map<util::Category, DeclarationType> definition_to_type{
             {util::Category::IDENTIFIER, DeclarationType::ALIAS},
@@ -197,6 +162,7 @@ namespace parser {
         }
         info.type = it->second;
 
+        size_t line = decl[0].line;
         if(info.type != DeclarationType::ALIAS) {
             decl = decl.subspan(1);
         }
@@ -208,7 +174,7 @@ namespace parser {
             return parse_struct(std::move(info), decl);
         }
 
-        return TypeInfo{.declaration = std::move(info), .definition = decl};
+        error(line, "parse_type_declaration: type not implemented");
     }
 
     TypeInfo Parser::parse_alias(Declaration decl, util::Tokens definition) {
@@ -216,6 +182,111 @@ namespace parser {
             .declaration = std::move(decl),
             .definition = parse_type(definition)
         };
+    }
+
+    NamedField Parser::parse_variable(util::Tokens tokens) {
+        if(tokens.empty()) {
+            error(0, "empty field declaration, possibly a bug in a compiler");
+        }
+        if(tokens.size() < 3) {
+            error(tokens[0].line, "field declaration: expected \"field_name : field_type\"");
+        }
+
+        NamedField result;
+        auto& [name, decl] = result;
+
+        if(tokens[0].category != util::Category::IDENTIFIER) {
+            error(tokens[0].line, "field declaration: expected field_name, got: " + std::string{util::to_string(tokens[0].category)});
+        }
+        name = tokens[0].value;
+
+        if(tokens[1].category != util::Category::COLON) {
+            error(tokens[1].line, "field declaration: expected \":\", got: " + std::string{util::to_string(tokens[1].category)});
+        }
+
+        size_t line = tokens[1].line;
+        tokens = tokens.subspan(2);
+        decl.type = parse_type(tokens, line);
+
+        if(!tokens.empty()) {
+            error(tokens[0].line, "field declaration: unexpected end");
+        }
+
+        return result;
+    }
+
+    TypeInfo Parser::parse_function(util::Tokens decl, size_t start_line) {
+        if(decl.size() <= 1) {
+            error(start_line, "empty function declaration, possibly a bug in a compiler");
+        }
+
+        // func keyword
+        if(decl.empty() || decl[0].category != util::Category::IDENTIFIER) {
+            error(start_line, "function declaration: expected function name");
+        }
+
+        TypeInfo result;
+        size_t line = decl[0].line;
+        result.declaration.type = DeclarationType::FUNCTION;
+        result.declaration.name = decl[0].value;
+        decl = decl.subspan(1);
+        result.declaration.generic_params = parse_generic_params(decl);
+
+        if(decl.empty()) {
+            error(line, "function declaration: expected function parameters");
+        }
+
+        if(decl[0].category != util::Category::LPAREN) {
+            error(decl[0].line, "function declaration: expected \"(\"");
+        }
+        line = decl[0].line;
+        decl = decl.subspan(1);
+
+        util::Tokens decl_copy = decl;
+        util::Tokens params = util::split(decl_copy, util::Category::RPAREN);
+
+        // no "("
+        if(decl_copy.size() == decl.size()) {
+            error(line, "function declaration: expected a \")\"");
+        }
+
+        decl = decl_copy;
+        if(decl.empty()) {
+            error(line, "function declaration: expected \";\" or \"{\"");
+        }
+
+        auto next_param = [&params]() -> util::Tokens {
+            return util::split(params, util::Category::COMMA);
+        };
+
+        FunctionInfo def;
+        for(util::Tokens param = next_param(); !param.empty(); param = next_param()) {
+            def.params.insert(parse_variable(param));
+        }
+        if(!params.empty()) {
+            def.params.insert(parse_variable(params));
+        }
+
+        if(decl[0].category != util::Category::LBRACE && decl[0].category != util::Category::SEMICOLON) {
+            def.return_type = parse_type(decl);
+        }
+
+        if(decl.empty()) {
+            error(line, "function declaration: expected \";\" or \"{\"");
+        }
+        if(decl.size() == 1 && decl[0].category != util::Category::SEMICOLON) {
+            error(decl[0].line, "function declaration: expected \";\"");
+        }
+        if(decl[0].category != util::Category::LBRACE || decl.back().category != util::Category::RBRACE) {
+            error(decl[0].line, "function declaration: expected a block");
+        }
+
+        if(decl[0].category == util::Category::LBRACE) {
+            def.body = decl;
+        }
+
+        result.definition = def;
+        return result;
     }
 
     TypeInfo Parser::parse_struct(Declaration decl, util::Tokens definition, size_t start_line) {
@@ -265,7 +336,7 @@ namespace parser {
 
         Declaration result;
         util::Tokens type = tokens;
-        while(!type.empty() && util::is_type_modifier(type[0].category)) {
+        while(!type.empty() && type[0].is_type_modifier()) {
             switch(type[0].category) {
             case util::Category::OPTIONAL:
                 result.modifiers.push_back(TypeModifiers::OPTIONAL);
@@ -286,7 +357,7 @@ namespace parser {
 
         auto it = definition_to_type.find(type[0].category);
         if(it == definition_to_type.end()) {
-            error(type[0].line, "expected one of the: type_name, tuple, unoin");
+            error(type[0].line, "expected one of the: type_name, tuple, union");
         }
 
         result.type = it->second;
