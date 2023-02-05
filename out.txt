@@ -39,6 +39,15 @@ category: STRUCT line: 18
 category: LBRACE line: 18
 value: x, category: IDENTIFIER line: 19
 category: COLON line: 19
+category: OPTIONAL line: 19
+category: MULTIPLY line: 19
+category: MULTIPLY line: 19
+category: MULTIPLY line: 19
+category: OPTIONAL line: 19
+category: MULTIPLY line: 19
+category: OPTIONAL line: 19
+category: MULTIPLY line: 19
+category: OPTIONAL line: 19
 value: u32, category: IDENTIFIER line: 19
 category: SEMICOLON line: 19
 value: y, category: IDENTIFIER line: 20

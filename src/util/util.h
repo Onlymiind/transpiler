@@ -177,6 +177,10 @@ namespace util {
 #undef CASE
     }
 
+    inline constexpr bool is_type_modifier(Category cat) {
+        return cat == Category::OPTIONAL || cat == Category::MULTIPLY;
+    }
+
     struct Token {
         Category category;
         size_t line;

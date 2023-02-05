@@ -131,18 +131,20 @@ namespace parser {
         }
 
         std::vector<GenericParam> result;
+        Tokens params = tokens;
         for(size_t i = 1; i < end; i++) {
-            switch(tokens[i].category) {
+            switch(params[i].category) {
             case util::Category::COMMA:
                 continue;
             case util::Category::IDENTIFIER:
-                result.emplace_back(GenericParam{tokens[i].value});
+                result.emplace_back(GenericParam{params[i].value});
                 break;
             default:
-                error(tokens[i].line, "generic arguments: expected comma separated list of identifiers");
+                error(params[i].line, "generic arguments: expected comma separated list of identifiers");
             }
         }
-        tokens = tokens.subspan(end + 1);
+        params = params.subspan(end + 1);
+        tokens = params;
         return result;
     }
 
@@ -280,18 +282,34 @@ namespace parser {
         return result;
     }
 
-    Declaration Parser::parse_type(Tokens& type, size_t start_line) {
+    Declaration Parser::parse_type(Tokens& tokens, size_t start_line) {
         static const std::unordered_map<util::Category, DeclarationType> definition_to_type{
             {util::Category::IDENTIFIER, DeclarationType::UNKNOWN},
             {util::Category::TUPLE, DeclarationType::TUPLE},
             {util::Category::UNION, DeclarationType::UNION}
         };
 
+        Declaration result;
+        Tokens type = tokens;
+        while(!type.empty() && util::is_type_modifier(type[0].category)) {
+            switch(type[0].category) {
+            case util::Category::OPTIONAL:
+                result.modifiers.push_back(TypeModifiers::OPTIONAL);
+                break;
+            case util::Category::MULTIPLY:
+                result.modifiers.push_back(TypeModifiers::POINTER);
+                break;
+            default:
+                error(type[0].line, "modifier " + std::string{util::to_string(type[0].category)} + " not implemented");
+            }
+
+            type = type.subspan(1);
+        }
+
         if(type.empty()) {
             error(start_line, "expected a type");
         }
 
-        Declaration result;
         auto it = definition_to_type.find(type[0].category);
         if(it == definition_to_type.end()) {
             error(type[0].line, "expected one of the: type_name, tuple, unoin");
@@ -305,6 +323,7 @@ namespace parser {
 
         type = type.subspan(1);
         result.generic_params = parse_generic_params(type);
+        tokens = type;
 
         return result;
     }

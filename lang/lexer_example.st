@@ -16,7 +16,7 @@ type Foo324 roieuwr;
 //}
 
 type Bar struct {
-    x: u32;
+    x: ?***?*?*?u32;
     y: u32;
 }
 
@@ -26,18 +26,18 @@ type Barz<T, U, V> struct {
     dask : Tup<V, V, V>;
 }
 
-type En enum<u8> {
-    Foo = 1;
-    Bar = 10;
-    Bars = 20;
-    Count = 3;
-}
+//type En enum<u8> {
+//    Foo = 1;
+//    Bar = 10;
+//    Bars = 20;
+//    Count = 3;
+//}
 
 type Variant union<u8, u16, u32>;
 
 type Tup<T, U, V> tuple<u8, u16, u32, T, U, V>;
 
-type Result<T: Iface, E> union<T, E>;
+type Result<T, E> union<T, E>;
 
 func Foo(b: *Bar, lhs: u32, rhs: u32) bool {
     return  lhs == rhs;

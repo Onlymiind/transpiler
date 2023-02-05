@@ -15,7 +15,7 @@ namespace parser {
 
     using Tokens = std::span<const util::Token>;
 
-    enum class DeclarationType {
+    enum class DeclarationType : uint8_t {
         UNKNOWN,
         ALIAS,
         STRUCT,
@@ -24,6 +24,12 @@ namespace parser {
         TUPLE,
         INTERFACE,
         BUILTIN
+    };
+
+    enum class TypeModifiers : uint8_t {
+        NONE,
+        POINTER,
+        OPTIONAL
     };
 
     struct Import {
@@ -43,6 +49,7 @@ namespace parser {
         DeclarationType type = DeclarationType::UNKNOWN;
         std::string_view name;
         std::vector<GenericParam> generic_params;
+        std::vector<TypeModifiers> modifiers;
     };
 
     struct Field {
@@ -59,23 +66,12 @@ namespace parser {
     struct FunctionInfo {
         std::unordered_map<std::string_view, Declaration> params;
         std::optional<Declaration> return_type;
+        Tokens body;
     };
 
     struct TypeInfo {
         Declaration declaration;
         std::variant<Declaration, StructInfo, FunctionInfo, Tokens> definition;
-    };
-
-    using TypeID = size_t;
-
-    struct Info {
-        std::string_view name;
-        std::unordered_map<std::string_view, std::optional<TypeID>> depends_on;
-    };
-
-    struct Types {
-        std::deque<std::string> types;
-        std::unordered_map<std::string_view, TypeID> name_to_id;
     };
 
     std::optional<size_t> find_in_current_scope(Tokens tokens, util::Category cat);
@@ -108,7 +104,7 @@ namespace parser {
 
         TypeInfo parse_struct(Declaration decl, Tokens definition, size_t start_line = 0);
 
-        Declaration parse_type(Tokens& type, size_t start_line = 0);
+        Declaration parse_type(Tokens& tokens, size_t start_line = 0);
 
         // pushes an error to errors_ and throws ParserError
         [[noreturn]] void error(size_t line, const std::string& msg);
