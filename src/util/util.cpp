@@ -22,7 +22,7 @@ namespace util {
         return out;
     }
 
-    size_t consume_scope(std::span<const Token> tokens, size_t start, std::pair<Category, Category> scope_delimiters) {
+    size_t consume_scope(Tokens tokens, size_t start, std::pair<Category, Category> scope_delimiters) {
         if(start >= tokens.size() || tokens[start].category != scope_delimiters.first) {
             return start;
         }
@@ -44,7 +44,7 @@ namespace util {
         return i;
     }
 
-    std::optional<size_t> consume_scopes(std::span<const Token> tokens, size_t start, std::unordered_map<Category, Category> scope_delimiters) {
+    std::optional<size_t> consume_scopes(Tokens tokens, size_t start, std::unordered_map<Category, Category> scope_delimiters) {
         if(start >= tokens.size() || !scope_delimiters.contains(tokens[start].category)) {
             return start;
         }
@@ -69,5 +69,38 @@ namespace util {
         }
 
         return i;
+    }
+
+    Tokens split(Tokens& tokens, Category delim) {
+        auto offset = find_in_current_scope(tokens, delim);
+        if(!offset) {
+            offset = tokens.size();
+        }
+
+        auto result = tokens.subspan(0, *offset);
+        tokens = tokens.subspan(std::min(tokens.size(), *offset + 1));
+        return result;
+    }
+
+    std::optional<size_t> find_in_current_scope(Tokens tokens, util::Category cat) {
+        size_t scope{};
+        for(size_t i = 0; i < tokens.size(); i++) {
+            
+            // "{" will be consumed by util::consume_scope, so check for it here 
+            if(cat == util::Category::LBRACE && tokens[i].category == cat) {
+                return i;
+            }
+
+            i = util::consume_scope(tokens, i, {util::Category::LBRACE, util::Category::RBRACE});
+            if(i >= tokens.size()) {
+                break;
+            }
+
+            if(scope == 0 && tokens[i].category == cat) {
+                return i;
+            }
+        }
+
+        return {};
     }
 }

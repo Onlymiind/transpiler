@@ -7,27 +7,10 @@
 
 namespace parser {
 
-    std::optional<size_t> find_in_current_scope(Tokens tokens, util::Category cat) {
-        size_t scope{};
-        for(size_t i = 0; i < tokens.size(); i++) {
-
-            i = util::consume_scope(tokens, i, {util::Category::LBRACE, util::Category::RBRACE});
-            if(i >= tokens.size()) {
-                break;
-            }
-
-            if(scope == 0 && tokens[i].category == cat) {
-                return i;
-            }
-        }
-
-        return {};
-    }
-
-    std::optional<std::pair<util::Category, size_t>> find_in_current_scope(Tokens tokens, const std::unordered_set<util::Category>& categories) {
+    std::optional<std::pair<util::Category, size_t>> find_in_current_scope(util::Tokens tokens, const std::unordered_set<util::Category>& categories) {
         std::unordered_map<util::Category, size_t> found;
         for(auto cat : categories) {
-            auto idx = find_in_current_scope(tokens, cat);
+            auto idx = util::find_in_current_scope(tokens, cat);
             if(idx) {
                 found[cat] = *idx;
             }
@@ -42,7 +25,7 @@ namespace parser {
         return *it;
     }
 
-    std::optional<size_t> first_not_comment(Tokens tokens) {
+    std::optional<size_t> first_not_comment(util::Tokens tokens) {
         auto it = std::find_if(tokens.begin(), tokens.end(), [](const auto& token){
             return token.category != util::Category::COMMENT;
         });
@@ -70,13 +53,12 @@ namespace parser {
         };
 
         std::vector<std::variant<TypeInfo, NamedField>> result;
-        auto tokens = Tokens{tokens_};
+        auto tokens = util::Tokens{tokens_};
         auto decl_start = find_in_current_scope(tokens, decl_tokens);
         while(decl_start) {
             if(decl_start->second != 0) {
                 tokens = tokens.subspan(decl_start->second);
             }
-
             tokens = tokens.subspan(1);
 
             if(tokens.size() < 3) {
@@ -105,7 +87,7 @@ namespace parser {
                     result.emplace_back(parse_type_declaration(tokens.subspan(0, decl_end->second + 1)));
                     break;
                 case util::Category::FUNC:
-                    //decl.type = Type_::FUNCTION;
+                    result.emplace_back(parse_type_declaration(tokens.subspan(0, decl_end->second + 1)));
                     break;
                 case util::Category::VAR:
                     result.emplace_back(parse_variable(tokens.subspan(0, decl_end->second)));
@@ -124,14 +106,14 @@ namespace parser {
         return result;
     }
 
-    std::vector<GenericParam> Parser::parse_generic_params(Tokens& tokens) {
+    std::vector<GenericParam> Parser::parse_generic_params(util::Tokens& tokens) {
         size_t end = util::consume_scope(tokens, 0, {util::Category::LESS, util::Category::GREATER});
         if(end <= 1) {
             return {};
         }
 
         std::vector<GenericParam> result;
-        Tokens params = tokens;
+        util::Tokens params = tokens;
         for(size_t i = 1; i < end; i++) {
             switch(params[i].category) {
             case util::Category::COMMA:
@@ -143,12 +125,13 @@ namespace parser {
                 error(params[i].line, "generic arguments: expected comma separated list of identifiers");
             }
         }
-        params = params.subspan(end + 1);
+
+        params = params.subspan(std::min(tokens.size(), end + 1));
         tokens = params;
         return result;
     }
 
-    NamedField Parser::parse_variable(Tokens tokens) {
+    NamedField Parser::parse_variable(util::Tokens tokens) {
         if(tokens.empty()) {
             error(0, "empty field declaration, possibly a bug in a compiler");
         }
@@ -179,11 +162,11 @@ namespace parser {
         return result;
     }
 
-    TypeInfo Parser::parse_function(Tokens decl) {
+    TypeInfo Parser::parse_function(util::Tokens decl) {
         error(0, "not implemented");
     }
 
-    TypeInfo Parser::parse_type_declaration(Tokens decl) {
+    TypeInfo Parser::parse_type_declaration(util::Tokens decl) {
         static const std::unordered_map<util::Category, DeclarationType> definition_to_type{
             {util::Category::IDENTIFIER, DeclarationType::ALIAS},
             {util::Category::INTERFACE, DeclarationType::INTERFACE},
@@ -228,14 +211,14 @@ namespace parser {
         return TypeInfo{.declaration = std::move(info), .definition = decl};
     }
 
-    TypeInfo Parser::parse_alias(Declaration decl, Tokens definition) {
+    TypeInfo Parser::parse_alias(Declaration decl, util::Tokens definition) {
         return TypeInfo{
             .declaration = std::move(decl),
             .definition = parse_type(definition)
         };
     }
 
-    TypeInfo Parser::parse_struct(Declaration decl, Tokens definition, size_t start_line) {
+    TypeInfo Parser::parse_struct(Declaration decl, util::Tokens definition, size_t start_line) {
         if(definition.empty()) {
             error(start_line, "struct declaration: empty definition, possibly a bug in a compiler");
         }
@@ -258,20 +241,11 @@ namespace parser {
 
         definition = definition.subspan(1);
 
-        auto next_field = [&definition]() -> Tokens {
-            auto it = std::find_if(definition.begin(), definition.end(), [](const util::Token& token) { return token.category == util::Category::SEMICOLON; });
-            if(it == definition.end()) {
-                return Tokens{};
-            }
-
-            // not + 1 to ignore semicolon itself
-            size_t end = it - definition.begin();
-            Tokens result = definition.subspan(0, end);
-            definition = definition.subspan(end + 1);
-            return result;
+        auto next_field = [&definition]() -> util::Tokens {
+            return util::split(definition, util::Category::SEMICOLON);
         };
 
-        for(Tokens field_def = next_field(); !field_def.empty(); field_def = next_field()) {
+        for(util::Tokens field_def = next_field(); !field_def.empty(); field_def = next_field()) {
             struct_definition.fields.insert(parse_variable(field_def));
         }
 
@@ -282,7 +256,7 @@ namespace parser {
         return result;
     }
 
-    Declaration Parser::parse_type(Tokens& tokens, size_t start_line) {
+    Declaration Parser::parse_type(util::Tokens& tokens, size_t start_line) {
         static const std::unordered_map<util::Category, DeclarationType> definition_to_type{
             {util::Category::IDENTIFIER, DeclarationType::UNKNOWN},
             {util::Category::TUPLE, DeclarationType::TUPLE},
@@ -290,7 +264,7 @@ namespace parser {
         };
 
         Declaration result;
-        Tokens type = tokens;
+        util::Tokens type = tokens;
         while(!type.empty() && util::is_type_modifier(type[0].category)) {
             switch(type[0].category) {
             case util::Category::OPTIONAL:
@@ -316,12 +290,11 @@ namespace parser {
         }
 
         result.type = it->second;
-
         if(type[0].category == util::Category::IDENTIFIER) {
             result.name = type[0].value;
         }
-
         type = type.subspan(1);
+
         result.generic_params = parse_generic_params(type);
         tokens = type;
 

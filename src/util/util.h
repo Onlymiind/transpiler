@@ -189,6 +189,8 @@ namespace util {
 
     std::ostream& operator<<(std::ostream& out, const Token& token);
 
+    using Tokens = std::span<const Token>;
+
     template<typename Key, typename Val>
     inline std::unordered_map<Val, Key> inverse(const std::unordered_map<Key, Val>& map) {
         std::unordered_map<Val, Key> inverse;
@@ -200,7 +202,11 @@ namespace util {
         return inverse;
     }
 
-    size_t consume_scope(std::span<const Token> tokens, size_t start, std::pair<Category, Category> scope_delimiters);
+    size_t consume_scope(Tokens tokens, size_t start, std::pair<Category, Category> scope_delimiters);
 
-    std::optional<size_t> consume_scopes(std::span<const Token> tokens, size_t start, std::unordered_map<Category, Category> scope_delimiters);
+    std::optional<size_t> consume_scopes(Tokens tokens, size_t start, std::unordered_map<Category, Category> scope_delimiters);
+
+    Tokens split(Tokens& tokens, Category delim);
+
+    std::optional<size_t> find_in_current_scope(Tokens tokens, util::Category cat);
 }

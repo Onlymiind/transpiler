@@ -13,8 +13,6 @@
 
 namespace parser {
 
-    using Tokens = std::span<const util::Token>;
-
     enum class DeclarationType : uint8_t {
         UNKNOWN,
         ALIAS,
@@ -33,7 +31,7 @@ namespace parser {
     };
 
     struct Import {
-        Tokens tokens;
+        util::Tokens tokens;
     };
 
     struct Comment {
@@ -54,7 +52,7 @@ namespace parser {
 
     struct Field {
         Declaration type;
-        Tokens value;
+        util::Tokens value;
     };
 
     using NamedField = std::pair<std::string_view, Field>;
@@ -66,19 +64,17 @@ namespace parser {
     struct FunctionInfo {
         std::unordered_map<std::string_view, Declaration> params;
         std::optional<Declaration> return_type;
-        Tokens body;
+        util::Tokens body;
     };
 
     struct TypeInfo {
         Declaration declaration;
-        std::variant<Declaration, StructInfo, FunctionInfo, Tokens> definition;
+        std::variant<Declaration, StructInfo, FunctionInfo, util::Tokens> definition;
     };
 
-    std::optional<size_t> find_in_current_scope(Tokens tokens, util::Category cat);
+    std::optional<std::pair<util::Category, size_t>> find_in_current_scope(util::Tokens tokens, const std::unordered_set<util::Category>& categories);
 
-    std::optional<std::pair<util::Category, size_t>> find_in_current_scope(Tokens tokens, const std::unordered_set<util::Category>& categories);
-
-    std::optional<size_t> first_not_comment(Tokens tokens);
+    std::optional<size_t> first_not_comment(util::Tokens tokens);
 
     void parse(std::vector<util::Token> tokens);
 
@@ -92,19 +88,19 @@ namespace parser {
 
         std::vector<std::variant<TypeInfo, NamedField>> pasre();
 
-        std::vector<GenericParam> parse_generic_params(Tokens& tokens);
+        std::vector<GenericParam> parse_generic_params(util::Tokens& tokens);
 
-        NamedField parse_variable(Tokens decl);
+        NamedField parse_variable(util::Tokens decl);
 
-        TypeInfo parse_function(Tokens decl);
+        TypeInfo parse_function(util::Tokens decl);
 
-        TypeInfo parse_type_declaration(Tokens decl);
+        TypeInfo parse_type_declaration(util::Tokens decl);
 
-        TypeInfo parse_alias(Declaration decl, Tokens definition);
+        TypeInfo parse_alias(Declaration decl, util::Tokens definition);
 
-        TypeInfo parse_struct(Declaration decl, Tokens definition, size_t start_line = 0);
+        TypeInfo parse_struct(Declaration decl, util::Tokens definition, size_t start_line = 0);
 
-        Declaration parse_type(Tokens& tokens, size_t start_line = 0);
+        Declaration parse_type(util::Tokens& tokens, size_t start_line = 0);
 
         // pushes an error to errors_ and throws ParserError
         [[noreturn]] void error(size_t line, const std::string& msg);
