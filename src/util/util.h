@@ -211,10 +211,10 @@ namespace util {
 
         using Base::span;
         constexpr Tokens(std::span<const Token> tokens) noexcept
-            : std::span<const Token>(tokens)
+            : Base(tokens)
         {
             if(!empty()) {
-                k_eof.pos = back().pos;
+                eof_.pos = back().pos;
             }
         }
 
@@ -227,8 +227,15 @@ namespace util {
         using Base::size_bytes;
         using Base::data;
         using Base::front;
-        using Base::back;
         using Base::empty;
+
+        constexpr inline const Token& back() const noexcept {
+            if(empty()) {
+                return eof_;
+            }
+
+            return Base::back();
+        }
 
         constexpr inline Tokens subspan(size_t offset = 0, size_t count = std::dynamic_extent) const noexcept {
             size_t size = this->size();
@@ -238,7 +245,12 @@ namespace util {
             if(count != std::dynamic_extent && count > size - offset) {
                 count = size - offset;
             }
-            return Base::subspan(offset, count);
+
+            Tokens result{Base::subspan(offset, count)};
+            if(count == 0) {
+                result.eof_ = make_eof(operator[](offset));
+            }
+            return result;
         }
 
         constexpr inline Tokens first(size_t count) const noexcept {
@@ -246,7 +258,11 @@ namespace util {
                 count = size();
             }
 
-            return Base::first(count);
+            Tokens result{Base::first(count)};
+            if(count == 0) {
+                result.eof_ = make_eof(operator[](0));
+            }
+            return result;
         }
 
         constexpr inline Tokens last(size_t count) const noexcept {
@@ -254,19 +270,27 @@ namespace util {
                 count = size();
             }
 
-            return Base::last(count);
+            Tokens result{Base::last(count)};
+            if(count == 0) {
+                result.eof_ = make_eof(back());
+            }
+            return result;
         }
 
         constexpr inline const Token& operator[](size_t idx) const noexcept {
             if(idx >= size()) {
-                return k_eof;
+                return eof_;
             }
 
-            return std::span<const Token>::operator[](idx);
+            return Base::operator[](idx);
         }
 
     private:
-        Token k_eof = Token{.category = Category::END_OF_FILE};
+        constexpr inline Token make_eof(const Token& token) const noexcept {
+            return Token{.category = Category::END_OF_FILE, .pos = token.pos};
+        }
+
+        Token eof_ = Token{.category = Category::END_OF_FILE};
     };
 
     template<typename Key, typename Val>

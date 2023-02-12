@@ -126,7 +126,7 @@ namespace parser {
             consume(1);
         }
 
-        void inline ignore_comments() {
+        inline void ignore_comments() {
             while(remainder_[0].category == util::Category::COMMENT) {
                 consume(1);
             }
