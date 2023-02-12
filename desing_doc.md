@@ -46,3 +46,15 @@ parameter = [identifier, ":"], type_name
 ```
 return_type = type_name | type_definition
 ```
+
+```
+expression = unary_expr | (expression, binary_op, expression)
+```
+
+expr_list = {expression, ";"}
+
+```
+block = "{", expr_list, "}"
+```
+
+unary_expr = identifier | block | function_call | field_access | literal | subscript | (unary_op expr)

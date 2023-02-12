@@ -18,7 +18,7 @@ namespace util {
             out << "value: " << token.value << ", ";
         }
 
-        out << "category: " << to_string(token.category) << " line: " << token.line;
+        out << "category: " << to_string(token.category) << " pos: " << token.pos;
         return out;
     }
 

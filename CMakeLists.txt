@@ -11,6 +11,9 @@ set(LEXER_MODULE
 set(PARSER_MODULE
     src/parser/parser.h
     src/parser/parser.cpp
+
+    src/parser2/parser.h
+    src/parser2/parser.cpp
 )
 
 add_executable(transpiler

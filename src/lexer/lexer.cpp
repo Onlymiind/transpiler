@@ -112,7 +112,7 @@ namespace lexer {
 
     std::optional<util::Token> Lexer::get_comment(std::istream& in) {
         if(eat_expected(in, "//")) {
-            util::Token result{.category = util::Category::COMMENT, .line = line_};
+            util::Token result{.category = util::Category::COMMENT, .pos = line_};
             std::string buf;
             std::getline(in, buf);
             result.value = std::move(buf);
@@ -120,7 +120,7 @@ namespace lexer {
             return result;
         } // else if(eat_expected(in, "/*")) {
             // TODO
-            // util::Token result{.line = line_, .category = util::Category::MULTILINE_COMMENT};
+            // util::Token result{.pos = line_, .category = util::Category::MULTILINE_COMMENT};
             // std::getline(in, result.word, "*/");
             // line_++;
             // return result;
@@ -148,7 +148,7 @@ namespace lexer {
     }
 
     std::optional<util::Token> Lexer::get_identifier(std::istream& in) {
-        util::Token result{.category = util::Category::IDENTIFIER, .line = line_};
+        util::Token result{.category = util::Category::IDENTIFIER, .pos = line_};
         std::string buf;
         char c = in.get();
         while(in && !(is_special_token(c) || std::isspace(c))) {
@@ -173,7 +173,7 @@ namespace lexer {
     }
 
     std::optional<util::Token> Lexer::get_numeric(std::istream& in) {
-        util::Token result{.category = util::Category::INTEGER, .line = line_};
+        util::Token result{.category = util::Category::INTEGER, .pos = line_};
 
         std::string buf;
         auto get_digits = [&result, &buf](std::istream& in) {
@@ -225,7 +225,7 @@ namespace lexer {
             str[0] = c;
             str[1] = in.get();
             if(in && multichar_special_tokens_.contains(str)) {
-                return util::Token{.category = multichar_special_tokens_.at(str), .line = line_};
+                return util::Token{.category = multichar_special_tokens_.at(str), .pos = line_};
             }
 
             in.putback(str[1]);
@@ -235,7 +235,7 @@ namespace lexer {
         if(special_tokens_.contains(c)) {
             cat = special_tokens_.at(c);
         }
-        return util::Token{.category = cat, .line = line_};
+        return util::Token{.category = cat, .pos = line_};
     }
 
     std::vector<util::Token> Lexer::split(std::istream& in) {
