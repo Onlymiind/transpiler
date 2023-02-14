@@ -175,6 +175,7 @@ namespace parser {
     private:
         std::vector<util::Token> tokens_;
         std::vector<util::Error> errors_;
+        std::deque<std::string> unnamed_params_;
 
         std::ostream* err_out_ {nullptr};
 

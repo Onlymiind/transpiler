@@ -438,4 +438,35 @@ category: RETURN pos: 86
 value: nil, category: IDENTIFIER pos: 86
 category: SEMICOLON pos: 86
 category: RBRACE pos: 87
+category: FUNC pos: 89
+value: unnamed, category: IDENTIFIER pos: 89
+category: LPAREN pos: 89
+value: u64, category: IDENTIFIER pos: 89
+category: COMMA pos: 89
+value: error, category: IDENTIFIER pos: 89
+category: RPAREN pos: 89
+category: LBRACE pos: 89
+category: RBRACE pos: 89
+category: TYPE pos: 91
+value: Functor, category: IDENTIFIER pos: 91
+category: STRUCT pos: 91
+category: LBRACE pos: 91
+value: data, category: IDENTIFIER pos: 92
+category: COLON pos: 92
+category: MULTIPLY pos: 92
+value: u8, category: IDENTIFIER pos: 92
+category: SEMICOLON pos: 92
+value: fun, category: IDENTIFIER pos: 93
+category: COLON pos: 93
+category: FUNC pos: 93
+category: LPAREN pos: 93
+category: MULTIPLY pos: 93
+value: u8, category: IDENTIFIER pos: 93
+category: COMMA pos: 93
+value: u16, category: IDENTIFIER pos: 93
+category: RPAREN pos: 93
+category: OPTIONAL pos: 93
+value: u32, category: IDENTIFIER pos: 93
+category: SEMICOLON pos: 93
+category: RBRACE pos: 94
 Done

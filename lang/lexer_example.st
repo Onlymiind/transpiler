@@ -85,3 +85,10 @@ func main() ?error {
 
     return nil;
 }
+
+func unnamed(u64, error) {}
+
+type Functor struct {
+    data: *u8;
+    fun: func (*u8, u16) ?u32;
+}

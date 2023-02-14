@@ -22,7 +22,11 @@ int main() {
         out << w << '\n';
     }
 
-    parser::parse(std::move(vec));
+    try {
+        parser::parse(std::move(vec));
+    } catch (const std::exception& e) {
+        std::cout << e.what() << std::endl;
+    }
 
     out << "Done" << '\n';
 

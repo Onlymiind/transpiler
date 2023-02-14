@@ -162,16 +162,28 @@ namespace parser {
         result.generic_params = parse_generic_params();
 
         consume_expected(util::Category::LPAREN, "function declaration");
+        size_t unnamed_param_cnt{0};
         while(remainder_[0].category != util::Category::RPAREN) {
-            auto& param = result.func_params[remainder_[0].value];
-            consume_expected(util::Category::IDENTIFIER, "function declaration");
-            consume_expected(util::Category::COLON, "function declaration");
+            // TODO: unnamed params
+            std::string_view param_name;
+            if(remainder_[1].category == util::Category::COLON) {
+                param_name = remainder_[0].value;
+                consume_expected(util::Category::IDENTIFIER, "function declaration");
+                consume_expected(util::Category::COLON, "function declaration");
+            } else {
+                for(size_t i = unnamed_params_.size(); i <= unnamed_param_cnt; i++) {
+                    unnamed_params_.push_back(std::to_string(i));
+                }
+                param_name = unnamed_params_[unnamed_param_cnt];
+                unnamed_param_cnt++;
+            }
+            auto& param = result.func_params[param_name];
             param = std::make_unique<Field>(parse_type());
             if(remainder_[0].category != util::Category::RPAREN) {
                 consume_expected(util::Category::COMMA, "function declaration");
             }
         }
-        consume_expected(util::Category::RPAREN, "function declaration");
+        consume(1);
 
         static const std::unordered_set<util::Category> decl_end{
             util::Category::COMMA, util::Category::SEMICOLON, util::Category::LBRACE
@@ -238,7 +250,7 @@ namespace parser {
             result.type = DeclarationType::UNION;
             break;
         case util::Category::FUNC:
-            return parse_function_decl(false);
+            return parse_function_decl(true);
         default:
             error(remainder_[0].pos, "type: expected one of the type_name, union, tuple, got: ", util::to_string(remainder_[0].category));
         }
