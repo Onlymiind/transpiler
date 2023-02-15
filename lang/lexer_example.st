@@ -92,3 +92,11 @@ type Functor struct {
     data: *u8;
     fun: func (*u8, u16) ?u32;
 }
+
+
+type Erroneous struct {
+    field1 : u8;
+    sddffwdfsfs
+    field2 : u16;
+    field3 : u16;
+}

@@ -10,6 +10,8 @@ inline constexpr std::string_view in_fname{"/home/onlymind/mine/cpp/projects/tra
 inline constexpr std::string_view out_fname{"/home/onlymind/mine/cpp/projects/transpiler/out.txt"};
 
 int main() {
+    std::cout << util::sprint(std::string{"string"}, 10, std::string_view{"fdskjfhk"}, "fdjsfho") << std::endl;
+
     std::filesystem::copy(in_fname, temp);
     std::fstream in{temp.data(), std::ios::in | std::ios::out | std::ios::ate};
     in << '\n';

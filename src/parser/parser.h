@@ -120,7 +120,7 @@ namespace parser {
 
         inline void consume_expected(util::Category expected, const std::string& err_prefix = "") {
             if(remainder_[0].category != expected) {
-                error(remainder_[0].pos, err_prefix, ": expected ", util::to_string(expected), ", got ", util::to_string(remainder_[0].category));
+                errorn(remainder_[0].pos, err_prefix, ": expected ", expected, ", got ", remainder_[0].category);
             }
 
             consume(1);
@@ -156,7 +156,7 @@ namespace parser {
             }
 
             if(trailing_sep && pos->first != sep) {
-                error(remainder_[pos->second].pos, err_prefix, ": expected a ", util::to_string(sep), ", got a ", util::to_string(pos->first));
+                errorn(remainder_[pos->second].pos, err_prefix, ": expected a ", sep, ", got a ", pos->first);
             }
 
             util::Tokens result = remainder_.first(pos->second);
@@ -165,12 +165,25 @@ namespace parser {
             return result;
         }
 
+        template<typename Function>
+        void do_with_recovery(util::Category recovery_point, Function func) {
+            try {
+                func();
+            } catch (const ParserError& e) {
+                if(err_out_) {
+                    *err_out_ << e.what() << '\n';
+                }
+                auto pos = find_in_current_scope(remainder_, recovery_point);
+                consume(pos ? *pos + 1: remainder_.size());
+            }
+        }
+
         // pushes an error to errors_ and throws ParserError
         [[noreturn]] void error(size_t pos, const std::string& msg);
 
-        template<util::String... Str>
-        [[noreturn]] void error(size_t pos, Str&&... msg_args) {
-            error(pos, util::sprint(std::forward<Str>(msg_args)...));
+        template<typename... T>
+        [[noreturn]] void errorn(size_t pos, T&&... msg_args) {
+            error(pos, util::sprint(std::forward<T>(msg_args)...));
         }
     private:
         std::vector<util::Token> tokens_;

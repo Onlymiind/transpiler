@@ -469,4 +469,22 @@ category: OPTIONAL pos: 93
 value: u32, category: IDENTIFIER pos: 93
 category: SEMICOLON pos: 93
 category: RBRACE pos: 94
+category: TYPE pos: 97
+value: Erroneous, category: IDENTIFIER pos: 97
+category: STRUCT pos: 97
+category: LBRACE pos: 97
+value: field1, category: IDENTIFIER pos: 98
+category: COLON pos: 98
+value: u8, category: IDENTIFIER pos: 98
+category: SEMICOLON pos: 98
+value: sddffwdfsfs, category: IDENTIFIER pos: 99
+value: field2, category: IDENTIFIER pos: 100
+category: COLON pos: 100
+value: u16, category: IDENTIFIER pos: 100
+category: SEMICOLON pos: 100
+value: field3, category: IDENTIFIER pos: 101
+category: COLON pos: 101
+value: u16, category: IDENTIFIER pos: 101
+category: SEMICOLON pos: 101
+category: RBRACE pos: 102
 Done

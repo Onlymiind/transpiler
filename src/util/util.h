@@ -7,6 +7,7 @@
 #include <vector>
 #include <variant>
 #include <ostream>
+#include <sstream>
 #include <iterator>
 #include <string_view>
 #include <type_traits>
@@ -179,6 +180,11 @@ namespace util {
 #undef CASE
     }
 
+    inline std::ostream& operator<<(std::ostream& out, Category cat) {
+        out << to_string(cat);
+        return out;
+    }
+
     inline constexpr bool is_type_modifier(Category cat) noexcept {
         return cat == Category::OPTIONAL || cat == Category::MULTIPLY;
     }
@@ -315,8 +321,10 @@ namespace util {
     template<typename T>
     concept String = std::is_constructible_v<std::string, std::decay_t<T>>;
 
-    template<String... Str>
-    std::string sprint(Str... args) {
-        return (std::string{args} + ...);
+    template<typename... T>
+    std::string sprint(T... args) {
+        std::ostringstream out;
+        (out << ... << args);
+        return out.str();
     }
 }

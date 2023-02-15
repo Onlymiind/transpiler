@@ -132,7 +132,7 @@ namespace parser {
         case util::Category::INTERFACE:
             error(remainder_[0].pos, "not implemented");
         default:
-            error(remainder_[0].pos, "type declaration: expected one of the: type_name, tuple, union, enum, struct, got ", util::to_string(remainder_[0].category));
+            errorn(remainder_[0].pos, "type declaration: expected one of the: type_name, tuple, union, enum, struct, got ", remainder_[0].category);
         }
     }
 
@@ -140,11 +140,13 @@ namespace parser {
         consume_expected(util::Category::LBRACE, "struct definition");
         StructInfo result;
         while(remainder_[0].category != util::Category::RBRACE) {
-            auto& field = result.fields[remainder_[0].value];
-            consume_expected(util::Category::IDENTIFIER, "struct definition");
-            consume_expected(util::Category::COLON, "struct definition");
-            field.type = parse_type();
-            consume_expected(util::Category::SEMICOLON, "struct definition");
+            do_with_recovery(util::Category::SEMICOLON, [&result, this]() {
+                auto& field = result.fields[remainder_[0].value];
+                consume_expected(util::Category::IDENTIFIER, "struct definition");
+                consume_expected(util::Category::COLON, "struct definition");
+                field.type = parse_type();
+                consume_expected(util::Category::SEMICOLON, "struct definition");
+            });
         }
         consume_expected(util::Category::RBRACE, "struct definition");
 
@@ -217,7 +219,7 @@ namespace parser {
 
         auto end = util::find_in_current_scope(remainder_, util::Category::RBRACE);
         if(!end) {
-            error(remainder_[0].pos, "function definition does not end");
+            errorn(remainder_[0].pos, "function definition does not end");
         }
         result.definition = FunctionInfo{remainder_.first(*end + 1)};
         remainder_ = remainder_.subspan(*end + 1);
@@ -252,7 +254,7 @@ namespace parser {
         case util::Category::FUNC:
             return parse_function_decl(true);
         default:
-            error(remainder_[0].pos, "type: expected one of the type_name, union, tuple, got: ", util::to_string(remainder_[0].category));
+            errorn(remainder_[0].pos, "type: expected one of the type_name, union, tuple, got: ", remainder_[0].category);
         }
         consume(1);
         result.generic_params = parse_generic_params();
