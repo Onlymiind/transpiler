@@ -1,490 +1,508 @@
-category: VAR pos: 1
-value: dfhsf, category: IDENTIFIER pos: 1
-category: COLON pos: 1
-category: UNION pos: 1
-category: LESS pos: 1
-value: Foo, category: IDENTIFIER pos: 1
-category: COMMA pos: 1
-value: Bar, category: IDENTIFIER pos: 1
-category: COMMA pos: 1
-value: u32, category: IDENTIFIER pos: 1
-category: COMMA pos: 1
-value: error, category: IDENTIFIER pos: 1
-category: GREATER pos: 1
-category: SEMICOLON pos: 1
-category: TYPE pos: 3
-value: Foo, category: IDENTIFIER pos: 3
-value: u32, category: IDENTIFIER pos: 3
-category: SEMICOLON pos: 3
-category: TYPE pos: 5
-value: Foo324, category: IDENTIFIER pos: 5
-value: roieuwr, category: IDENTIFIER pos: 5
-category: SEMICOLON pos: 5
-value: type Iface interface {, category: COMMENT pos: 7
-value:     Foo(u32, u32) bool;, category: COMMENT pos: 8
-value:     Bar(*u32, const u64) u16;, category: COMMENT pos: 9
-value: }, category: COMMENT pos: 10
-category: TYPE pos: 12
-value: Bar, category: IDENTIFIER pos: 12
-category: STRUCT pos: 12
-category: LBRACE pos: 12
-value: x, category: IDENTIFIER pos: 13
-category: COLON pos: 13
-category: OPTIONAL pos: 13
-category: MULTIPLY pos: 13
-category: MULTIPLY pos: 13
-category: MULTIPLY pos: 13
-category: OPTIONAL pos: 13
-category: MULTIPLY pos: 13
-category: OPTIONAL pos: 13
-category: MULTIPLY pos: 13
-category: OPTIONAL pos: 13
-value: u32, category: IDENTIFIER pos: 13
+category: FUNC pos: 1
+value: foo4, category: IDENTIFIER pos: 1
+category: LPAREN pos: 1
+category: RPAREN pos: 1
+value: string, category: IDENTIFIER pos: 1
+category: LBRACE pos: 1
+value: a nice string, category: STRING pos: 2
+category: SEMICOLON pos: 2
+category: RBRACE pos: 3
+category: FUNC pos: 5
+value: foo16, category: IDENTIFIER pos: 5
+category: LPAREN pos: 5
+category: RPAREN pos: 5
+value: char, category: IDENTIFIER pos: 5
+category: LBRACE pos: 5
+value: c, category: CHAR pos: 6
+category: SEMICOLON pos: 6
+category: RBRACE pos: 7
+category: VAR pos: 9
+value: dfhsf, category: IDENTIFIER pos: 9
+category: COLON pos: 9
+category: UNION pos: 9
+category: LESS pos: 9
+value: Foo, category: IDENTIFIER pos: 9
+category: COMMA pos: 9
+value: Bar, category: IDENTIFIER pos: 9
+category: COMMA pos: 9
+value: u32, category: IDENTIFIER pos: 9
+category: COMMA pos: 9
+value: error, category: IDENTIFIER pos: 9
+category: GREATER pos: 9
+category: SEMICOLON pos: 9
+category: TYPE pos: 11
+value: Foo, category: IDENTIFIER pos: 11
+value: u32, category: IDENTIFIER pos: 11
+category: SEMICOLON pos: 11
+category: TYPE pos: 13
+value: Foo324, category: IDENTIFIER pos: 13
+value: roieuwr, category: IDENTIFIER pos: 13
 category: SEMICOLON pos: 13
-value: y, category: IDENTIFIER pos: 14
-category: COLON pos: 14
-value: u32, category: IDENTIFIER pos: 14
-category: SEMICOLON pos: 14
-category: RBRACE pos: 15
-category: TYPE pos: 17
-value: Barz, category: IDENTIFIER pos: 17
-category: LESS pos: 17
-value: T, category: IDENTIFIER pos: 17
-category: COMMA pos: 17
-value: U, category: IDENTIFIER pos: 17
-category: COMMA pos: 17
-value: V, category: IDENTIFIER pos: 17
-category: GREATER pos: 17
-category: STRUCT pos: 17
-category: LBRACE pos: 17
-value: abc, category: IDENTIFIER pos: 18
-category: COLON pos: 18
-value: a_type, category: IDENTIFIER pos: 18
-category: LESS pos: 18
-value: T, category: IDENTIFIER pos: 18
-category: COMMA pos: 18
-value: u32, category: IDENTIFIER pos: 18
-category: GREATER pos: 18
-category: SEMICOLON pos: 18
-value: un, category: IDENTIFIER pos: 19
-category: COLON pos: 19
-value: U, category: IDENTIFIER pos: 19
-category: SEMICOLON pos: 19
-value: dask, category: IDENTIFIER pos: 20
-category: COLON pos: 20
-value: Tup, category: IDENTIFIER pos: 20
-category: LESS pos: 20
-value: V, category: IDENTIFIER pos: 20
-category: COMMA pos: 20
-value: V, category: IDENTIFIER pos: 20
-category: COMMA pos: 20
-value: V, category: IDENTIFIER pos: 20
-category: GREATER pos: 20
-category: SEMICOLON pos: 20
-category: RBRACE pos: 21
-value: type En enum<u8> {, category: COMMENT pos: 23
-value:     Foo = 1;, category: COMMENT pos: 24
-value:     Bar = 10;, category: COMMENT pos: 25
-value:     Bars = 20;, category: COMMENT pos: 26
-value:     Count = 3;, category: COMMENT pos: 27
-value: }, category: COMMENT pos: 28
-category: TYPE pos: 30
-value: Variant, category: IDENTIFIER pos: 30
-category: UNION pos: 30
-category: LESS pos: 30
-value: u8, category: IDENTIFIER pos: 30
-category: COMMA pos: 30
-value: u16, category: IDENTIFIER pos: 30
-category: COMMA pos: 30
-value: u32, category: IDENTIFIER pos: 30
-category: GREATER pos: 30
-category: SEMICOLON pos: 30
-category: TYPE pos: 32
-value: Tup, category: IDENTIFIER pos: 32
-category: LESS pos: 32
-value: T, category: IDENTIFIER pos: 32
-category: COMMA pos: 32
-value: U, category: IDENTIFIER pos: 32
-category: COMMA pos: 32
-value: V, category: IDENTIFIER pos: 32
-category: GREATER pos: 32
-category: TUPLE pos: 32
-category: LESS pos: 32
-value: u8, category: IDENTIFIER pos: 32
-category: COMMA pos: 32
-value: u16, category: IDENTIFIER pos: 32
-category: COMMA pos: 32
-value: u32, category: IDENTIFIER pos: 32
-category: COMMA pos: 32
-value: T, category: IDENTIFIER pos: 32
-category: COMMA pos: 32
-value: U, category: IDENTIFIER pos: 32
-category: COMMA pos: 32
-value: V, category: IDENTIFIER pos: 32
-category: GREATER pos: 32
-category: SEMICOLON pos: 32
-category: TYPE pos: 34
-value: Result, category: IDENTIFIER pos: 34
-category: LESS pos: 34
-value: T, category: IDENTIFIER pos: 34
-category: COMMA pos: 34
-value: E, category: IDENTIFIER pos: 34
-category: GREATER pos: 34
-category: UNION pos: 34
-category: LESS pos: 34
-value: T, category: IDENTIFIER pos: 34
-category: COMMA pos: 34
-value: E, category: IDENTIFIER pos: 34
-category: GREATER pos: 34
-category: SEMICOLON pos: 34
-category: FUNC pos: 36
-value: Foo, category: IDENTIFIER pos: 36
-category: LPAREN pos: 36
-value: b, category: IDENTIFIER pos: 36
-category: COLON pos: 36
-category: MULTIPLY pos: 36
-value: Bar, category: IDENTIFIER pos: 36
-category: COMMA pos: 36
-value: lhs, category: IDENTIFIER pos: 36
-category: COLON pos: 36
-value: u32, category: IDENTIFIER pos: 36
-category: COMMA pos: 36
-value: rhs, category: IDENTIFIER pos: 36
-category: COLON pos: 36
-value: u32, category: IDENTIFIER pos: 36
-category: RPAREN pos: 36
-value: bool, category: IDENTIFIER pos: 36
-category: LBRACE pos: 36
-category: RETURN pos: 37
-value: lhs, category: IDENTIFIER pos: 37
-category: EQUALS pos: 37
-value: rhs, category: IDENTIFIER pos: 37
-category: SEMICOLON pos: 37
-category: RBRACE pos: 38
-category: FUNC pos: 40
-value: Bar, category: IDENTIFIER pos: 40
-category: LPAREN pos: 40
-value: b, category: IDENTIFIER pos: 40
-category: COLON pos: 40
-category: OPTIONAL pos: 40
-category: MULTIPLY pos: 40
-value: Bar, category: IDENTIFIER pos: 40
+value: type Iface interface {, category: COMMENT pos: 15
+value:     Foo(u32, u32) bool;, category: COMMENT pos: 16
+value:     Bar(*u32, const u64) u16;, category: COMMENT pos: 17
+value: }, category: COMMENT pos: 18
+category: TYPE pos: 20
+value: Bar, category: IDENTIFIER pos: 20
+category: STRUCT pos: 20
+category: LBRACE pos: 20
+value: x, category: IDENTIFIER pos: 21
+category: COLON pos: 21
+category: OPTIONAL pos: 21
+category: MULTIPLY pos: 21
+category: MULTIPLY pos: 21
+category: MULTIPLY pos: 21
+category: OPTIONAL pos: 21
+category: MULTIPLY pos: 21
+category: OPTIONAL pos: 21
+category: MULTIPLY pos: 21
+category: OPTIONAL pos: 21
+value: u32, category: IDENTIFIER pos: 21
+category: SEMICOLON pos: 21
+value: y, category: IDENTIFIER pos: 22
+category: COLON pos: 22
+value: u32, category: IDENTIFIER pos: 22
+category: SEMICOLON pos: 22
+category: RBRACE pos: 23
+category: TYPE pos: 25
+value: Barz, category: IDENTIFIER pos: 25
+category: LESS pos: 25
+value: T, category: IDENTIFIER pos: 25
+category: COMMA pos: 25
+value: U, category: IDENTIFIER pos: 25
+category: COMMA pos: 25
+value: V, category: IDENTIFIER pos: 25
+category: GREATER pos: 25
+category: STRUCT pos: 25
+category: LBRACE pos: 25
+value: abc, category: IDENTIFIER pos: 26
+category: COLON pos: 26
+value: a_type, category: IDENTIFIER pos: 26
+category: LESS pos: 26
+value: T, category: IDENTIFIER pos: 26
+category: COMMA pos: 26
+value: u32, category: IDENTIFIER pos: 26
+category: GREATER pos: 26
+category: SEMICOLON pos: 26
+value: un, category: IDENTIFIER pos: 27
+category: COLON pos: 27
+value: U, category: IDENTIFIER pos: 27
+category: SEMICOLON pos: 27
+value: dask, category: IDENTIFIER pos: 28
+category: COLON pos: 28
+value: Tup, category: IDENTIFIER pos: 28
+category: LESS pos: 28
+value: V, category: IDENTIFIER pos: 28
+category: COMMA pos: 28
+value: V, category: IDENTIFIER pos: 28
+category: COMMA pos: 28
+value: V, category: IDENTIFIER pos: 28
+category: GREATER pos: 28
+category: SEMICOLON pos: 28
+category: RBRACE pos: 29
+value: type En enum<u8> {, category: COMMENT pos: 31
+value:     Foo = 1;, category: COMMENT pos: 32
+value:     Bar = 10;, category: COMMENT pos: 33
+value:     Bars = 20;, category: COMMENT pos: 34
+value:     Count = 3;, category: COMMENT pos: 35
+value: }, category: COMMENT pos: 36
+category: TYPE pos: 38
+value: Variant, category: IDENTIFIER pos: 38
+category: UNION pos: 38
+category: LESS pos: 38
+value: u8, category: IDENTIFIER pos: 38
+category: COMMA pos: 38
+value: u16, category: IDENTIFIER pos: 38
+category: COMMA pos: 38
+value: u32, category: IDENTIFIER pos: 38
+category: GREATER pos: 38
+category: SEMICOLON pos: 38
+category: TYPE pos: 40
+value: Tup, category: IDENTIFIER pos: 40
+category: LESS pos: 40
+value: T, category: IDENTIFIER pos: 40
 category: COMMA pos: 40
-value: ptr, category: IDENTIFIER pos: 40
-category: COLON pos: 40
-category: MULTIPLY pos: 40
+value: U, category: IDENTIFIER pos: 40
+category: COMMA pos: 40
+value: V, category: IDENTIFIER pos: 40
+category: GREATER pos: 40
+category: TUPLE pos: 40
+category: LESS pos: 40
+value: u8, category: IDENTIFIER pos: 40
+category: COMMA pos: 40
+value: u16, category: IDENTIFIER pos: 40
+category: COMMA pos: 40
 value: u32, category: IDENTIFIER pos: 40
 category: COMMA pos: 40
-value: constant, category: IDENTIFIER pos: 40
-category: COLON pos: 40
-value: u64, category: IDENTIFIER pos: 40
-category: RPAREN pos: 40
-value: u16, category: IDENTIFIER pos: 40
-category: LBRACE pos: 40
-value: if, category: IDENTIFIER pos: 41
-value: b, category: IDENTIFIER pos: 41
-category: EQUALS pos: 41
-value: nil, category: IDENTIFIER pos: 41
-category: LBRACE pos: 41
-category: RETURN pos: 42
-value: 0, category: INTEGER pos: 42
+value: T, category: IDENTIFIER pos: 40
+category: COMMA pos: 40
+value: U, category: IDENTIFIER pos: 40
+category: COMMA pos: 40
+value: V, category: IDENTIFIER pos: 40
+category: GREATER pos: 40
+category: SEMICOLON pos: 40
+category: TYPE pos: 42
+value: Result, category: IDENTIFIER pos: 42
+category: LESS pos: 42
+value: T, category: IDENTIFIER pos: 42
+category: COMMA pos: 42
+value: E, category: IDENTIFIER pos: 42
+category: GREATER pos: 42
+category: UNION pos: 42
+category: LESS pos: 42
+value: T, category: IDENTIFIER pos: 42
+category: COMMA pos: 42
+value: E, category: IDENTIFIER pos: 42
+category: GREATER pos: 42
 category: SEMICOLON pos: 42
-category: RBRACE pos: 43
-category: MULTIPLY pos: 44
-value: ptr, category: IDENTIFIER pos: 44
-category: ASSIGN pos: 44
+category: FUNC pos: 44
+value: Foo, category: IDENTIFIER pos: 44
 category: LPAREN pos: 44
 value: b, category: IDENTIFIER pos: 44
-category: DOT pos: 44
-value: x, category: IDENTIFIER pos: 44
+category: COLON pos: 44
 category: MULTIPLY pos: 44
-value: b, category: IDENTIFIER pos: 44
-category: DOT pos: 44
-value: y, category: IDENTIFIER pos: 44
-category: PLUS pos: 44
-category: MULTIPLY pos: 44
-value: ptr, category: IDENTIFIER pos: 44
-category: RPAREN pos: 44
-category: DIVIDE pos: 44
+value: Bar, category: IDENTIFIER pos: 44
+category: COMMA pos: 44
+value: lhs, category: IDENTIFIER pos: 44
+category: COLON pos: 44
 value: u32, category: IDENTIFIER pos: 44
-category: LPAREN pos: 44
-value: constant, category: IDENTIFIER pos: 44
+category: COMMA pos: 44
+value: rhs, category: IDENTIFIER pos: 44
+category: COLON pos: 44
+value: u32, category: IDENTIFIER pos: 44
 category: RPAREN pos: 44
-category: SEMICOLON pos: 44
+value: bool, category: IDENTIFIER pos: 44
+category: LBRACE pos: 44
 category: RETURN pos: 45
-value: u16, category: IDENTIFIER pos: 45
-category: LPAREN pos: 45
-category: MULTIPLY pos: 45
-value: ptr, category: IDENTIFIER pos: 45
-category: RPAREN pos: 45
+value: lhs, category: IDENTIFIER pos: 45
+category: EQUALS pos: 45
+value: rhs, category: IDENTIFIER pos: 45
 category: SEMICOLON pos: 45
 category: RBRACE pos: 46
-value:  comment, comment \n, category: COMMENT pos: 48
-category: FUNC pos: 51
-value: foo, category: IDENTIFIER pos: 51
-category: LPAREN pos: 51
-value: x, category: IDENTIFIER pos: 51
-category: COLON pos: 51
-value: i32, category: IDENTIFIER pos: 51
-category: COMMA pos: 51
-value: y, category: IDENTIFIER pos: 51
-category: COLON pos: 51
-value: u32, category: IDENTIFIER pos: 51
-category: RPAREN pos: 51
-value: u64, category: IDENTIFIER pos: 51
-category: LBRACE pos: 51
-category: RETURN pos: 52
-value: u64, category: IDENTIFIER pos: 52
+category: FUNC pos: 48
+value: Bar, category: IDENTIFIER pos: 48
+category: LPAREN pos: 48
+value: b, category: IDENTIFIER pos: 48
+category: COLON pos: 48
+category: OPTIONAL pos: 48
+category: MULTIPLY pos: 48
+value: Bar, category: IDENTIFIER pos: 48
+category: COMMA pos: 48
+value: ptr, category: IDENTIFIER pos: 48
+category: COLON pos: 48
+category: MULTIPLY pos: 48
+value: u32, category: IDENTIFIER pos: 48
+category: COMMA pos: 48
+value: constant, category: IDENTIFIER pos: 48
+category: COLON pos: 48
+value: u64, category: IDENTIFIER pos: 48
+category: RPAREN pos: 48
+value: u16, category: IDENTIFIER pos: 48
+category: LBRACE pos: 48
+value: if, category: IDENTIFIER pos: 49
+value: b, category: IDENTIFIER pos: 49
+category: EQUALS pos: 49
+value: nil, category: IDENTIFIER pos: 49
+category: LBRACE pos: 49
+category: RETURN pos: 50
+value: 0, category: INTEGER pos: 50
+category: SEMICOLON pos: 50
+category: RBRACE pos: 51
+category: MULTIPLY pos: 52
+value: ptr, category: IDENTIFIER pos: 52
+category: ASSIGN pos: 52
 category: LPAREN pos: 52
+value: b, category: IDENTIFIER pos: 52
+category: DOT pos: 52
+value: x, category: IDENTIFIER pos: 52
+category: MULTIPLY pos: 52
+value: b, category: IDENTIFIER pos: 52
+category: DOT pos: 52
 value: y, category: IDENTIFIER pos: 52
 category: PLUS pos: 52
+category: MULTIPLY pos: 52
+value: ptr, category: IDENTIFIER pos: 52
+category: RPAREN pos: 52
+category: DIVIDE pos: 52
 value: u32, category: IDENTIFIER pos: 52
 category: LPAREN pos: 52
-value: x, category: IDENTIFIER pos: 52
-category: RPAREN pos: 52
+value: constant, category: IDENTIFIER pos: 52
 category: RPAREN pos: 52
 category: SEMICOLON pos: 52
-category: RBRACE pos: 53
-category: FUNC pos: 55
-value: errors, category: IDENTIFIER pos: 55
-category: LPAREN pos: 55
-value: option, category: IDENTIFIER pos: 55
-category: COLON pos: 55
-value: bool, category: IDENTIFIER pos: 55
-category: RPAREN pos: 55
-category: UNION pos: 55
-category: LESS pos: 55
-value: u32, category: IDENTIFIER pos: 55
-category: COMMA pos: 55
-value: error, category: IDENTIFIER pos: 55
-category: GREATER pos: 55
-category: LBRACE pos: 55
-value: if, category: IDENTIFIER pos: 56
-value: option, category: IDENTIFIER pos: 56
-category: LBRACE pos: 56
-category: RETURN pos: 57
-value: err, category: IDENTIFIER pos: 57
-category: LPAREN pos: 57
-category: RPAREN pos: 57
-category: SEMICOLON pos: 57
-category: RBRACE pos: 58
-category: RETURN pos: 59
-value: 10, category: INTEGER pos: 59
-category: SEMICOLON pos: 59
-category: RBRACE pos: 60
-category: FUNC pos: 62
-value: main, category: IDENTIFIER pos: 62
-category: LPAREN pos: 62
-category: RPAREN pos: 62
-category: OPTIONAL pos: 62
-value: error, category: IDENTIFIER pos: 62
-category: LBRACE pos: 62
-category: BLANK pos: 64
-category: ASSIGN pos: 64
-value: foo, category: IDENTIFIER pos: 64
-category: LPAREN pos: 64
-value: 1000, category: INTEGER pos: 64
-category: COMMA pos: 64
-value: 999, category: INTEGER pos: 64
-category: RPAREN pos: 64
-category: SEMICOLON pos: 64
-category: VAR pos: 66
-value: x, category: IDENTIFIER pos: 66
-category: COLON pos: 66
-value: bool, category: IDENTIFIER pos: 66
-category: SEMICOLON pos: 66
-category: VAR pos: 67
-value: bar, category: IDENTIFIER pos: 67
-category: COLON pos: 67
-category: ASSIGN pos: 67
-value: example, category: IDENTIFIER pos: 67
-category: NAMESPACE_OP pos: 67
-value: Bar, category: IDENTIFIER pos: 67
-category: LBRACE pos: 67
-value: y, category: IDENTIFIER pos: 67
-category: ASSIGN pos: 67
+category: RETURN pos: 53
+value: u16, category: IDENTIFIER pos: 53
+category: LPAREN pos: 53
+category: MULTIPLY pos: 53
+value: ptr, category: IDENTIFIER pos: 53
+category: RPAREN pos: 53
+category: SEMICOLON pos: 53
+category: RBRACE pos: 54
+value:  comment, comment \n, category: COMMENT pos: 56
+category: FUNC pos: 59
+value: foo, category: IDENTIFIER pos: 59
+category: LPAREN pos: 59
+value: x, category: IDENTIFIER pos: 59
+category: COLON pos: 59
+value: i32, category: IDENTIFIER pos: 59
+category: COMMA pos: 59
+value: y, category: IDENTIFIER pos: 59
+category: COLON pos: 59
+value: u32, category: IDENTIFIER pos: 59
+category: RPAREN pos: 59
+value: u64, category: IDENTIFIER pos: 59
+category: LBRACE pos: 59
+category: RETURN pos: 60
+value: u64, category: IDENTIFIER pos: 60
+category: LPAREN pos: 60
+value: y, category: IDENTIFIER pos: 60
+category: PLUS pos: 60
+value: u32, category: IDENTIFIER pos: 60
+category: LPAREN pos: 60
+value: x, category: IDENTIFIER pos: 60
+category: RPAREN pos: 60
+category: RPAREN pos: 60
+category: SEMICOLON pos: 60
+category: RBRACE pos: 61
+category: FUNC pos: 63
+value: errors, category: IDENTIFIER pos: 63
+category: LPAREN pos: 63
+value: option, category: IDENTIFIER pos: 63
+category: COLON pos: 63
+value: bool, category: IDENTIFIER pos: 63
+category: RPAREN pos: 63
+category: UNION pos: 63
+category: LESS pos: 63
+value: u32, category: IDENTIFIER pos: 63
+category: COMMA pos: 63
+value: error, category: IDENTIFIER pos: 63
+category: GREATER pos: 63
+category: LBRACE pos: 63
+value: if, category: IDENTIFIER pos: 64
+value: option, category: IDENTIFIER pos: 64
+category: LBRACE pos: 64
+category: RETURN pos: 65
+value: err, category: IDENTIFIER pos: 65
+category: LPAREN pos: 65
+category: RPAREN pos: 65
+category: SEMICOLON pos: 65
+category: RBRACE pos: 66
+category: RETURN pos: 67
 value: 10, category: INTEGER pos: 67
-category: COMMA pos: 67
-value: x, category: IDENTIFIER pos: 67
-category: ASSIGN pos: 67
-value: 111, category: INTEGER pos: 67
-category: RBRACE pos: 67
 category: SEMICOLON pos: 67
-value: x, category: IDENTIFIER pos: 69
-category: ASSIGN pos: 69
-value: bar, category: IDENTIFIER pos: 69
-category: DOT pos: 69
-value: Foo, category: IDENTIFIER pos: 69
-category: LPAREN pos: 69
-value: 1984, category: INTEGER pos: 69
-category: COMMA pos: 69
-value: 1984, category: INTEGER pos: 69
-category: RPAREN pos: 69
-category: SEMICOLON pos: 69
-category: VAR pos: 71
-value: works, category: IDENTIFIER pos: 71
-category: COLON pos: 71
-value: u32, category: IDENTIFIER pos: 71
-category: ASSIGN pos: 71
-category: LBRACE pos: 71
-value: errors, category: IDENTIFIER pos: 71
-category: LPAREN pos: 71
-value: false, category: IDENTIFIER pos: 71
-category: RPAREN pos: 71
-category: SEMICOLON pos: 71
-category: RBRACE pos: 71
-category: OPTIONAL pos: 71
-category: LBRACKET pos: 71
-value: res, category: IDENTIFIER pos: 71
-category: COLON pos: 71
-value: u32, category: IDENTIFIER pos: 71
-category: RBRACKET pos: 71
-category: LBRACE pos: 71
-value: res, category: IDENTIFIER pos: 71
-category: SEMICOLON pos: 71
-category: RBRACE pos: 71
-category: COMMA pos: 71
-category: LBRACKET pos: 71
-value: err, category: IDENTIFIER pos: 71
-category: COLON pos: 71
-value: error, category: IDENTIFIER pos: 71
-category: RBRACKET pos: 71
-category: LBRACE pos: 71
-category: RETURN pos: 71
-value: err, category: IDENTIFIER pos: 71
-category: SEMICOLON pos: 71
-category: RBRACE pos: 71
-category: SEMICOLON pos: 71
-category: VAR pos: 73
-value: returns, category: IDENTIFIER pos: 73
-category: COLON pos: 73
-value: u32, category: IDENTIFIER pos: 73
-category: SEMICOLON pos: 73
-value:  do something with returns, category: COMMENT pos: 74
-value: returns, category: IDENTIFIER pos: 75
+category: RBRACE pos: 68
+category: FUNC pos: 70
+value: main, category: IDENTIFIER pos: 70
+category: LPAREN pos: 70
+category: RPAREN pos: 70
+category: OPTIONAL pos: 70
+value: error, category: IDENTIFIER pos: 70
+category: LBRACE pos: 70
+category: BLANK pos: 72
+category: ASSIGN pos: 72
+value: foo, category: IDENTIFIER pos: 72
+category: LPAREN pos: 72
+value: 1000, category: INTEGER pos: 72
+category: COMMA pos: 72
+value: 999, category: INTEGER pos: 72
+category: RPAREN pos: 72
+category: SEMICOLON pos: 72
+category: VAR pos: 74
+value: x, category: IDENTIFIER pos: 74
+category: COLON pos: 74
+value: bool, category: IDENTIFIER pos: 74
+category: SEMICOLON pos: 74
+category: VAR pos: 75
+value: bar, category: IDENTIFIER pos: 75
+category: COLON pos: 75
 category: ASSIGN pos: 75
+value: example, category: IDENTIFIER pos: 75
+category: NAMESPACE_OP pos: 75
+value: Bar, category: IDENTIFIER pos: 75
 category: LBRACE pos: 75
-value: errors, category: IDENTIFIER pos: 75
-category: LPAREN pos: 75
-value: true, category: IDENTIFIER pos: 75
-category: RPAREN pos: 75
-category: SEMICOLON pos: 75
-category: RBRACE pos: 75
-category: OPTIONAL pos: 75
-category: LBRACKET pos: 75
-value: res, category: IDENTIFIER pos: 75
-category: COLON pos: 75
-value: u32, category: IDENTIFIER pos: 75
-category: RBRACKET pos: 75
-category: LBRACE pos: 75
-value: res, category: IDENTIFIER pos: 75
-category: SEMICOLON pos: 75
-category: RBRACE pos: 75
+value: y, category: IDENTIFIER pos: 75
+category: ASSIGN pos: 75
+value: 10, category: INTEGER pos: 75
 category: COMMA pos: 75
-category: LBRACKET pos: 75
-value: err, category: IDENTIFIER pos: 75
-category: COLON pos: 75
-value: error, category: IDENTIFIER pos: 75
-category: RBRACKET pos: 75
-category: LBRACE pos: 75
-category: RETURN pos: 75
-value: err, category: IDENTIFIER pos: 75
-category: SEMICOLON pos: 75
+value: x, category: IDENTIFIER pos: 75
+category: ASSIGN pos: 75
+value: 111, category: INTEGER pos: 75
 category: RBRACE pos: 75
 category: SEMICOLON pos: 75
-value: if, category: IDENTIFIER pos: 77
 value: x, category: IDENTIFIER pos: 77
-category: LBRACE pos: 77
-category: VAR pos: 78
-value: y, category: IDENTIFIER pos: 78
-category: COLON pos: 78
-category: MULTIPLY pos: 78
-value: u32, category: IDENTIFIER pos: 78
-category: ASSIGN pos: 78
-value: new, category: IDENTIFIER pos: 78
-category: LESS pos: 78
-value: u32, category: IDENTIFIER pos: 78
-category: GREATER pos: 78
-category: LPAREN pos: 78
-value: 10, category: INTEGER pos: 78
-category: RPAREN pos: 78
-category: SEMICOLON pos: 78
-value: defer, category: IDENTIFIER pos: 79
-value: delete, category: IDENTIFIER pos: 79
+category: ASSIGN pos: 77
+value: bar, category: IDENTIFIER pos: 77
+category: DOT pos: 77
+value: Foo, category: IDENTIFIER pos: 77
+category: LPAREN pos: 77
+value: 1984, category: INTEGER pos: 77
+category: COMMA pos: 77
+value: 1984, category: INTEGER pos: 77
+category: RPAREN pos: 77
+category: SEMICOLON pos: 77
+category: VAR pos: 79
+value: works, category: IDENTIFIER pos: 79
+category: COLON pos: 79
+value: u32, category: IDENTIFIER pos: 79
+category: ASSIGN pos: 79
+category: LBRACE pos: 79
+value: errors, category: IDENTIFIER pos: 79
 category: LPAREN pos: 79
-value: y, category: IDENTIFIER pos: 79
+value: false, category: IDENTIFIER pos: 79
 category: RPAREN pos: 79
 category: SEMICOLON pos: 79
-value: std, category: IDENTIFIER pos: 81
-category: NAMESPACE_OP pos: 81
-value: println, category: IDENTIFIER pos: 81
-category: LPAREN pos: 81
-value: bar, category: IDENTIFIER pos: 81
-category: DOT pos: 81
-value: Bar, category: IDENTIFIER pos: 81
-category: LPAREN pos: 81
-value: y, category: IDENTIFIER pos: 81
-category: COMMA pos: 81
-value: u64, category: IDENTIFIER pos: 81
-category: LPAREN pos: 81
-category: MULTIPLY pos: 81
-value: y, category: IDENTIFIER pos: 81
-category: RPAREN pos: 81
-category: RPAREN pos: 81
-category: RPAREN pos: 81
+category: RBRACE pos: 79
+category: OPTIONAL pos: 79
+category: LBRACKET pos: 79
+value: res, category: IDENTIFIER pos: 79
+category: COLON pos: 79
+value: u32, category: IDENTIFIER pos: 79
+category: RBRACKET pos: 79
+category: LBRACE pos: 79
+value: res, category: IDENTIFIER pos: 79
+category: SEMICOLON pos: 79
+category: RBRACE pos: 79
+category: COMMA pos: 79
+category: LBRACKET pos: 79
+value: err, category: IDENTIFIER pos: 79
+category: COLON pos: 79
+value: error, category: IDENTIFIER pos: 79
+category: RBRACKET pos: 79
+category: LBRACE pos: 79
+category: RETURN pos: 79
+value: err, category: IDENTIFIER pos: 79
+category: SEMICOLON pos: 79
+category: RBRACE pos: 79
+category: SEMICOLON pos: 79
+category: VAR pos: 81
+value: returns, category: IDENTIFIER pos: 81
+category: COLON pos: 81
+value: u32, category: IDENTIFIER pos: 81
 category: SEMICOLON pos: 81
-category: RBRACE pos: 82
-category: RETURN pos: 86
-value: nil, category: IDENTIFIER pos: 86
+value:  do something with returns, category: COMMENT pos: 82
+value: returns, category: IDENTIFIER pos: 83
+category: ASSIGN pos: 83
+category: LBRACE pos: 83
+value: errors, category: IDENTIFIER pos: 83
+category: LPAREN pos: 83
+value: true, category: IDENTIFIER pos: 83
+category: RPAREN pos: 83
+category: SEMICOLON pos: 83
+category: RBRACE pos: 83
+category: OPTIONAL pos: 83
+category: LBRACKET pos: 83
+value: res, category: IDENTIFIER pos: 83
+category: COLON pos: 83
+value: u32, category: IDENTIFIER pos: 83
+category: RBRACKET pos: 83
+category: LBRACE pos: 83
+value: res, category: IDENTIFIER pos: 83
+category: SEMICOLON pos: 83
+category: RBRACE pos: 83
+category: COMMA pos: 83
+category: LBRACKET pos: 83
+value: err, category: IDENTIFIER pos: 83
+category: COLON pos: 83
+value: error, category: IDENTIFIER pos: 83
+category: RBRACKET pos: 83
+category: LBRACE pos: 83
+category: RETURN pos: 83
+value: err, category: IDENTIFIER pos: 83
+category: SEMICOLON pos: 83
+category: RBRACE pos: 83
+category: SEMICOLON pos: 83
+value: if, category: IDENTIFIER pos: 85
+value: x, category: IDENTIFIER pos: 85
+category: LBRACE pos: 85
+category: VAR pos: 86
+value: y, category: IDENTIFIER pos: 86
+category: COLON pos: 86
+category: MULTIPLY pos: 86
+value: u32, category: IDENTIFIER pos: 86
+category: ASSIGN pos: 86
+value: new, category: IDENTIFIER pos: 86
+category: LESS pos: 86
+value: u32, category: IDENTIFIER pos: 86
+category: GREATER pos: 86
+category: LPAREN pos: 86
+value: 10, category: INTEGER pos: 86
+category: RPAREN pos: 86
 category: SEMICOLON pos: 86
-category: RBRACE pos: 87
-category: FUNC pos: 89
-value: unnamed, category: IDENTIFIER pos: 89
+value: defer, category: IDENTIFIER pos: 87
+value: delete, category: IDENTIFIER pos: 87
+category: LPAREN pos: 87
+value: y, category: IDENTIFIER pos: 87
+category: RPAREN pos: 87
+category: SEMICOLON pos: 87
+value: std, category: IDENTIFIER pos: 89
+category: NAMESPACE_OP pos: 89
+value: println, category: IDENTIFIER pos: 89
 category: LPAREN pos: 89
-value: u64, category: IDENTIFIER pos: 89
+value: bar, category: IDENTIFIER pos: 89
+category: DOT pos: 89
+value: Bar, category: IDENTIFIER pos: 89
+category: LPAREN pos: 89
+value: y, category: IDENTIFIER pos: 89
 category: COMMA pos: 89
-value: error, category: IDENTIFIER pos: 89
+value: u64, category: IDENTIFIER pos: 89
+category: LPAREN pos: 89
+category: MULTIPLY pos: 89
+value: y, category: IDENTIFIER pos: 89
 category: RPAREN pos: 89
-category: LBRACE pos: 89
-category: RBRACE pos: 89
-category: TYPE pos: 91
-value: Functor, category: IDENTIFIER pos: 91
-category: STRUCT pos: 91
-category: LBRACE pos: 91
-value: data, category: IDENTIFIER pos: 92
-category: COLON pos: 92
-category: MULTIPLY pos: 92
-value: u8, category: IDENTIFIER pos: 92
-category: SEMICOLON pos: 92
-value: fun, category: IDENTIFIER pos: 93
-category: COLON pos: 93
-category: FUNC pos: 93
-category: LPAREN pos: 93
-category: MULTIPLY pos: 93
-value: u8, category: IDENTIFIER pos: 93
-category: COMMA pos: 93
-value: u16, category: IDENTIFIER pos: 93
-category: RPAREN pos: 93
-category: OPTIONAL pos: 93
-value: u32, category: IDENTIFIER pos: 93
-category: SEMICOLON pos: 93
-category: RBRACE pos: 94
-category: TYPE pos: 97
-value: Erroneous, category: IDENTIFIER pos: 97
-category: STRUCT pos: 97
+category: RPAREN pos: 89
+category: RPAREN pos: 89
+category: SEMICOLON pos: 89
+category: RBRACE pos: 90
+category: RETURN pos: 94
+value: nil, category: IDENTIFIER pos: 94
+category: SEMICOLON pos: 94
+category: RBRACE pos: 95
+category: FUNC pos: 97
+value: unnamed, category: IDENTIFIER pos: 97
+category: LPAREN pos: 97
+value: u64, category: IDENTIFIER pos: 97
+category: COMMA pos: 97
+value: error, category: IDENTIFIER pos: 97
+category: RPAREN pos: 97
 category: LBRACE pos: 97
-value: field1, category: IDENTIFIER pos: 98
-category: COLON pos: 98
-value: u8, category: IDENTIFIER pos: 98
-category: SEMICOLON pos: 98
-value: sddffwdfsfs, category: IDENTIFIER pos: 99
-value: field2, category: IDENTIFIER pos: 100
+category: RBRACE pos: 97
+category: TYPE pos: 99
+value: Functor, category: IDENTIFIER pos: 99
+category: STRUCT pos: 99
+category: LBRACE pos: 99
+value: data, category: IDENTIFIER pos: 100
 category: COLON pos: 100
-value: u16, category: IDENTIFIER pos: 100
+category: MULTIPLY pos: 100
+value: u8, category: IDENTIFIER pos: 100
 category: SEMICOLON pos: 100
-value: field3, category: IDENTIFIER pos: 101
+value: fun, category: IDENTIFIER pos: 101
 category: COLON pos: 101
+category: FUNC pos: 101
+category: LPAREN pos: 101
+category: MULTIPLY pos: 101
+value: u8, category: IDENTIFIER pos: 101
+category: COMMA pos: 101
 value: u16, category: IDENTIFIER pos: 101
+category: RPAREN pos: 101
+category: OPTIONAL pos: 101
+value: u32, category: IDENTIFIER pos: 101
 category: SEMICOLON pos: 101
 category: RBRACE pos: 102
+category: TYPE pos: 105
+value: Erroneous, category: IDENTIFIER pos: 105
+category: STRUCT pos: 105
+category: LBRACE pos: 105
+value: field1, category: IDENTIFIER pos: 106
+category: COLON pos: 106
+value: u8, category: IDENTIFIER pos: 106
+category: SEMICOLON pos: 106
+value: sddffwdfsfs, category: IDENTIFIER pos: 107
+value: field2, category: IDENTIFIER pos: 108
+category: COLON pos: 108
+value: u16, category: IDENTIFIER pos: 108
+category: SEMICOLON pos: 108
+value: field3, category: IDENTIFIER pos: 109
+category: COLON pos: 109
+value: u16, category: IDENTIFIER pos: 109
+category: SEMICOLON pos: 109
+category: RBRACE pos: 110
 Done

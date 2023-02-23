@@ -28,6 +28,10 @@ namespace lexer {
 
         std::optional<util::Token> get_numeric(std::istream& in);
 
+        std::optional<util::Token> get_string(std::istream& in);
+
+        std::optional<util::Token> get_char(std::istream& in);
+
         bool eat_expected(std::istream& in, char expected);
 
         bool eat_expected(std::istream& in, std::string_view str);

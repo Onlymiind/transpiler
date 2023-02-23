@@ -12,6 +12,7 @@
 #include <string_view>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <optional>
 
 namespace util {
@@ -79,9 +80,11 @@ namespace util {
         SEMICOLON,
         DOT,
 
-        // Numeric
+        // Literals
         INTEGER,
         FLOAT,
+        STRING,
+        CHAR,
 
         // Comments
         COMMENT,
@@ -175,6 +178,8 @@ namespace util {
         CASE(RETURN);
         CASE(TUPLE);
         CASE(VAR);
+        CASE(STRING);
+        CASE(CHAR);
         default: return "";
         }
 #undef CASE
@@ -201,6 +206,12 @@ namespace util {
         Position pos_;
         Pos pos {0};
         std::string value;
+
+        union {
+            uint64_t num;
+            double f_num;
+            char c;
+        };
 
         inline constexpr bool is_type_modifier() const noexcept {
             return util::is_type_modifier(category);
@@ -316,10 +327,15 @@ namespace util {
 
     Tokens split(Tokens& tokens, Category delim);
 
-    std::optional<size_t> find_in_current_scope(Tokens tokens, util::Category cat);
+    std::optional<size_t> find_in_current_scope(Tokens tokens, Category cat);
+
+    std::optional<std::pair<util::Category, size_t>> find_in_current_scope(Tokens tokens, const std::unordered_set<Category>& categories);
 
     template<typename T>
-    concept String = std::is_constructible_v<std::string, std::decay_t<T>>;
+    concept Stringable = std::is_constructible_v<std::string, std::decay_t<T>>;
+
+    template<typename T, typename... Args>
+    concept Function = std::is_invocable_v<T, Args...>;
 
     template<typename... T>
     std::string sprint(T... args) {

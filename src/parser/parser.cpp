@@ -6,25 +6,6 @@
 #include <memory>
 
 namespace parser {
-
-    std::optional<std::pair<util::Category, size_t>> find_in_current_scope(util::Tokens tokens, const std::unordered_set<util::Category>& categories) {
-        std::unordered_map<util::Category, size_t> found;
-        for(auto cat : categories) {
-            auto idx = util::find_in_current_scope(tokens, cat);
-            if(idx) {
-                found[cat] = *idx;
-            }
-        }
-
-        if(found.empty()) {
-            return {};
-        }
-
-        auto it = std::min_element(found.begin(), found.end(), [](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
-
-        return *it;
-    }
-
     std::optional<size_t> first_not_comment(util::Tokens tokens) {
         auto it = std::find_if(tokens.begin(), tokens.end(), [](const auto& token){
             return token.category != util::Category::COMMENT;

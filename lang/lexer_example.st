@@ -1,3 +1,11 @@
+func foo4() string {
+    "a nice string";
+}
+
+func foo16() char {
+    'c';
+}
+
 var dfhsf : union<Foo, Bar, u32, error>;
 
 type Foo u32;

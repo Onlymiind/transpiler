@@ -77,8 +77,6 @@ namespace parser {
         std::variant<Declaration, StructInfo, FunctionInfo> definition;
     };
 
-    std::optional<std::pair<util::Category, size_t>> find_in_current_scope(util::Tokens tokens, const std::unordered_set<util::Category>& categories);
-
     std::optional<size_t> first_not_comment(util::Tokens tokens);
 
     void parse(std::vector<util::Token> tokens);
@@ -132,40 +130,7 @@ namespace parser {
             }
         }
 
-        template<typename Function>
-        void do_in_scope(std::pair<util::Category, util::Category> delim, util::Category sep, Function func, const std::string& err_prefix = "", bool trailing_sep = false) {
-            consume_expected(delim.first, err_prefix);
-            auto pos = find_in_current_scope(remainder_, {delim.second, sep});
-            auto next = [delim, sep, trailing_sep, err_prefix, this] () -> util::Tokens {
-                return this->split_in_scope(delim.second, sep, trailing_sep, err_prefix);
-            };
-
-            for(auto piece = next(); !piece.empty(); piece = next()) {
-                func(piece);
-            }
-        }
-
-        inline util::Tokens split_in_scope(util::Category scope_end, util::Category sep, bool trailing_sep = false, const std::string& err_prefix = "") {
-            if(remainder_[0].category == scope_end || remainder_[0].category == util::Category::END_OF_FILE) {
-                return util::Tokens{};
-            }
-
-            auto pos = find_in_current_scope(this->remainder_, {scope_end, sep});
-            if(!pos) {
-                return util::Tokens{};
-            }
-
-            if(trailing_sep && pos->first != sep) {
-                errorn(remainder_[pos->second].pos, err_prefix, ": expected a ", sep, ", got a ", pos->first);
-            }
-
-            util::Tokens result = remainder_.first(pos->second);
-            remainder_ = remainder_.subspan(pos->second);
-
-            return result;
-        }
-
-        template<typename Function>
+        template<util::Function Function>
         void do_with_recovery(util::Category recovery_point, Function func) {
             try {
                 func();
@@ -177,6 +142,15 @@ namespace parser {
                 consume(pos ? *pos + 1: remainder_.size());
             }
         }
+
+        template<util::Function Function, util::Function<std::string_view> Recover>
+        void do_with_recovery(Function func, Recover recover_func) {
+            try {
+                func();
+            } catch (const ParserError& e) {
+                recover_func(e.what());
+            }
+        };
 
         // pushes an error to errors_ and throws ParserError
         [[noreturn]] void error(size_t pos, const std::string& msg);

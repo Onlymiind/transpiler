@@ -136,6 +136,10 @@ namespace lexer {
             return {};
         } else if(is_comment(in)) {
             return get_comment(in);
+        } else if(c == '"') {
+            return get_string(in);
+        } else if(c == '\'') {
+            return get_char(in);
         } else if(is_special_token(c)) {
             return get_special_token(in);
         } else if(std::isalpha(c) || c == '_') {
@@ -255,5 +259,44 @@ namespace lexer {
 
     constexpr bool Lexer::is_special_token(char c) {
         return !(std::isalnum(c) || c == '_');
+    }
+
+    std::optional<util::Token> Lexer::get_string(std::istream& in) {
+        if(!eat_expected(in, '"')) {
+            return {};
+        }
+
+        util::Token result{.category = util::Category::STRING, .pos = line_};
+        
+        for(char c = in.get(); in && c != '"'; c = in.get()) {
+            result.value.push_back(c);
+        }
+
+        if(!in) {
+            return {};
+        }
+
+        return result;
+    }
+
+    std::optional<util::Token> Lexer::get_char(std::istream& in) {
+        if(!eat_expected(in, '\'')) {
+            return {};
+        }
+
+        util::Token result {.category = util::Category::CHAR, .pos = line_};
+        char c = in.get();
+        if(!in) {
+            return {};
+        }
+
+        result.value = std::string{{c}};
+        result.c = c;
+
+        if(!eat_expected(in, '\'')) {
+            return {};
+        }
+
+        return result;
     }
 }

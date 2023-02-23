@@ -107,4 +107,30 @@ namespace util {
 
         return {};
     }
+
+    std::optional<std::pair<util::Category, size_t>> find_in_current_scope(Tokens tokens, const std::unordered_set<Category>& categories) {
+        size_t scope{};
+        bool has_lbrace = categories.contains(Category::LBRACE);
+        for(size_t i = 0; i < tokens.size(); i++) {
+
+            Category cat = tokens[i].category;
+            
+            // "{" will be consumed by util::consume_scope, so check for it here 
+            if(has_lbrace && cat == Category::LBRACE) {
+                return std::pair{cat, i};
+            }
+
+            i = util::consume_scope(tokens, i, {util::Category::LBRACE, util::Category::RBRACE});
+            if(i >= tokens.size()) {
+                break;
+            }
+
+            if(scope == 0 && categories.contains(cat)) {
+                return std::pair{cat, i};
+            }
+        }
+
+        return {};
+    }
+
 }
