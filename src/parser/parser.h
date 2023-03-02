@@ -117,6 +117,8 @@ namespace parser {
 
         Expression parse_unary_expression();
 
+        Expression parse_primary_expression();
+
         inline void consume(size_t count) {
             remainder_ = remainder_.subspan(count);
         }

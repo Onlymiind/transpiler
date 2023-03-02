@@ -247,32 +247,36 @@ namespace parser {
     }
 
     Expression Parser::parse_unary_expression() {
+        static const std::unordered_map<util::Category, Action> unary_ops{
+            {util::Category::MINUS, Action::NEGATE},
+            {util::Category::PLUS, Action::NONE},
+            {util::Category::NOT, Action::NOT},
+            {util::Category::INVERT, Action::INV},
+            {util::Category::MULTIPLY, Action::DEREF}
+        };
+        Expression result;
+        auto it = unary_ops.find(remainder_[0].category);
+        if(it != unary_ops.end()) {
+            result.action = it->second;
+            consume(1);
+        }
+
+        auto primary = parse_primary_expression();
+        if(result.action == Action::NONE) {
+            return primary;
+        }
+        result.lhs = std::make_unique<Expression>(std::move(primary));
+        return result;
+    }
+
+    Expression Parser::parse_primary_expression() {
         Expression result;
         switch(remainder_[0].category) {
-        case util::Category::MINUS:
-            consume(1);
-            result = Expression{.action = Action::NEGATE, .lhs = std::make_unique<Expression>(parse_expression())};
-            break;
-        case util::Category::PLUS:
-            consume(1);
-            result = parse_expression();
-            break;
-        case util::Category::MULTIPLY:
-            consume(1);
-            result = Expression{.action = Action::DEREF, .lhs = std::make_unique<Expression>(parse_expression())};
-            break;
-        case util::Category::NOT:
-            consume(1);
-            result = Expression{.action = Action::NOT, .lhs = std::make_unique<Expression>(parse_expression())};
-            break;
-        case util::Category::INVERT:
-            consume(1);
-            result = Expression{.action = Action::INV, .lhs = std::make_unique<Expression>(parse_expression())};
-            break;
         case util::Category::IDENTIFIER:
         case util::Category::INTEGER:
         case util::Category::FLOAT:
         case util::Category::STRING:
+        case util::Category::CHAR:
             result.terminal = remainder_[0];
             consume(1);
             break;
