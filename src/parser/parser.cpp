@@ -243,6 +243,10 @@ namespace parser {
     }
 
     Expression Parser::parse_expression() {
+        return parse_unary_expression();
+    }
+
+    Expression Parser::parse_unary_expression() {
         Expression result;
         switch(remainder_[0].category) {
         case util::Category::MINUS:
@@ -252,6 +256,10 @@ namespace parser {
         case util::Category::PLUS:
             consume(1);
             result = parse_expression();
+            break;
+        case util::Category::MULTIPLY:
+            consume(1);
+            result = Expression{.action = Action::DEREF, .lhs = std::make_unique<Expression>(parse_expression())};
             break;
         case util::Category::IDENTIFIER:
         case util::Category::INTEGER:
