@@ -2,6 +2,7 @@
 
 #include <iterator>
 #include <algorithm>
+#include <sstream>
 
 namespace lexer {
 
@@ -290,7 +291,7 @@ namespace lexer {
             return {};
         }
 
-        result.value = std::string{{c}};
+        result.value = std::string{static_cast<size_t>(1), c};
         result.c = c;
 
         if(!eat_expected(in, '\'')) {
@@ -298,5 +299,10 @@ namespace lexer {
         }
 
         return result;
+    }
+
+    std::vector<util::Token> split(std::string_view str) {
+        std::stringstream in{str.data(), std::ios_base::in};
+        return Lexer{}.split(in);
     }
 }

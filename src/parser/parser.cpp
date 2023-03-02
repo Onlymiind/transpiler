@@ -68,12 +68,12 @@ namespace parser {
         consume(1);
 
         std::vector<GenericParam> result;
-        result.emplace_back(remainder_[0].value);
+        result.emplace_back(GenericParam{remainder_[0].value});
         consume_expected(util::Category::IDENTIFIER, "generic params");
 
         while(remainder_[0].category != util::Category::GREATER) {
             consume_expected(util::Category::COMMA, "generic params");
-            result.emplace_back(remainder_[0].value);
+            result.emplace_back(GenericParam{remainder_[0].value});
             consume_expected(util::Category::IDENTIFIER, "generic params");
         }
 
@@ -161,7 +161,7 @@ namespace parser {
                 unnamed_param_cnt++;
             }
             auto& param = result.func_params[param_name];
-            param = std::make_unique<Field>(parse_type());
+            param = std::make_unique<Field>(Field{parse_type()});
             if(remainder_[0].category != util::Category::RPAREN) {
                 consume_expected(util::Category::COMMA, "function declaration");
             }
@@ -242,8 +242,33 @@ namespace parser {
         return result;
     }
 
+    Expression Parser::parse_expression() {
+        Expression result;
+        switch(remainder_[0].category) {
+        case util::Category::MINUS:
+            consume(1);
+            result = Expression{.action = Action::NEGATE, .lhs = std::make_unique<Expression>(parse_expression())};
+            break;
+        case util::Category::PLUS:
+            consume(1);
+            result = parse_expression();
+            break;
+        case util::Category::IDENTIFIER:
+        case util::Category::INTEGER:
+        case util::Category::FLOAT:
+        case util::Category::STRING:
+            result.terminal = remainder_[0];
+            consume(1);
+            break;
+        default:
+            errorn(remainder_[0].pos, "unexpected token: ", remainder_[0].category);
+        }
+
+        return result;
+    }
+
     void Parser::error(size_t pos, const std::string& msg) {
-        errors_.emplace_back(pos, msg);
+        errors_.emplace_back(util::Error{pos, msg});
         throw ParserError{"pos " + std::to_string(pos) + ", parser error: " + msg};
     }
 }

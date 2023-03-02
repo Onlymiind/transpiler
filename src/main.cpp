@@ -5,20 +5,15 @@
 #include "lexer/lexer.h"
 #include "parser/parser.h"
 
-inline constexpr std::string_view temp{"tmp.st"};
-inline constexpr std::string_view in_fname{"/home/onlymind/mine/cpp/projects/transpiler/lang/lexer_example.st"};
+inline constexpr std::string_view in_fname{"/home/onlymind/mine/cpp/projects/transpiler/lang/example.st"};
 inline constexpr std::string_view out_fname{"/home/onlymind/mine/cpp/projects/transpiler/out.txt"};
 
 int main() {
     std::cout << util::sprint(std::string{"string"}, 10, std::string_view{"fdskjfhk"}, "fdjsfho") << std::endl;
 
-    std::filesystem::copy(in_fname, temp);
-    std::fstream in{temp.data(), std::ios::in | std::ios::out | std::ios::ate};
-    in << '\n';
-    in.seekg(0, std::ios::beg);
+    std::ifstream in{in_fname.data(), std::ios::in};
     std::ofstream out{out_fname.data()};
     auto vec = lexer::Lexer{}.split(in);
-    std::filesystem::remove(temp);
 
     for(auto w : vec) {
         out << w << '\n';

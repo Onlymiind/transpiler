@@ -11,6 +11,7 @@
 #include <memory>
 
 #include "util/util.h"
+#include "parser/expression.h"
 
 namespace parser {
 
@@ -111,6 +112,8 @@ namespace parser {
         StructInfo parse_struct_def();
 
         Declaration parse_function_decl(bool unnamed = false);
+
+        Expression parse_expression();
 
         inline void consume(size_t count) {
             remainder_ = remainder_.subspan(count);

@@ -11,17 +11,33 @@ set(LEXER_MODULE
 set(PARSER_MODULE
     src/parser/parser.h
     src/parser/parser.cpp
+    src/parser/expression.h
+    src/parser/expression.cpp
 )
 
-add_executable(transpiler
+add_library(transpiler_lib
     ${LEXER_MODULE}
     ${PARSER_MODULE}
 
     src/util/util.h
     src/util/util.cpp
+)
+
+add_executable(transpiler
     src/main.cpp
 )
 
-target_include_directories(transpiler PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
+add_executable(tests
+    tests/expression_test.h
+    tests/tests.cpp
 )
+
+add_subdirectory(${CMAKE_SOURCE_DIR}/Catch2)
+
+target_link_libraries(transpiler PRIVATE transpiler_lib)
+target_link_libraries(tests PRIVATE transpiler_lib Catch2)
+
+target_include_directories(transpiler_lib PUBLIC ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(tests PRIVATE ${CMAKE_SOURCE_DIR}/test)
+
+add_test("Transpiler tests" tests)

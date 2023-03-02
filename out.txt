@@ -13,7 +13,7 @@ category: LPAREN pos: 5
 category: RPAREN pos: 5
 value: char, category: IDENTIFIER pos: 5
 category: LBRACE pos: 5
-value: c, category: CHAR pos: 6
+value: c, category: CHAR pos: 6
 category: SEMICOLON pos: 6
 category: RBRACE pos: 7
 category: VAR pos: 9

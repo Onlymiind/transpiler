@@ -14,6 +14,8 @@
 
 namespace lexer {
 
+    std::vector<util::Token> split(std::string_view str);
+
     class Lexer{
     public:
         Lexer() noexcept = default;
