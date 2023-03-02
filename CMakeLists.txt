@@ -19,6 +19,7 @@ add_library(transpiler_lib
     ${LEXER_MODULE}
     ${PARSER_MODULE}
 
+    src/util/hashmap.h
     src/util/util.h
     src/util/util.cpp
 )
