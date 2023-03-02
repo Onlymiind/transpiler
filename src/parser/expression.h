@@ -19,6 +19,7 @@ namespace parser {
         BAND,
         OR,
         BOR,
+        XOR,
         NOT,
         INV,
         LSHIFT,

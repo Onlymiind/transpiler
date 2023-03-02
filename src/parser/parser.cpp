@@ -261,6 +261,14 @@ namespace parser {
             consume(1);
             result = Expression{.action = Action::DEREF, .lhs = std::make_unique<Expression>(parse_expression())};
             break;
+        case util::Category::NOT:
+            consume(1);
+            result = Expression{.action = Action::NOT, .lhs = std::make_unique<Expression>(parse_expression())};
+            break;
+        case util::Category::INVERT:
+            consume(1);
+            result = Expression{.action = Action::INV, .lhs = std::make_unique<Expression>(parse_expression())};
+            break;
         case util::Category::IDENTIFIER:
         case util::Category::INTEGER:
         case util::Category::FLOAT:

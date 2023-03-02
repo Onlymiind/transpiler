@@ -9,24 +9,31 @@
 #include "parser/parser.h"
 #include "lexer/lexer.h"
 
-using TestData = std::pair<std::string_view, parser::Expression>;
+struct TestData {
+    std::string name;
+    std::string str;
+    parser::Expression expected;
+};
+
 inline std::array test_data{
-    TestData{"1000", parser::integer(1000)},
-    TestData{"identifier", parser::ident("identifier")},
-    TestData{"-1", parser::unary_expression(parser::Action::NEGATE, parser::integer(1))},
-    TestData{"-identifier", parser::unary_expression(parser::Action::NEGATE, parser::ident("identifier"))},
-    TestData{"+1", parser::integer(1)},
-    TestData{"+identifier", parser::ident("identifier")},
-    TestData{"10.11", parser::floating(10.11)},
-    TestData{"-10.11", parser::unary_expression(parser::Action::NEGATE, parser::floating(10.11))},
-    TestData{"+10.11", parser::floating(10.11)},
-    TestData{"*ptr", parser::unary_expression(parser::Action::DEREF, parser::ident("ptr"))}
+    TestData{"integer", "1000", parser::integer(1000)},
+    TestData{"identifier", "identifier", parser::ident("identifier")},
+    TestData{"negative integer", "-1", parser::unary_expression(parser::Action::NEGATE, parser::integer(1))},
+    TestData{"identifier negation", "-identifier", parser::unary_expression(parser::Action::NEGATE, parser::ident("identifier"))},
+    TestData{"+integer", "+1", parser::integer(1)},
+    TestData{"+identifier", "+identifier", parser::ident("identifier")},
+    TestData{"float", "10.11", parser::floating(10.11)},
+    TestData{"negative float", "-10.11", parser::unary_expression(parser::Action::NEGATE, parser::floating(10.11))},
+    TestData{"+float", "+10.11", parser::floating(10.11)},
+    TestData{"deref", "*ptr", parser::unary_expression(parser::Action::DEREF, parser::ident("ptr"))},
+    TestData{"not", "!boolean", parser::unary_expression(parser::Action::NOT, parser::ident("boolean"))},
+    TestData{"invert", "~flags", parser::unary_expression(parser::Action::INV, parser::ident("flags"))}
 };
 
 TEST_CASE("Simple expressions") {
-    for(const auto& [str, expected] : test_data) {
-        INFO(std::string{"testsing expression: "} + std::string{str});
-        parser::Expression result = parser::Parser{lexer::split(str)}.parse_unary_expression();
-        REQUIRE(result == expected);
+    for(const auto& test : test_data) {
+        INFO(test.name + ", expression: " + test.str);
+        parser::Expression result = parser::Parser{lexer::split(test.str)}.parse_expression();
+        REQUIRE(result == test.expected);
     }
 }

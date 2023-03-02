@@ -43,7 +43,9 @@ namespace lexer {
         {'=', util::Category::ASSIGN},
         {'?', util::Category::OPTIONAL},
         {'<', util::Category::LESS},
-        {'>', util::Category::GREATER}
+        {'>', util::Category::GREATER},
+        {'~', util::Category::INVERT},
+        {'^', util::Category::XOR}
     };
 
     const std::unordered_map<std::string_view, util::Category> Lexer::keywords_ = {

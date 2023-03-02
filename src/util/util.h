@@ -52,6 +52,8 @@ namespace util {
         GREATER,
         LESS_EQ,
         GREATER_EQ,
+        INVERT,
+        XOR,
 
         //Braces
         LPAREN,
