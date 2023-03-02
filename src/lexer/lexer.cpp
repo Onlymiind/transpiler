@@ -133,6 +133,10 @@ namespace lexer {
     std::optional<util::Token> Lexer::get_word(std::istream& in) {
         std::string result;
         char c = in.peek();
+        if(!in) {
+            return {};
+        }
+        
         if(std::isspace(c)) {
             return {};
         } else if(is_comment(in)) {
@@ -253,6 +257,10 @@ namespace lexer {
             }
             eat_spaces(in);
             buf = get_word(in);
+        }
+
+        if(buf) {
+            result.emplace_back(std::move(*buf));
         }
 
         return result;

@@ -208,6 +208,9 @@ namespace util {
     };
 
     std::ostream& operator<<(std::ostream& out, const Token& token);
+    inline constexpr bool operator==(const Token& lhs, const Token& rhs) {
+        return lhs.category == rhs.category && lhs.value == rhs.value;
+    }
 
     class Tokens : private std::span<const Token> {
         using Base = std::span<const Token>;

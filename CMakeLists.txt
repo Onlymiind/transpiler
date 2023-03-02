@@ -28,14 +28,13 @@ add_executable(transpiler
 )
 
 add_executable(tests
-    tests/expression_test.h
-    tests/tests.cpp
+    tests/expression_test.cpp
 )
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/Catch2)
 
 target_link_libraries(transpiler PRIVATE transpiler_lib)
-target_link_libraries(tests PRIVATE transpiler_lib Catch2)
+target_link_libraries(tests PRIVATE transpiler_lib Catch2WithMain)
 
 target_include_directories(transpiler_lib PUBLIC ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(tests PRIVATE ${CMAKE_SOURCE_DIR}/test)

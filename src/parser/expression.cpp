@@ -1,5 +1,7 @@
 #include "parser/expression.h"
 
+#include <sstream>
+
 namespace parser {
     Expression unary_expression(Action action, Expression arg) {
         return Expression{
@@ -9,9 +11,12 @@ namespace parser {
     }
 
     Expression floating(double val) {
+        std::stringstream out;
+        out << val;
+    
         return Expression{.terminal = util::Token{
             .category = util::Category::FLOAT,
-            .value = std::to_string(val),
+            .value = out.str(),
             .f_num = val
         }};
     }

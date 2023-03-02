@@ -32,6 +32,13 @@ namespace parser {
         std::unique_ptr<Expression> rhs;
         std::optional<util::Token> terminal;
     };
+
+    inline bool operator==(const Expression& lhs, const Expression& rhs) {
+        return lhs.action == rhs.action &&
+            (!lhs.lhs && !rhs.lhs || *lhs.lhs == *rhs.lhs) &&
+            (!lhs.rhs && !rhs.rhs || *lhs.rhs == *rhs.rhs) &&
+            lhs.terminal == rhs.terminal;
+    }
     
     Expression unary_expression(Action action, Expression arg);
 
