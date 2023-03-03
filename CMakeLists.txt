@@ -32,12 +32,20 @@ add_executable(tests
     tests/expression_test.cpp
 )
 
+add_executable(benchmarks
+    benchmarks/hashmap_bench.cpp
+)
+
 add_subdirectory(${CMAKE_SOURCE_DIR}/Catch2)
+
+set(BENCHMARK_ENABLE_TESTING OFF)
+add_subdirectory(${CMAKE_SOURCE_DIR}/benchmark)
 
 target_link_libraries(transpiler PRIVATE transpiler_lib)
 target_link_libraries(tests PRIVATE transpiler_lib Catch2WithMain)
+target_link_libraries(benchmarks PRIVATE transpiler_lib benchmark::benchmark_main)
 
 target_include_directories(transpiler_lib PUBLIC ${CMAKE_SOURCE_DIR}/src)
-target_include_directories(tests PRIVATE ${CMAKE_SOURCE_DIR}/test)
+#target_include_directories(tests PRIVATE ${CMAKE_SOURCE_DIR}/test)
 
 add_test("Transpiler tests" tests)

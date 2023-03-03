@@ -250,12 +250,13 @@ namespace parser {
 
     Expression Parser::parse_unary_expression() {
         constexpr util::Hashmap unary_ops{std::array{
-                std::pair<util::Category, Action>{util::Category::MINUS, Action::NEGATE},
-                std::pair<util::Category, Action>{util::Category::PLUS, Action::NONE},
-                std::pair<util::Category, Action>{util::Category::NOT, Action::NOT},
-                std::pair<util::Category, Action>{util::Category::INVERT, Action::INV},
-                std::pair<util::Category, Action>{util::Category::MULTIPLY, Action::DEREF}
+                std::pair{util::Category::MINUS, Action::NEGATE},
+                std::pair{util::Category::PLUS, Action::NONE},
+                std::pair{util::Category::NOT, Action::NOT},
+                std::pair{util::Category::INVERT, Action::INV},
+                std::pair{util::Category::MULTIPLY, Action::DEREF}
         }};
+        
         Expression result;
         auto action = unary_ops[remainder_[0].category];
         if(action) {

@@ -1,6 +1,7 @@
 #pragma once 
 #include <array>
 #include <optional>
+#include <string_view>
 #include <utility>
 #include <cstdint>
 #include <cstddef>
@@ -48,9 +49,29 @@ namespace util {
         return static_cast<size_t>(val);
     }
 
+    template<>
+    constexpr size_t hash(std::string_view val) noexcept {
+        size_t result = 0;
+        for(char c : val) {
+            result *= 7919;
+            result += c;
+        }
+        return result;
+    }
+
     template<typename T>
     constexpr size_t odd_hash(T val) noexcept {
         return (static_cast<size_t>(val) * 7919) | size_t(1);
+    }
+
+    template<>
+    constexpr size_t odd_hash(std::string_view val) noexcept {
+        size_t result = 0;
+        for(char c : val) {
+            result *= 7919;
+            result += c;
+        }
+        return result | size_t(1);
     }
 
     template<typename Key, typename Val, size_t Count>
@@ -124,8 +145,9 @@ namespace util {
         Storage storage_;
     };
 
-    template<typename T, typename... KeyValPairs>
-    consteval auto make_hashmap(KeyValPairs... args) {
-        return Hashmap{std::array<T, sizeof...(KeyValPairs)>{args...}};
+    template<typename T, typename V, typename... Args>
+    consteval Hashmap<T, V, sizeof...(Args)> make_hashmap(Args... args) {
+        return Hashmap{std::array<std::pair<T, V>, sizeof...(Args)>{args...}};
     }
 }
+
