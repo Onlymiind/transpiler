@@ -5,6 +5,8 @@
 #include <iostream>
 #include <memory>
 
+#include "util/hashmap.h"
+
 namespace parser {
     std::optional<size_t> first_not_comment(util::Tokens tokens) {
         auto it = std::find_if(tokens.begin(), tokens.end(), [](const auto& token){
@@ -247,17 +249,17 @@ namespace parser {
     }
 
     Expression Parser::parse_unary_expression() {
-        static const std::unordered_map<util::Category, Action> unary_ops{
-            {util::Category::MINUS, Action::NEGATE},
-            {util::Category::PLUS, Action::NONE},
-            {util::Category::NOT, Action::NOT},
-            {util::Category::INVERT, Action::INV},
-            {util::Category::MULTIPLY, Action::DEREF}
-        };
+        constexpr util::Hashmap unary_ops{std::array{
+                std::pair<util::Category, Action>{util::Category::MINUS, Action::NEGATE},
+                std::pair<util::Category, Action>{util::Category::PLUS, Action::NONE},
+                std::pair<util::Category, Action>{util::Category::NOT, Action::NOT},
+                std::pair<util::Category, Action>{util::Category::INVERT, Action::INV},
+                std::pair<util::Category, Action>{util::Category::MULTIPLY, Action::DEREF}
+        }};
         Expression result;
-        auto it = unary_ops.find(remainder_[0].category);
-        if(it != unary_ops.end()) {
-            result.action = it->second;
+        auto action = unary_ops[remainder_[0].category];
+        if(action) {
+            result.action = *action;
             consume(1);
         }
 
