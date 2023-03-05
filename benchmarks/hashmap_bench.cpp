@@ -10,138 +10,314 @@
 #include "util/util.h"
 #include "util/hashmap.h"
 
-std::vector<char> data{
-    '!','&','|','/','*','(',')','{','}','[',']',',','\'',
-    '\'',':',';','.','+','-','=','?','<','>','~','^', ' ',
-    'i', 'b', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-    '0', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p',
-    's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'z', 'x', 'c'
-};
+/*
+        std::pair{'!', 4},
+        std::pair{'&', 19},
+        std::pair{'|', 16},
+        std::pair{'/', 8},
+        std::pair{'*', 76},
+        std::pair{'(', 39},
+        std::pair{')', 33},
+        std::pair{'{', 47},
+        std::pair{'}', 174},
+        std::pair{'[', 534},
+        std::pair{']', 823},
+        std::pair{',', 800},
+        std::pair{'\'', 240},
+        std::pair{'\"', 907},
+        std::pair{':', 282},
+        std::pair{';', 424},
+        std::pair{'.', 275},
+        std::pair{'+', 866},
+        std::pair{'-', 884},
+        std::pair{'=', 346},
+        std::pair{'?', 539},
+        std::pair{'<', 236},
+        std::pair{'>', 151},
+        std::pair{'~', 125},
+        std::pair{'^', 186},
+        std::pair{'q', 944},
+        std::pair{'w', 650},
+        std::pair{'e', 916},
+        std::pair{'r', 210},
+        std::pair{'t', 642},
+        std::pair{'y', 536},
+        std::pair{'u', 531},
+        std::pair{'i', 519},
+        std::pair{'o', 264},
+        std::pair{'p', 883},
+        std::pair{'a', 185},
+        std::pair{'s', 933},
+        std::pair{'d', 318},
+        std::pair{'f', 127},
+        std::pair{'g', 141},
+        std::pair{'h',  686},
+        std::pair{'j', 717},
+        std::pair{'k', 450},
+        std::pair{'l', 254},
+        std::pair{'z', 478},
+        std::pair{'x', 209},
+        std::pair{'c', 226},
+        std::pair{'v', 306},
+        std::pair{'b', 975},
+        std::pair{'n', 726},
+        std::pair{'m', 356},
+        std::pair{'1', 610},
+        std::pair{'2', 510},
+        std::pair{'3', 839},
+        std::pair{'4', 520},
+        std::pair{'5', 942}
+        
+*/
 
 void BM_const_hashmap(benchmark::State& state) {
-    constexpr util::Hashmap map = util::make_hashmap<char, util::Category>(
-        std::pair{'!', util::Category::NOT},
-        std::pair{'&', util::Category::BIWISE_AND},
-        std::pair{'|', util::Category::BITWISE_OR},
-        std::pair{'/', util::Category::DIVIDE},
-        std::pair{'*', util::Category::MULTIPLY},
-        std::pair{'(', util::Category::LPAREN},
-        std::pair{')', util::Category::RPAREN},
-        std::pair{'{', util::Category::LBRACE},
-        std::pair{'}', util::Category::RBRACE},
-        std::pair{'[', util::Category::LBRACKET},
-        std::pair{']', util::Category::RBRACKET},
-        std::pair{',', util::Category::COMMA},
-        std::pair{'\'', util::Category::SINGLE_QUOTE},
-        std::pair{'\"', util::Category::DOUBLE_QUOTE},
-        std::pair{':', util::Category::COLON},
-        std::pair{';', util::Category::SEMICOLON},
-        std::pair{'.', util::Category::DOT},
-        std::pair{'+', util::Category::PLUS},
-        std::pair{'-', util::Category::MINUS},
-        std::pair{'=', util::Category::ASSIGN},
-        std::pair{'?', util::Category::OPTIONAL},
-        std::pair{'<', util::Category::LESS},
-        std::pair{'>', util::Category::GREATER},
-        std::pair{'~', util::Category::INVERT},
-        std::pair{'^', util::Category::XOR}
+    constexpr util::Hashmap map = util::Hashmap(
+        std::array{std::pair{'!', 4},
+        std::pair{'&', 19},
+        std::pair{'|', 16},
+        std::pair{'/', 8},
+        std::pair{'*', 76},
+        std::pair{'(', 39},
+        std::pair{')', 33},
+        std::pair{'{', 47},
+        std::pair{'}', 174},
+        std::pair{'[', 534},
+        std::pair{']', 823},
+        std::pair{',', 800},
+        std::pair{'\'', 240},
+        std::pair{'\"', 907},
+        std::pair{':', 282},
+        std::pair{';', 424},
+        std::pair{'.', 275},
+        std::pair{'+', 866},
+        std::pair{'-', 884},
+        std::pair{'=', 346},
+        std::pair{'?', 539},
+        std::pair{'<', 236},
+        std::pair{'>', 151},
+        std::pair{'~', 125},
+        std::pair{'^', 186},
+        std::pair{'q', 944},
+        std::pair{'w', 650},
+        std::pair{'e', 916},
+        std::pair{'r', 210},
+        std::pair{'t', 642},
+        std::pair{'y', 536},
+        std::pair{'u', 531},
+        std::pair{'i', 519},
+        std::pair{'o', 264},
+        std::pair{'p', 883},
+        std::pair{'a', 185},
+        std::pair{'s', 933},
+        std::pair{'d', 318},
+        std::pair{'f', 127},
+        std::pair{'g', 141},
+        std::pair{'h',  686},
+        std::pair{'j', 717},
+        std::pair{'k', 450},
+        std::pair{'l', 254},
+        std::pair{'z', 478},
+        std::pair{'x', 209},
+        std::pair{'c', 226},
+        std::pair{'v', 306},
+        std::pair{'b', 975},
+        std::pair{'n', 726},
+        std::pair{'m', 356},
+        std::pair{'1', 610},
+        std::pair{'2', 510},
+        std::pair{'3', 839},
+        std::pair{'4', 520},
+        std::pair{'5', 942}}
     );
-
-    std::shuffle(data.begin(), data.end(), std::mt19937{std::random_device{}()});
-
-    size_t i = 0;
-    size_t size = data.size();
+    
+    std::random_device device{};
+    std::mt19937 rand{device()};
     
     for(auto _ : state) {
-        volatile auto c = map.find(data[i]);
-        i = (i + 1) % size;
+        volatile auto c = map.find(rand() % 128);
+    }
+}
+
+void BM_const_robinmap(benchmark::State& state) {
+    constexpr util::RobinMap map = util::RobinMap(
+        std::array{std::pair{'!', 4},
+        std::pair{'&', 19},
+        std::pair{'|', 16},
+        std::pair{'/', 8},
+        std::pair{'*', 76},
+        std::pair{'(', 39},
+        std::pair{')', 33},
+        std::pair{'{', 47},
+        std::pair{'}', 174},
+        std::pair{'[', 534},
+        std::pair{']', 823},
+        std::pair{',', 800},
+        std::pair{'\'', 240},
+        std::pair{'\"', 907},
+        std::pair{':', 282},
+        std::pair{';', 424},
+        std::pair{'.', 275},
+        std::pair{'+', 866},
+        std::pair{'-', 884},
+        std::pair{'=', 346},
+        std::pair{'?', 539},
+        std::pair{'<', 236},
+        std::pair{'>', 151},
+        std::pair{'~', 125},
+        std::pair{'^', 186},
+        std::pair{'q', 944},
+        std::pair{'w', 650},
+        std::pair{'e', 916},
+        std::pair{'r', 210},
+        std::pair{'t', 642},
+        std::pair{'y', 536},
+        std::pair{'u', 531},
+        std::pair{'i', 519},
+        std::pair{'o', 264},
+        std::pair{'p', 883},
+        std::pair{'a', 185},
+        std::pair{'s', 933},
+        std::pair{'d', 318},
+        std::pair{'f', 127},
+        std::pair{'g', 141},
+        std::pair{'h',  686},
+        std::pair{'j', 717},
+        std::pair{'k', 450},
+        std::pair{'l', 254},
+        std::pair{'z', 478},
+        std::pair{'x', 209},
+        std::pair{'c', 226},
+        std::pair{'v', 306},
+        std::pair{'b', 975},
+        std::pair{'n', 726},
+        std::pair{'m', 356},
+        std::pair{'1', 610},
+        std::pair{'2', 510},
+        std::pair{'3', 839},
+        std::pair{'4', 520},
+        std::pair{'5', 942}}
+    );
+
+    std::random_device device{};
+    std::mt19937 rand{device()};
+    
+    for(auto _ : state) {
+        volatile auto c = map.find(rand() % 128);
     }
 }
 
 void BM_std_hashmap(benchmark::State& state) {
-    const std::unordered_map<char, util::Category> map{
-        {'!', util::Category::NOT},
-        {'&', util::Category::BIWISE_AND},
-        {'|', util::Category::BITWISE_OR},
-        {'/', util::Category::DIVIDE},
-        {'*', util::Category::MULTIPLY},
-        {'(', util::Category::LPAREN},
-        {')', util::Category::RPAREN},
-        {'{', util::Category::LBRACE},
-        {'}', util::Category::RBRACE},
-        {'[', util::Category::LBRACKET},
-        {']', util::Category::RBRACKET},
-        {',', util::Category::COMMA},
-        {'\'', util::Category::SINGLE_QUOTE},
-        {'"', util::Category::DOUBLE_QUOTE},
-        {':', util::Category::COLON},
-        {';', util::Category::SEMICOLON},
-        {'.', util::Category::DOT},
-        {'+', util::Category::PLUS},
-        {'-', util::Category::MINUS},
-        {'=', util::Category::ASSIGN},
-        {'?', util::Category::OPTIONAL},
-        {'<', util::Category::LESS},
-        {'>', util::Category::GREATER},
-        {'~', util::Category::INVERT},
-        {'^', util::Category::XOR}
+    static const std::unordered_map<char, int> map{
+        std::pair{'!', 4},
+        std::pair{'&', 19},
+        std::pair{'|', 16},
+        std::pair{'/', 8},
+        std::pair{'*', 76},
+        std::pair{'(', 39},
+        std::pair{')', 33},
+        std::pair{'{', 47},
+        std::pair{'}', 174},
+        std::pair{'[', 534},
+        std::pair{']', 823},
+        std::pair{',', 800},
+        std::pair{'\'', 240},
+        std::pair{'\"', 907},
+        std::pair{':', 282},
+        std::pair{';', 424},
+        std::pair{'.', 275},
+        std::pair{'+', 866},
+        std::pair{'-', 884},
+        std::pair{'=', 346},
+        std::pair{'?', 539},
+        std::pair{'<', 236},
+        std::pair{'>', 151},
+        std::pair{'~', 125},
+        std::pair{'^', 186},
+        std::pair{'q', 944},
+        std::pair{'w', 650},
+        std::pair{'e', 916},
+        std::pair{'r', 210},
+        std::pair{'t', 642},
+        std::pair{'y', 536},
+        std::pair{'u', 531},
+        std::pair{'i', 519},
+        std::pair{'o', 264},
+        std::pair{'p', 883},
+        std::pair{'a', 185},
+        std::pair{'s', 933},
+        std::pair{'d', 318},
+        std::pair{'f', 127},
+        std::pair{'g', 141},
+        std::pair{'h',  686},
+        std::pair{'j', 717},
+        std::pair{'k', 450},
+        std::pair{'l', 254},
+        std::pair{'z', 478},
+        std::pair{'x', 209},
+        std::pair{'c', 226},
+        std::pair{'v', 306},
+        std::pair{'b', 975},
+        std::pair{'n', 726},
+        std::pair{'m', 356},
+        std::pair{'1', 610},
+        std::pair{'2', 510},
+        std::pair{'3', 839},
+        std::pair{'4', 520},
+        std::pair{'5', 942}
     };
 
-    std::shuffle(data.begin(), data.end(), std::mt19937{std::random_device{}()});
-    size_t i = 0;
-    size_t size = data.size();
-
+    std::random_device device{};
+    std::mt19937 rand{device()};
+    
     for(auto _ : state) {
-        volatile auto c = map.find(data[i]);
-        i = (i + 1) % size;
+        volatile auto c = map.find(rand() % 128);
     }
 
 }
 
-constexpr inline util::Category switch_func(char c) {
+constexpr inline int switch_func(char c) {
         switch(c) 
         {
-        case '!': return  util::Category::NOT;
-        case '&': return  util::Category::BIWISE_AND;
-        case '|': return  util::Category::BITWISE_OR;
-        case '/': return  util::Category::DIVIDE;
-        case '*': return  util::Category::MULTIPLY;
-        case '(': return  util::Category::LPAREN;
-        case ')': return  util::Category::RPAREN;
-        case '{': return  util::Category::LBRACE;
-        case '}': return  util::Category::RBRACE;
-        case '[': return  util::Category::LBRACKET;
-        case ']': return  util::Category::RBRACKET;
-        case ',': return  util::Category::COMMA;
-        case '\'': return util::Category::SINGLE_QUOTE;
-        case '"': return  util::Category::DOUBLE_QUOTE;
-        case ':': return  util::Category::COLON;
-        case ';': return  util::Category::SEMICOLON;
-        case '.': return  util::Category::DOT;
-        case '+': return  util::Category::PLUS;
-        case '-': return  util::Category::MINUS;
-        case '=': return  util::Category::ASSIGN;
-        case '?': return  util::Category::OPTIONAL;
-        case '<': return  util::Category::LESS;
-        case '>': return  util::Category::GREATER;
-        case '~': return  util::Category::INVERT;
-        case '^': return  util::Category::XOR;
-        default: return util::Category::NONE;
+        case '!' : return 1 ;
+        case '&' : return 201 ;
+        case '|' : return 3 ;
+        case '/' : return 4 ;
+        case '*' : return 5322 ;
+        case '(' : return 632910 ;
+        case ')' : return 7 ;
+        case '{' : return 8 ;
+        case '}' : return 9 ;
+        case '[' : return 10 ;
+        case ']' : return 11 ;
+        case ',' : return 12124 ;
+        case '\'' : return 13 ;
+        case '\"' : return 14 ;
+        case ':' : return 15343 ;
+        case ';' : return 16 ;
+        case '.' : return 17 ;
+        case '+' : return 18132 ;
+        case '-' : return 191 ;
+        case '=' : return 210 ;
+        case '?' : return 219 ;
+        case '<' : return 2232 ;
+        case '>' : return 23 ;
+        case '~' : return 2423 ;
+        case '^' : return 254 ;
+        default: return -1;
         }
 }
 
 void BM_switch(benchmark::State& state) {
-    std::shuffle(data.begin(), data.end(), std::mt19937{std::random_device{}()});
-    size_t i = 0;
-    size_t size = data.size();
-
+    std::random_device device{};
+    std::mt19937 rand{device()};
+    
     for(auto _ : state) {
-        volatile auto c = switch_func(data[i]);
-        i = (i + 1) % size;
+        volatile auto c = switch_func(rand() % 128);
     }
 }
 
 BENCHMARK(BM_const_hashmap);
+BENCHMARK(BM_const_robinmap);
 BENCHMARK(BM_std_hashmap);
 BENCHMARK(BM_switch);
 
