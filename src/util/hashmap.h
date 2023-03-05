@@ -56,9 +56,20 @@ namespace util {
     template<>
     constexpr size_t hash(std::string_view val) noexcept {
         size_t result = 0;
-        for(char c : val) {
-            result *= 7919;
-            result += c;
+        uint64_t buf = 0;
+        for(size_t i = 0; i < val.size() % 8; i++) {
+            buf = (buf | val[i]) << 1;
+        }
+        for(size_t i = val.size() % 8; i < val.size(); i += 8) {
+            buf = (buf | val[i]) << 1;
+            buf = (buf | val[i + 1]) << 1;
+            buf = (buf | val[i + 2]) << 1;
+            buf = (buf | val[i + 3]) << 1;
+            buf = (buf | val[i + 4]) << 1;
+            buf = (buf | val[i + 5]) << 1;
+            buf = (buf | val[i + 6]) << 1;
+            buf = (buf | val[i + 7]) << 1;
+            result = result * 7919 + buf;
         }
         return result;
     }
@@ -71,11 +82,22 @@ namespace util {
     template<>
     constexpr size_t odd_hash(std::string_view val) noexcept {
         size_t result = 0;
-        for(char c : val) {
-            result *= 7919;
-            result += c;
+        uint64_t buf = 0;
+        for(size_t i = 0; i < val.size() % 8; i++) {
+            buf = (buf | val[i]) << 1;
         }
-        return result | size_t(1);
+        for(size_t i = val.size() % 8; i < val.size(); i += 8) {
+            buf = (buf | val[i]) << 1;
+            buf = (buf | val[i + 1]) << 1;
+            buf = (buf | val[i + 2]) << 1;
+            buf = (buf | val[i + 3]) << 1;
+            buf = (buf | val[i + 4]) << 1;
+            buf = (buf | val[i + 5]) << 1;
+            buf = (buf | val[i + 6]) << 1;
+            buf = (buf | val[i + 7]) << 1;
+            result = result * 7919 + buf;
+        }
+        return result | 1;
     }
 
     template<typename Key, typename Val, size_t Count>
@@ -165,22 +187,25 @@ namespace util {
 
     template<typename Key, typename Val, size_t Count>
     class RobinMap {
+    public:
         struct StorageItem {
-            Key key{};
-            Val val{};
+            size_t hash = 0;
+            size_t idx = 0;
             uint8_t probe = 0;
             bool free = true;
         };
-    public:
+        
         using Storage = std::array<StorageItem, next_pow_of_two(Count)>;
 
         using iterator = typename Storage::const_iterator;
     
-        constexpr RobinMap(std::array<std::pair<Key, Val>, Count> items) noexcept {
+        constexpr RobinMap(std::array<std::pair<Key, Val>, Count> items) noexcept 
+            : items_(items)
+        {
             bool dummy = false;
-            for(auto pair : items) {
+            for(size_t i = 0; i < items_.size(); i++) {
                 // insertion should always succeed at this point
-                dummy = insert(pair);
+                dummy = insert(items_[i].first, i);
             }
         }
 
@@ -194,14 +219,16 @@ namespace util {
         }
 
         constexpr iterator find(Key key) const noexcept {
-            size_t idx = hash(key);
+            size_t key_hash = hash(key);
+            size_t idx = key_hash;
             for(size_t i = 0; i < storage_.size(); i++) {
                 idx = (idx + i) % storage_.size();
-                if(storage_[idx].free) {
+                const auto& item = storage_[idx];
+                if(item.free) {
                     return end();
-                } else if(storage_[idx].key == key) {
+                } else if(item.hash == key_hash && items_[item.idx].first == key) {
                     return begin() + i;
-                } else if(storage_[idx].probe > i) {
+                } else if(item.probe > i) {
                     return end();
                 }
             }
@@ -225,13 +252,13 @@ namespace util {
             return storage_.size();
         }
 
-        [[nodiscard]] constexpr bool insert(Key k, Val v) noexcept {
-            return insert(std::pair<Key, Val>(k, v));
-        }
-
-        [[nodiscard]] constexpr bool insert(std::pair<Key, Val> p) noexcept {
-            size_t idx = hash(p.first);
-            StorageItem item = {.key = p.first, .val = p.second, .free = false};
+        [[nodiscard]] constexpr bool insert(Key key, size_t item_idx) noexcept {
+            size_t idx = hash(key);
+            StorageItem item = {
+                .hash = hash(key),
+                .idx = item_idx,
+                .free = false
+            };
             for(size_t i = 0; i < storage_.size(); i++) {
                 idx = (idx + i) % storage_.size();
                 if(storage_[idx].free) {
@@ -247,6 +274,7 @@ namespace util {
         
     private:
         Storage storage_;
+        std::array<std::pair<Key, Val>, Count> items_;
     };
 
 
