@@ -5,7 +5,9 @@
 #include <iostream>
 #include <memory>
 
+#include "parser/expression.h"
 #include "util/hashmap.h"
+#include "util/util.h"
 
 namespace parser {
     std::optional<size_t> first_not_comment(util::Tokens tokens) {
@@ -200,12 +202,16 @@ namespace parser {
             return result;
         }
 
-        auto end = util::find_in_current_scope(remainder_, util::Category::RBRACE);
-        if(!end) {
-            errorn(remainder_[0].pos, "function definition does not end");
+        consume_expected(util::Category::LBRACE);
+        FunctionInfo body;
+        while(remainder_[0].category != util::Category::RBRACE) {
+            body.body.emplace_back(parse_expression());
+            if(!body.body.back().is_block()) {
+                consume_expected(util::Category::SEMICOLON);
+            }
         }
-        result.definition = FunctionInfo{remainder_.first(*end + 1)};
-        remainder_ = remainder_.subspan(*end + 1);
+        consume(1);
+        result.definition = std::move(body);
         return result;
     }
 
@@ -245,19 +251,35 @@ namespace parser {
     }
 
     Expression Parser::parse_expression() {
-        return parse_unary_expression();
+        return parse_binary_expression();
+    }
+
+    Expression Parser::parse_binary_expression() {
+        return parse_binary_expression_recursive(parse_unary_expression(), 0);
+    }
+
+    Expression Parser::parse_binary_expression_recursive(Expression lhs, uint8_t precedence) {
+        for(auto op = binary_ops[remainder_[0].category];
+            op && op->precedence >= precedence; op = binary_ops[remainder_[0].category]) {
+            consume(1);
+            auto rhs = parse_unary_expression();
+            for(auto next_op = binary_ops[remainder_[0].category];
+                next_op && next_op->precedence > op->precedence; next_op = binary_ops[remainder_[0].category]) {
+                rhs = parse_binary_expression_recursive(std::move(rhs), op->precedence);
+            }
+
+            lhs.expr = Expr{
+                .lhs = std::make_unique<Expression>(std::move(lhs)),
+                .rhs = std::make_unique<Expression>(std::move(rhs)),
+                .action = *op
+            };
+        }
+        return lhs;
     }
 
     Expression Parser::parse_unary_expression() {
-        constexpr util::Hashmap unary_ops{std::array{
-                std::pair{util::Category::MINUS, Action::NEGATE},
-                std::pair{util::Category::PLUS, Action::NONE},
-                std::pair{util::Category::NOT, Action::NOT},
-                std::pair{util::Category::INVERT, Action::INV},
-                std::pair{util::Category::MULTIPLY, Action::DEREF}
-        }};
-        
-        Expression result;
+        // TODO: needs slight refactoring
+        Expr result;
         auto action = unary_ops[remainder_[0].category];
         if(action) {
             result.action = *action;
@@ -265,11 +287,11 @@ namespace parser {
         }
 
         auto primary = parse_primary_expression();
-        if(result.action == Action::NONE) {
+        if(result.action.type == ActionType::NONE) {
             return primary;
         }
         result.lhs = std::make_unique<Expression>(std::move(primary));
-        return result;
+        return Expression{std::move(result)};
     }
 
     Expression Parser::parse_primary_expression() {
@@ -280,7 +302,7 @@ namespace parser {
         case util::Category::FLOAT:
         case util::Category::STRING:
         case util::Category::CHAR:
-            result.terminal = remainder_[0];
+            result.expr = remainder_[0];
             consume(1);
             break;
         default:

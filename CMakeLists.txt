@@ -30,6 +30,7 @@ add_executable(transpiler
 
 add_executable(tests
     tests/expression_test.cpp
+    tests/hashmap_test.cpp
 )
 
 add_executable(benchmarks

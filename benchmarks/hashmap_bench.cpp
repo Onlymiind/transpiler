@@ -132,7 +132,7 @@ constexpr std::array test_data_ints {
 
 inline volatile bool b;
 
-std::string random_string(size_t max_len = 100) {
+std::string random_string(size_t max_len = 50) {
     std::random_device device{};
     std::mt19937 random{device()};
     std::string result;

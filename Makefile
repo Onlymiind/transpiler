@@ -27,3 +27,6 @@ debug: config_debug
 release: config_release
 > $(MAKE) -C build all
 
+tests: config_debug
+> $(MAKE) -C build tests
+

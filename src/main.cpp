@@ -5,7 +5,7 @@
 #include "lexer/lexer.h"
 #include "parser/parser.h"
 
-inline constexpr std::string_view in_fname{"/home/onlymind/mine/cpp/projects/transpiler/lang/example.st"};
+inline constexpr std::string_view in_fname{"/home/onlymind/mine/cpp/projects/transpiler/lang/simple_func.st"};
 inline constexpr std::string_view out_fname{"/home/onlymind/mine/cpp/projects/transpiler/out.txt"};
 
 int main() {

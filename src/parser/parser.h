@@ -69,9 +69,7 @@ namespace parser {
         std::unordered_map<std::string_view, Field> fields;
     };
 
-    struct FunctionInfo {
-        util::Tokens body;
-    };
+    using FunctionInfo = Block;
 
     struct TypeInfo {
         Declaration declaration;
@@ -114,6 +112,10 @@ namespace parser {
         Declaration parse_function_decl(bool unnamed = false);
 
         Expression parse_expression();
+
+        Expression parse_binary_expression();
+
+        Expression parse_binary_expression_recursive(Expression lhs, uint8_t precedence);
 
         Expression parse_unary_expression();
 
@@ -174,7 +176,5 @@ namespace parser {
         std::ostream* err_out_ {nullptr};
 
         util::Tokens remainder_ {tokens_};
-        size_t previous_pos_ {0};
-        size_t scope_depth_ {0};
     };
 }

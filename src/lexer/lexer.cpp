@@ -3,63 +3,15 @@
 #include <iterator>
 #include <algorithm>
 #include <sstream>
+#include <cassert>
+
+#include "util/hashmap.h"
 
 namespace lexer {
+    using std::operator""sv;
 
     const std::unordered_set<char> Lexer::multichar_special_tokens_start_ = {
         '!', '=', '&', '|', ':', '<', '>'
-    };
-
-    const std::unordered_map<std::string_view, util::Category> Lexer::multichar_special_tokens_ = {
-        {"!=", util::Category::NOT_EQUALS},
-        {"==", util::Category::EQUALS},
-        {"&&", util::Category::AND},
-        {"||", util::Category::OR},
-        {"::", util::Category::NAMESPACE_OP},
-        {"<=", util::Category::LESS_EQ},
-        {">=", util::Category::GREATER_EQ}
-    };
-
-    const std::unordered_map<char, util::Category> Lexer::special_tokens_ = {
-        {'!', util::Category::NOT},
-        {'&', util::Category::BIWISE_AND},
-        {'|', util::Category::BITWISE_OR},
-        {'/', util::Category::DIVIDE},
-        {'*', util::Category::MULTIPLY},
-        {'(', util::Category::LPAREN},
-        {')', util::Category::RPAREN},
-        {'{', util::Category::LBRACE},
-        {'}', util::Category::RBRACE},
-        {'[', util::Category::LBRACKET},
-        {']', util::Category::RBRACKET},
-        {',', util::Category::COMMA},
-        {'\'', util::Category::SINGLE_QUOTE},
-        {'"', util::Category::DOUBLE_QUOTE},
-        {':', util::Category::COLON},
-        {';', util::Category::SEMICOLON},
-        {'.', util::Category::DOT},
-        {'+', util::Category::PLUS},
-        {'-', util::Category::MINUS},
-        {'=', util::Category::ASSIGN},
-        {'?', util::Category::OPTIONAL},
-        {'<', util::Category::LESS},
-        {'>', util::Category::GREATER},
-        {'~', util::Category::INVERT},
-        {'^', util::Category::XOR}
-    };
-
-    const std::unordered_map<std::string_view, util::Category> Lexer::keywords_ = {
-        {"type", util::Category::TYPE},
-        {"import", util::Category::IMPORT},
-        {"enum", util::Category::ENUM},
-        {"struct", util::Category::STRUCT},
-        {"union", util::Category::UNION},
-        {"interface", util::Category::INTERFACE},
-        {"func", util::Category::FUNC},
-        {"const", util::Category::CONST},
-        {"return", util::Category::RETURN},
-        {"tuple", util::Category::TUPLE},
-        {"var", util::Category::VAR}
     };
 
     bool Lexer::eat_expected(std::istream& in, char expected) {
@@ -158,6 +110,20 @@ namespace lexer {
         return {};
     }
 
+    constexpr util::Hashmap g_keywords = std::array{
+        std::pair{"type"sv, util::Category::TYPE},
+        std::pair{"import"sv, util::Category::IMPORT},
+        std::pair{"enum"sv, util::Category::ENUM},
+        std::pair{"struct"sv, util::Category::STRUCT},
+        std::pair{"union"sv, util::Category::UNION},
+        std::pair{"interface"sv, util::Category::INTERFACE},
+        std::pair{"func"sv, util::Category::FUNC},
+        std::pair{"const"sv, util::Category::CONST},
+        std::pair{"return"sv, util::Category::RETURN},
+        std::pair{"tuple"sv, util::Category::TUPLE},
+        std::pair{"var"sv, util::Category::VAR}
+    };
+
     std::optional<util::Token> Lexer::get_identifier(std::istream& in) {
         util::Token result{.category = util::Category::IDENTIFIER, .pos = line_};
         std::string buf;
@@ -172,9 +138,9 @@ namespace lexer {
             result.category = util::Category::BLANK;
         }
         
-        auto it = keywords_.find(buf);
-        if(it != keywords_.end()) {
-            result.category = it->second;
+        
+        if(auto keyword_cat = g_keywords[buf]; keyword_cat) {
+            result.category = *keyword_cat;
         }
         if (result.category == util::Category::IDENTIFIER) {
             result.value = std::move(buf);
@@ -187,7 +153,7 @@ namespace lexer {
         util::Token result{.category = util::Category::INTEGER, .pos = line_};
 
         std::string buf;
-        auto get_digits = [&result, &buf](std::istream& in) {
+        auto get_digits = [&buf](std::istream& in) {
             char c = in.get();
             while(in && std::isdigit(c)) {
                 buf.push_back(c);
@@ -225,6 +191,44 @@ namespace lexer {
         return in && (buf == "//");
     }
 
+    constexpr util::Hashmap g_multichar_special_tokens = std::array{
+        std::pair{"!="sv, util::Category::NOT_EQUALS},
+        std::pair{"=="sv, util::Category::EQUALS},
+        std::pair{"&&"sv, util::Category::AND},
+        std::pair{"||"sv, util::Category::OR},
+        std::pair{"::"sv, util::Category::NAMESPACE_OP},
+        std::pair{"<="sv, util::Category::LESS_EQ},
+        std::pair{">="sv, util::Category::GREATER_EQ}
+    };
+
+    constexpr util::Hashmap g_special_tokens = std::array{
+        std::pair{'!', util::Category::NOT},
+        std::pair{'&', util::Category::BIWISE_AND},
+        std::pair{'|', util::Category::BITWISE_OR},
+        std::pair{'/', util::Category::DIVIDE},
+        std::pair{'*', util::Category::MULTIPLY},
+        std::pair{'(', util::Category::LPAREN},
+        std::pair{')', util::Category::RPAREN},
+        std::pair{'{', util::Category::LBRACE},
+        std::pair{'}', util::Category::RBRACE},
+        std::pair{'[', util::Category::LBRACKET},
+        std::pair{']', util::Category::RBRACKET},
+        std::pair{',', util::Category::COMMA},
+        std::pair{'\'', util::Category::SINGLE_QUOTE},
+        std::pair{'"', util::Category::DOUBLE_QUOTE},
+        std::pair{':', util::Category::COLON},
+        std::pair{';', util::Category::SEMICOLON},
+        std::pair{'.', util::Category::DOT},
+        std::pair{'+', util::Category::PLUS},
+        std::pair{'-', util::Category::MINUS},
+        std::pair{'=', util::Category::ASSIGN},
+        std::pair{'?', util::Category::OPTIONAL},
+        std::pair{'<', util::Category::LESS},
+        std::pair{'>', util::Category::GREATER},
+        std::pair{'~', util::Category::INVERT},
+        std::pair{'^', util::Category::XOR}
+    };
+
     std::optional<util::Token> Lexer::get_special_token(std::istream& in) {
         char c = in.get();
         if(!in) {
@@ -232,19 +236,19 @@ namespace lexer {
         }
 
         if(multichar_special_tokens_start_.contains(c)) {
-            std::string str{2, '\0'};
+            std::string str(2, '\0');
             str[0] = c;
             str[1] = in.get();
-            if(in && multichar_special_tokens_.contains(str)) {
-                return util::Token{.category = multichar_special_tokens_.at(str), .pos = line_};
+            if(in && g_multichar_special_tokens.contains(str)) {
+                return util::Token{.category = *g_multichar_special_tokens[str], .pos = line_};
             }
 
             in.putback(str[1]);
         }
 
         util::Category cat = util::Category::NONE;
-        if(special_tokens_.contains(c)) {
-            cat = special_tokens_.at(c);
+        if(g_special_tokens.contains(c)) {
+            cat = *g_special_tokens[c];
         }
         return util::Token{.category = cat, .pos = line_};
     }

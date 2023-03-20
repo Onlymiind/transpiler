@@ -18,16 +18,16 @@ struct TestData {
 inline std::array test_data{
     TestData{"integer", "1000", parser::integer(1000)},
     TestData{"identifier", "identifier", parser::ident("identifier")},
-    TestData{"negative integer", "-1", parser::unary_expression(parser::Action::NEGATE, parser::integer(1))},
-    TestData{"identifier negation", "-identifier", parser::unary_expression(parser::Action::NEGATE, parser::ident("identifier"))},
+    TestData{"negative integer", "-1", parser::unary_expression(parser::ActionType::NEGATE, parser::integer(1))},
+    TestData{"identifier negation", "-identifier", parser::unary_expression(parser::ActionType::NEGATE, parser::ident("identifier"))},
     TestData{"+integer", "+1", parser::integer(1)},
     TestData{"+identifier", "+identifier", parser::ident("identifier")},
     TestData{"float", "10.11", parser::floating(10.11)},
-    TestData{"negative float", "-10.11", parser::unary_expression(parser::Action::NEGATE, parser::floating(10.11))},
+    TestData{"negative float", "-10.11", parser::unary_expression(parser::ActionType::NEGATE, parser::floating(10.11))},
     TestData{"+float", "+10.11", parser::floating(10.11)},
-    TestData{"deref", "*ptr", parser::unary_expression(parser::Action::DEREF, parser::ident("ptr"))},
-    TestData{"not", "!boolean", parser::unary_expression(parser::Action::NOT, parser::ident("boolean"))},
-    TestData{"invert", "~flags", parser::unary_expression(parser::Action::INV, parser::ident("flags"))}
+    TestData{"deref", "*ptr", parser::unary_expression(parser::ActionType::DEREF, parser::ident("ptr"))},
+    TestData{"not", "!boolean", parser::unary_expression(parser::ActionType::NOT, parser::ident("boolean"))},
+    TestData{"invert", "~flags", parser::unary_expression(parser::ActionType::INV, parser::ident("flags"))}
 };
 
 TEST_CASE("Simple expressions") {

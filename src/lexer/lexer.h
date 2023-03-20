@@ -50,8 +50,5 @@ namespace lexer {
         size_t line_ = 1;
 
         static const std::unordered_set<char> multichar_special_tokens_start_;
-        static const std::unordered_map<std::string_view, util::Category> multichar_special_tokens_;
-        static const std::unordered_map<char, util::Category> special_tokens_;
-        static const std::unordered_map<std::string_view, util::Category> keywords_;
     };
 }
