@@ -27,10 +27,6 @@ namespace util {
         return out;
     }
 
-
-    template<typename T>
-    using Result = std::variant<T, Error>;
-
     enum class Category : uint8_t {
         NONE,
         END_OF_FILE,
@@ -210,6 +206,7 @@ namespace util {
     };
 
     std::ostream& operator<<(std::ostream& out, const Token& token);
+    
     inline constexpr bool operator==(const Token& lhs, const Token& rhs) {
         return lhs.category == rhs.category && lhs.value == rhs.value;
     }
@@ -324,9 +321,6 @@ namespace util {
     std::optional<size_t> find_in_current_scope(Tokens tokens, Category cat);
 
     std::optional<std::pair<util::Category, size_t>> find_in_current_scope(Tokens tokens, const std::unordered_set<Category>& categories);
-
-    template<typename T>
-    concept Stringable = std::is_constructible_v<std::string, std::decay_t<T>>;
 
     template<typename T, typename... Args>
     concept Function = std::is_invocable_v<T, Args...>;

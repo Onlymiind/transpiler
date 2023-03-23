@@ -5,14 +5,6 @@
 
 namespace util {
 
-    template<typename T>
-    void print(std::ostream& out, const T& val) {
-        out << "value: " << val << ' ';
-    }
-
-    template<>
-    void print(std::ostream& out, const std::monostate& val) {}
-
     std::ostream& operator<<(std::ostream& out, const Token& token) {
         if(!token.value.empty()) {
             out << "value: " << token.value << ", ";

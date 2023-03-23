@@ -11,6 +11,7 @@
 #include <memory>
 
 #include "util/util.h"
+#include "util/arena.h"
 #include "parser/expression.h"
 
 namespace parser {
@@ -74,6 +75,11 @@ namespace parser {
     struct TypeInfo {
         Declaration declaration;
         std::variant<Declaration, StructInfo, FunctionInfo> definition;
+    };
+
+    struct File {
+        std::vector<TypeInfo> types;
+        util::ArenaPool<Declaration, Field, Expression> arena;
     };
 
     std::optional<size_t> first_not_comment(util::Tokens tokens);
@@ -151,15 +157,6 @@ namespace parser {
                 consume(pos ? *pos + 1: remainder_.size());
             }
         }
-
-        template<util::Function Function, util::Function<std::string_view> Recover>
-        void do_with_recovery(Function func, Recover recover_func) {
-            try {
-                func();
-            } catch (const ParserError& e) {
-                recover_func(e.what());
-            }
-        };
 
         // pushes an error to errors_ and throws ParserError
         [[noreturn]] void error(size_t pos, const std::string& msg);

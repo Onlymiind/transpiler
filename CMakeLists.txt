@@ -15,6 +15,13 @@ set(PARSER_MODULE
     src/parser/expression.cpp
 )
 
+set(UTIL_MODULE
+    src/util/util.h
+    src/util/util.cpp
+    src/util/hashmap.h
+    src/util/arena.h
+)
+
 add_library(transpiler_lib
     ${LEXER_MODULE}
     ${PARSER_MODULE}
