@@ -1,7 +1,7 @@
 #pragma once 
 #include <vector>
 #include <variant>
-#include <string_view>
+#include <string>
 
 #include "parser/expression.h"
 #include "parser/declaration.h"
@@ -14,7 +14,7 @@ namespace parser {
     };
 
     struct VariableDecl {
-        std::string_view name;
+        std::string name;
         Declaration type;
         Expression value;
     };

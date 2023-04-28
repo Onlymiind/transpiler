@@ -18,11 +18,9 @@
 
 namespace parser {
 
-    using FunctionInfo = Block;
-
     struct TypeInfo {
         Declaration declaration;
-        FunctionInfo definition;
+        Block function_definition;
     };
 
     struct File {
@@ -33,7 +31,7 @@ namespace parser {
 
     std::optional<size_t> first_not_comment(util::Tokens tokens);
 
-    void parse(std::vector<util::Token> tokens);
+    File parse(std::vector<util::Token> tokens);
 
     // just so it is distinct from std::runtime_error
     class ParserError : public std::runtime_error {
@@ -50,7 +48,7 @@ namespace parser {
         {}
 
 
-        File pasre();
+        File parse();
 
         std::vector<GenericParam> parse_generic_params();
 
@@ -62,7 +60,7 @@ namespace parser {
 
         Declaration parse_type();
 
-        std::unordered_map<std::string_view, Declaration> parse_struct_def();
+        std::unordered_map<std::string, Declaration> parse_struct_def();
 
         Declaration parse_function_decl(bool unnamed = false);
 
@@ -80,20 +78,24 @@ namespace parser {
 
         Block parse_block();
 
+        inline const util::Token& next() noexcept {
+            return remainder_[0];
+        }
+
         inline void consume(size_t count) {
             remainder_ = remainder_.subspan(count);
         }
 
         inline void consume_expected(util::Category expected, const std::string& err_prefix = "") {
-            if(remainder_[0].category != expected) {
-                errorn(remainder_[0].pos, err_prefix, ": expected ", expected, ", got ", remainder_[0].category);
+            if(next().category != expected) {
+                errorn(next().pos, err_prefix, ": expected ", expected, ", got ", remainder_[0].category);
             }
 
             consume(1);
         }
 
         inline void ignore_comments() {
-            while(remainder_[0].category == util::Category::COMMENT) {
+            while(next().category == util::Category::COMMENT) {
                 consume(1);
             }
         }
@@ -121,7 +123,6 @@ namespace parser {
     private:
         std::vector<util::Token> tokens_;
         std::vector<util::Error> errors_;
-        std::deque<std::string> unnamed_params_;
 
         File file_;
 

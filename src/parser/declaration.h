@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <string>
 #include <vector>
-#include <string_view>
 #include <unordered_map>
 
 #include "util/util.h"
@@ -38,15 +37,15 @@ namespace parser {
     };
 
     struct GenericParam {
-        std::string_view name;
+        std::string name;
     };
 
     struct Declaration {
-        std::unordered_map<std::string_view, Declaration> fields;
+        std::unordered_map<std::string, Declaration> fields;
         std::vector<GenericParam> generic_params;
         std::vector<TypeModifiers> modifiers;
 
-        std::string_view name;
+        std::string name;
         Declaration* return_type = nullptr;
         Declaration* underlying_type = nullptr;
         DeclarationType type = DeclarationType::UNKNOWN;
