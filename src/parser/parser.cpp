@@ -1,11 +1,10 @@
 #include "parser/parser.h"
 
 #include <algorithm>
-#include <stack>
 #include <iostream>
-#include <memory>
 
 #include "parser/expression.h"
+#include "parser/statement.h"
 #include "util/hashmap.h"
 #include "util/util.h"
 
@@ -30,10 +29,7 @@ namespace parser {
     }
 
 
-    std::vector<std::variant<TypeInfo, NamedField>> Parser::pasre() {
-
-        std::vector<std::variant<TypeInfo, NamedField>> result;
-
+    File Parser::pasre() {
         while(!remainder_.empty()) {
             ignore_comments();
             if(remainder_.empty()) {
@@ -49,20 +45,20 @@ namespace parser {
                 break;
             }
             case util::Category::TYPE:
-                result.emplace_back(parse_type_declaration());
+                file_.types.emplace_back(parse_type_declaration());
                 break;
             case util::Category::VAR:
-                result.emplace_back(parse_variable());
+                file_.variables.emplace_back(parse_variable());
                 break;
             case util::Category::FUNC:
-                result.emplace_back(parse_function());
+                file_.types.emplace_back(parse_function());
                 break;
             default:
                 consume(1);
             }
         }
 
-        return result;
+        return std::exchange(file_, File{});
     }
 
     std::vector<GenericParam> Parser::parse_generic_params() {
@@ -96,7 +92,7 @@ namespace parser {
 
         if(remainder_[0].is_type_modifier()) {
             info.declaration.type = DeclarationType::ALIAS;
-            info.definition = parse_type();
+            info.declaration.underlying_type = file_.arena.allocate<Declaration>(parse_type());
             return info;
         }
 
@@ -105,13 +101,13 @@ namespace parser {
         case util::Category::TUPLE:
         case util::Category::UNION:
             info.declaration.type = DeclarationType::ALIAS;
-            info.definition = parse_type();
+            info.declaration.underlying_type = file_.arena.allocate<Declaration>(parse_type());
             consume_expected(util::Category::SEMICOLON, "alias declaration");
             return info;
         case util::Category::STRUCT:
             info.declaration.type = DeclarationType::STRUCT;
             consume(1);
-            info.definition = parse_struct_def();
+            info.declaration.fields = parse_struct_def();
             return info;
         case util::Category::ENUM:
         case util::Category::INTERFACE:
@@ -121,15 +117,15 @@ namespace parser {
         }
     }
 
-    StructInfo Parser::parse_struct_def() {
+    std::unordered_map<std::string_view, Declaration> Parser::parse_struct_def() {
         consume_expected(util::Category::LBRACE, "struct definition");
-        StructInfo result;
+        std::unordered_map<std::string_view, Declaration> result;
         while(remainder_[0].category != util::Category::RBRACE) {
             do_with_recovery(util::Category::SEMICOLON, [&result, this]() {
-                auto& field = result.fields[remainder_[0].value];
+                auto& field = result[remainder_[0].value];
                 consume_expected(util::Category::IDENTIFIER, "struct definition");
                 consume_expected(util::Category::COLON, "struct definition");
-                field.type = parse_type();
+                field = parse_type();
                 consume_expected(util::Category::SEMICOLON, "struct definition");
             });
         }
@@ -164,8 +160,8 @@ namespace parser {
                 param_name = unnamed_params_[unnamed_param_cnt];
                 unnamed_param_cnt++;
             }
-            auto& param = result.func_params[param_name];
-            param = std::make_unique<Field>(Field{parse_type()});
+            auto& param = result.fields[param_name];
+            param = parse_type();
             if(remainder_[0].category != util::Category::RPAREN) {
                 consume_expected(util::Category::COMMA, "function declaration");
             }
@@ -177,20 +173,25 @@ namespace parser {
         };
 
         if(!decl_end.contains(remainder_[0].category)) {
-            result.return_type = std::make_unique<Declaration>(parse_type());
+            result.return_type = file_.arena.allocate<Declaration>(parse_type());
         }
 
         return result;
     }
 
-    NamedField Parser::parse_variable() {
+    VariableDecl Parser::parse_variable() {
         consume_expected(util::Category::VAR, "variable declaration");
-        NamedField result;
-        result.first = remainder_[0].value;
+        VariableDecl result;
+        result.name = remainder_[0].value;
         consume_expected(util::Category::IDENTIFIER, "variable declaration");
         consume_expected(util::Category::COLON, "variable declaration");
-        result.second = Field{.type = parse_type()};
+        result.type = parse_type();
+        if(remainder_[0].category == util::Category::ASSIGN) {
+            consume(1);
+            result.value = parse_expression();
+        }
 
+        consume_expected(util::Category::SEMICOLON, "variable declaration");
         return result;
     }
 
@@ -202,16 +203,7 @@ namespace parser {
             return result;
         }
 
-        consume_expected(util::Category::LBRACE);
-        FunctionInfo body;
-        while(remainder_[0].category != util::Category::RBRACE) {
-            body.body.emplace_back(parse_expression());
-            if(!body.body.back().is_block()) {
-                consume_expected(util::Category::SEMICOLON);
-            }
-        }
-        consume(1);
-        result.definition = std::move(body);
+        result.definition = FunctionInfo{parse_block()};
         return result;
     }
 
@@ -269,8 +261,8 @@ namespace parser {
             }
 
             lhs.expr = Expr{
-                .lhs = std::make_unique<Expression>(std::move(lhs)),
-                .rhs = std::make_unique<Expression>(std::move(rhs)),
+                .lhs = file_.arena.allocate<Expression>(std::move(lhs)),
+                .rhs = file_.arena.allocate<Expression>(std::move(rhs)),
                 .action = *op
             };
         }
@@ -290,7 +282,7 @@ namespace parser {
         if(result.action.type == ActionType::NONE) {
             return primary;
         }
-        result.lhs = std::make_unique<Expression>(std::move(primary));
+        result.lhs = file_.arena.allocate<Expression>(std::move(primary));
         return Expression{std::move(result)};
     }
 
@@ -309,6 +301,34 @@ namespace parser {
             errorn(remainder_[0].pos, "unexpected token: ", remainder_[0].category);
         }
 
+        return result;
+    }
+
+    Block Parser::parse_block() {
+        consume_expected(util::Category::LBRACE);
+        Block result;
+        while(remainder_[0].category != util::Category::RBRACE) {
+            result.statements.emplace_back(parse_statement());
+        }
+        consume(1);
+        return result;
+    }
+
+    Statement Parser::parse_statement() {
+        Statement result;
+        switch(remainder_[0].category) {
+        case util::Category::RETURN:
+            consume(1);
+            result.smt = Return{parse_expression()};
+            consume_expected(util::Category::SEMICOLON);
+            break;
+        case util::Category::VAR:
+            result.smt = parse_variable();
+            break;
+        default:
+            result.smt = parse_expression();
+            consume_expected(util::Category::SEMICOLON);
+        }   
         return result;
     }
 

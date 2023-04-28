@@ -190,7 +190,6 @@ namespace util {
         using Pos = size_t;
 
         Category category {Category::NONE};
-        Position pos_;
         Pos pos {0};
         std::string value;
 
@@ -330,5 +329,10 @@ namespace util {
         std::ostringstream out;
         (out << ... << args);
         return out.str();
+    }
+
+    template<typename T>
+    constexpr bool deep_eq(T* lhs, T* rhs) {
+        return (!lhs && !rhs) || *lhs == *rhs;
     }
 }

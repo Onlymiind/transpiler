@@ -142,6 +142,10 @@ namespace util {
         constexpr auto storage() const noexcept {
             return storage_;
         }
+
+        constexpr Val force_get(Key key) const {
+            return find(key)->second;
+        }
     private:
         constexpr void insert(Key key, size_t item_idx) noexcept {
             ItemInfo item = ItemInfo{

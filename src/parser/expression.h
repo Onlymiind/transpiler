@@ -1,11 +1,14 @@
 #pragma once
 #include <array>
+#include <utility>
 #include <variant>
 #include <memory>
 #include <optional>
 
 #include "util/util.h"
 #include "util/hashmap.h"
+#include "util/arena.h"
+#include "util/variant.h"
 
 namespace parser {
     enum class ActionType: uint8_t {
@@ -44,43 +47,26 @@ namespace parser {
     struct Conditional;
 
     struct Expr {
-        std::unique_ptr<Expression> lhs;
-        std::unique_ptr<Expression> rhs;
+        Expression* lhs = nullptr;
+        Expression* rhs = nullptr;
         Action action;
     };
 
     inline bool operator==(const Expr& lhs, const Expr& rhs) {
         return lhs.action == rhs.action && 
-            (!lhs.lhs && !rhs.lhs || *lhs.lhs == *rhs.lhs) &&
-            (!lhs.rhs && !rhs.rhs || *lhs.rhs == *rhs.rhs);
+            util::deep_eq(lhs.lhs, rhs.lhs) &&
+            util::deep_eq(lhs.rhs, rhs.rhs);
     }
 
     struct Expression {
-        std::variant<util::Token, Expr, std::unique_ptr<Block>, std::unique_ptr<Conditional>> expr;
-
-        inline bool is_block() const {
-            return std::holds_alternative<std::unique_ptr<Block>>(expr) || std::holds_alternative<std::unique_ptr<Conditional>>(expr);
-        }
+        util::Variant<util::Token, Expr> expr;
     };
 
     inline bool operator==(const Expression& lhs, const Expression& rhs) {
-        // TODO: this will yield wrong result when comparing blocks and conditionals
         return lhs.expr == rhs.expr;
     }
-
-    struct Block {
-        std::vector<Expression> body;
-    };
-
-    using Condition = Expression;
-
-    struct Conditional {
-        std::vector<std::pair<Condition, Block>> cases;
-        std::optional<Expression> default_case;
-    };
-
     
-    Expression unary_expression(ActionType action, Expression arg);
+    Expression unary_expression(ActionType action, Expression arg, util::Arena<Expression>& arena);
 
     Expression floating(double val);
 
@@ -96,9 +82,15 @@ namespace parser {
         std::pair{util::Category::MULTIPLY, Action{ActionType::DEREF}}
     };
 
+    constexpr util::Hashmap binary_actions = std::array{
+        std::pair{ActionType::SUB, Action{ActionType::SUB, 1}},
+        std::pair{ActionType::ADD, Action{ActionType::ADD, 1}},
+        std::pair{ActionType::MUL, Action{ActionType::MUL, 2}}
+    };
+
     constexpr util::Hashmap binary_ops = std::array{
-        std::pair{util::Category::MINUS, Action{ActionType::SUB, 1}},
-        std::pair{util::Category::PLUS, Action{ActionType::ADD, 1}},
-        std::pair{util::Category::MULTIPLY, Action{ActionType::MUL, 2}}
+        std::pair{util::Category::MINUS, binary_actions.force_get(ActionType::SUB)},
+        std::pair{util::Category::PLUS, binary_actions.force_get(ActionType::ADD)},
+        std::pair{util::Category::MULTIPLY, binary_actions.force_get(ActionType::MUL)}
     };
 }

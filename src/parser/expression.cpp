@@ -3,9 +3,9 @@
 #include <sstream>
 
 namespace parser {
-    Expression unary_expression(ActionType action, Expression arg) {
+    Expression unary_expression(ActionType action, Expression arg, util::Arena<Expression>& arena) {
         return Expression{Expr{
-            .lhs = std::make_unique<Expression>(std::move(arg)),
+            .lhs = arena.allocate(std::move(arg)),
             .action = action,
         }};
     }

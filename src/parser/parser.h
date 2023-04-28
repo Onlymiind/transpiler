@@ -13,73 +13,22 @@
 #include "util/util.h"
 #include "util/arena.h"
 #include "parser/expression.h"
+#include "parser/statement.h"
+#include "parser/declaration.h"
 
 namespace parser {
-
-    enum class DeclarationType : uint8_t {
-        UNKNOWN,
-        ALIAS,
-        STRUCT,
-        UNION,
-        ENUM,
-        TUPLE,
-        INTERFACE,
-        FUNCTION,
-        BUILTIN
-    };
-
-    enum class TypeModifiers : uint8_t {
-        NONE,
-        POINTER,
-        OPTIONAL
-    };
-
-    struct Import {
-        util::Tokens tokens;
-    };
-
-    struct Comment {
-        size_t pos = 0;
-        std::string value;
-    };
-
-    struct GenericParam {
-        std::string_view name;
-    };
-
-    struct Field;
-
-    struct Declaration {
-        DeclarationType type = DeclarationType::UNKNOWN;
-        std::string_view name;
-        std::vector<GenericParam> generic_params;
-        std::vector<TypeModifiers> modifiers;
-
-        std::unordered_map<std::string_view, std::unique_ptr<Field>> func_params;
-        std::unique_ptr<Declaration> return_type;
-    };
-
-    struct Field {
-        Declaration type;
-        util::Tokens value;
-    };
-
-    using NamedField = std::pair<std::string_view, Field>;
-
-    struct StructInfo {
-        std::unordered_map<std::string_view, Field> fields;
-    };
 
     using FunctionInfo = Block;
 
     struct TypeInfo {
         Declaration declaration;
-        std::variant<Declaration, StructInfo, FunctionInfo> definition;
+        FunctionInfo definition;
     };
 
     struct File {
         std::vector<TypeInfo> types;
-        util::ArenaPool<Declaration, Field, Expression> arena;
+        std::vector<VariableDecl> variables;
+        util::ArenaPool<Declaration, Expression> arena;
     };
 
     std::optional<size_t> first_not_comment(util::Tokens tokens);
@@ -101,11 +50,11 @@ namespace parser {
         {}
 
 
-        std::vector<std::variant<TypeInfo, NamedField>> pasre();
+        File pasre();
 
         std::vector<GenericParam> parse_generic_params();
 
-        NamedField parse_variable();
+        VariableDecl parse_variable();
 
         TypeInfo parse_function();
 
@@ -113,7 +62,7 @@ namespace parser {
 
         Declaration parse_type();
 
-        StructInfo parse_struct_def();
+        std::unordered_map<std::string_view, Declaration> parse_struct_def();
 
         Declaration parse_function_decl(bool unnamed = false);
 
@@ -126,6 +75,10 @@ namespace parser {
         Expression parse_unary_expression();
 
         Expression parse_primary_expression();
+
+        Statement parse_statement();
+
+        Block parse_block();
 
         inline void consume(size_t count) {
             remainder_ = remainder_.subspan(count);
@@ -169,6 +122,8 @@ namespace parser {
         std::vector<util::Token> tokens_;
         std::vector<util::Error> errors_;
         std::deque<std::string> unnamed_params_;
+
+        File file_;
 
         std::ostream* err_out_ {nullptr};
 

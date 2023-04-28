@@ -13,6 +13,9 @@ set(PARSER_MODULE
     src/parser/parser.cpp
     src/parser/expression.h
     src/parser/expression.cpp
+
+    src/parser/declaration.h
+    src/parser/statement.h
 )
 
 set(UTIL_MODULE
@@ -20,6 +23,7 @@ set(UTIL_MODULE
     src/util/util.cpp
     src/util/hashmap.h
     src/util/arena.h
+    src/util/variant.h
 )
 
 add_library(transpiler_lib

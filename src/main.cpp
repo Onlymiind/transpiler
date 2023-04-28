@@ -5,12 +5,10 @@
 #include "lexer/lexer.h"
 #include "parser/parser.h"
 
-inline constexpr std::string_view in_fname{"/home/onlymind/mine/cpp/projects/transpiler/lang/simple_func.st"};
+inline constexpr std::string_view in_fname{"/home/onlymind/mine/cpp/projects/transpiler/lang/simple.st"};
 inline constexpr std::string_view out_fname{"/home/onlymind/mine/cpp/projects/transpiler/out.txt"};
 
 int main() {
-    std::cout << util::sprint(std::string{"string"}, 10, std::string_view{"fdskjfhk"}, "fdjsfho") << std::endl;
-
     std::ifstream in{in_fname.data(), std::ios::in};
     std::ofstream out{out_fname.data()};
     auto vec = lexer::Lexer{}.split(in);
@@ -27,5 +25,5 @@ int main() {
 
     out << "Done" << '\n';
 
-    return 0;
+    return 10;
 }

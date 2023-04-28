@@ -29,6 +29,13 @@ namespace util {
         constexpr T* allocate(Args&&... args) {
             return new (allocate_()) T(std::forward<Args>(args)...);
         }
+
+        constexpr size_t get_block_size() const noexcept{
+            return g_block_size;
+        }
+
+        constexpr Arena& operator=(const Arena<T>&) = delete;
+        constexpr Arena& operator=(Arena<T>&&) = default;
     private:
         constexpr T* allocate_() {
             if(!blocks_.empty()) {
@@ -59,15 +66,20 @@ namespace util {
         }
 
         std::vector<Block> blocks_;
-        static constexpr size_t g_block_size = 512 / sizeof(T) == 0 ? sizeof(T) : 512 / sizeof(T);
+        static constexpr size_t g_block_size = std::max<size_t>(512 / sizeof(T), 10);
     };
 
     template<typename... Types>
     class ArenaPool {
     public:
         template<typename T>
-        Arena<T>& get() noexcept {
+        constexpr inline Arena<T>& get() noexcept {
             return std::get<Arena<T>>(arenas_);
+        }
+
+        template<typename T, typename... Args>
+        constexpr inline T* allocate(Args&&... args) {
+            return std::get<Arena<T>>(arenas_).allocate(std::forward<Args>(args)...);
         }
     private:
         std::tuple<Arena<Types>...> arenas_;
