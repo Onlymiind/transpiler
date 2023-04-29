@@ -1,9 +1,11 @@
 #pragma once
 #include <array>
+#include <string>
 #include <utility>
 #include <variant>
 #include <memory>
 #include <optional>
+#include <vector>
 
 #include "util/util.h"
 #include "util/hashmap.h"
@@ -58,8 +60,15 @@ namespace parser {
             util::deep_eq(lhs.rhs, rhs.rhs);
     }
 
+    struct FunctionCall {
+        std::string func_name;
+        std::vector<Expression*> args;
+    };
+
+    bool operator==(const FunctionCall& lhs, const FunctionCall& rhs);
+
     struct Expression {
-        util::Variant<util::Token, Expr> expr;
+        util::Variant<util::Token, Expr, FunctionCall> expr;
     };
 
     inline bool operator==(const Expression& lhs, const Expression& rhs) {

@@ -147,7 +147,6 @@ namespace parser {
         consume_expected(util::Category::LPAREN, "function declaration");
         size_t unnamed_param_cnt{0};
         while(next().category != util::Category::RPAREN) {
-            // TODO: unnamed params
             std::string param_name;
             if(remainder_[1].category == util::Category::COLON) {
                 param_name = next().value;
@@ -287,6 +286,11 @@ namespace parser {
         Expression result;
         switch(next().category) {
         case util::Category::IDENTIFIER:
+            //check for a function call
+            if(remainder_[1].category == util::Category::LPAREN) {
+                result.expr = parse_function_call();
+                break;
+            }
         case util::Category::INTEGER:
         case util::Category::FLOAT:
         case util::Category::STRING:
@@ -295,7 +299,7 @@ namespace parser {
             consume(1);
             break;
         default:
-            errorn(next().pos, "unexpected token: ", next().category);
+            errorn(next().pos, "primary expression: unexpected token: ", next().category);
         }
 
         return result;
@@ -305,7 +309,7 @@ namespace parser {
         consume_expected(util::Category::LBRACE);
         Block result;
         while(next().category != util::Category::RBRACE) {
-            result.statements.emplace_back(parse_statement());
+            do_with_recovery(util::Category::SEMICOLON, [this, &result](){result.statements.emplace_back(parse_statement());});
         }
         consume(1);
         return result;
@@ -327,6 +331,21 @@ namespace parser {
             consume_expected(util::Category::SEMICOLON);
         }   
         return result;
+    }
+
+    FunctionCall Parser::parse_function_call() {
+        FunctionCall result;
+        result.func_name = next().value;
+        consume_expected(util::Category::IDENTIFIER, "function call");
+        consume_expected(util::Category::LPAREN, "function call");
+        while(next().category != util::Category::RPAREN) {
+            result.args.push_back(file_.arena.allocate<Expression>(parse_expression()));
+            if(next().category != util::Category::RPAREN) {
+                consume_expected(util::Category::COMMA, "function call");
+            }
+        }
+        consume(1);
+        return std::move(result);
     }
 
     void Parser::error(size_t pos, const std::string& msg) {

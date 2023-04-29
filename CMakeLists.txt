@@ -18,6 +18,11 @@ set(PARSER_MODULE
     src/parser/statement.h
 )
 
+set(CHECKER_MODULE
+    src/checker/checker.h
+    src/checker/checker.cpp
+)
+
 set(UTIL_MODULE
     src/util/util.h
     src/util/util.cpp
@@ -29,10 +34,8 @@ set(UTIL_MODULE
 add_library(transpiler_lib
     ${LEXER_MODULE}
     ${PARSER_MODULE}
-
-    src/util/hashmap.h
-    src/util/util.h
-    src/util/util.cpp
+    ${CHECKER_MODULE}
+    ${UTIL_MODULE}
 )
 
 add_executable(transpiler

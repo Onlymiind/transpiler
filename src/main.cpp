@@ -4,26 +4,24 @@
 
 #include "lexer/lexer.h"
 #include "parser/parser.h"
+#include "checker/checker.h"
 
 inline constexpr std::string_view in_fname{"/home/onlymind/mine/cpp/projects/transpiler/lang/simple.st"};
 inline constexpr std::string_view out_fname{"/home/onlymind/mine/cpp/projects/transpiler/out.txt"};
 
 int main() {
     std::ifstream in{in_fname.data(), std::ios::in};
-    std::ofstream out{out_fname.data()};
-    auto vec = lexer::Lexer{}.split(in);
 
-    for(auto w : vec) {
-        out << w << '\n';
-    }
-
+    parser::File file;
     try {
-        parser::parse(std::move(vec));
+        file = parser::parse(lexer::Lexer{}.split(in));
     } catch (const std::exception& e) {
         std::cout << e.what() << std::endl;
     }
 
-    out << "Done" << '\n';
+    checker::Checker c(std::move(file), &std::cout);
+
+    std::cout << "Done" << '\n';
 
     return 10;
 }

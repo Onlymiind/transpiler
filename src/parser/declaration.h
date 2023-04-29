@@ -9,7 +9,7 @@
 #include "parser/expression.h"
 
 namespace parser {
-        enum class DeclarationType : uint8_t {
+    enum class DeclarationType : uint8_t {
         UNKNOWN,
         ALIAS,
         STRUCT,

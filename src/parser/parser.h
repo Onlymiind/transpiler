@@ -74,6 +74,8 @@ namespace parser {
 
         Expression parse_primary_expression();
 
+        FunctionCall parse_function_call();
+
         Statement parse_statement();
 
         Block parse_block();
@@ -126,8 +128,8 @@ namespace parser {
 
         File file_;
 
-        std::ostream* err_out_ {nullptr};
+        std::ostream* err_out_ = nullptr;
 
-        util::Tokens remainder_ {tokens_};
+        util::Tokens remainder_ = tokens_;
     };
 }
