@@ -49,7 +49,7 @@ TEST_CASE("Simple binary expressions") {
         parser::Expression expected = parser::Expression{parser::Expr{
             .lhs = arena.allocate(parser::ident("a")),
             .rhs = arena.allocate(parser::integer(10)),
-            .action = parser::binary_actions.force_get(parser::ActionType::ADD),
+            .action = parser::binary_actions.at(parser::ActionType::ADD),
         }};
 
         parser::Parser p{lexer::split("a + 10")};
@@ -61,7 +61,7 @@ TEST_CASE("Simple binary expressions") {
         parser::Expression expected = parser::Expression{parser::Expr{
             .lhs = arena.allocate(parser::ident("a")),
             .rhs = arena.allocate(parser::integer(10)),
-            .action = parser::binary_actions.force_get(parser::ActionType::SUB),
+            .action = parser::binary_actions.at(parser::ActionType::SUB),
         }};
 
         parser::Parser p{lexer::split("a - 10")};
@@ -73,7 +73,7 @@ TEST_CASE("Simple binary expressions") {
         parser::Expression expected = parser::Expression{parser::Expr{
             .lhs = arena.allocate(parser::ident("a")),
             .rhs = arena.allocate(parser::integer(10)),
-            .action = parser::binary_actions.force_get(parser::ActionType::MUL),
+            .action = parser::binary_actions.at(parser::ActionType::MUL),
         }};
 
         parser::Parser p{lexer::split("a * 10")};

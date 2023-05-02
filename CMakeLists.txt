@@ -26,7 +26,6 @@ set(CHECKER_MODULE
 set(UTIL_MODULE
     src/util/util.h
     src/util/util.cpp
-    src/util/hashmap.h
     src/util/arena.h
     src/util/variant.h
 )
@@ -44,11 +43,6 @@ add_executable(transpiler
 
 add_executable(tests
     tests/expression_test.cpp
-    tests/hashmap_test.cpp
-)
-
-add_executable(benchmarks
-    benchmarks/hashmap_bench.cpp
 )
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/Catch2)
@@ -58,7 +52,6 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/benchmark)
 
 target_link_libraries(transpiler PRIVATE transpiler_lib)
 target_link_libraries(tests PRIVATE transpiler_lib Catch2WithMain)
-target_link_libraries(benchmarks PRIVATE transpiler_lib benchmark::benchmark_main)
 
 target_include_directories(transpiler_lib PUBLIC ${CMAKE_SOURCE_DIR}/src)
 #target_include_directories(tests PRIVATE ${CMAKE_SOURCE_DIR}/test)

@@ -5,13 +5,17 @@
 #include <iostream>
 #include <optional>
 #include <utility>
+#include <variant>
+#include <vector>
 
+#include "parser/expression.h"
 #include "parser/parser.h"
 #include "util/util.h"
 
 namespace checker {
 
     using TypeID = size_t;
+    using VariableID = size_t;
 
     class CheckerError : public std::runtime_error {
     public:
@@ -52,5 +56,41 @@ namespace checker {
 
         std::ostream* err_out_ = nullptr;
     };
+
+    struct Expression;
+
+    struct BinaryExpression {
+        parser::ActionType action;
+        Expression* lhs;
+        Expression* rhs;
+    };
+
+    struct UnaryExpression {
+        parser::ActionType action;
+        Expression* arg;
+    };
+
+    struct FunctionCall {
+        TypeID function;
+        std::vector<Expression> args;
+    };
+
+    struct Literal {
+        std::variant<uint64_t, double> value;
+    };
+
+    struct Expression {
+        std::variant<VariableID, Literal, BinaryExpression, UnaryExpression, FunctionCall> i;
+        TypeID result_type;
+        parser::ActionType action;
+    };
+
+    struct Variable {
+        TypeID type;
+        std::string name;
+        Expression* value = nullptr;
+    };
+
+
 
 }

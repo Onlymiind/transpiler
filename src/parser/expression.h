@@ -6,9 +6,9 @@
 #include <memory>
 #include <optional>
 #include <vector>
+#include <unordered_map>
 
 #include "util/util.h"
-#include "util/hashmap.h"
 #include "util/arena.h"
 #include "util/variant.h"
 
@@ -83,23 +83,23 @@ namespace parser {
 
     Expression ident(std::string val);
 
-    constexpr util::Hashmap unary_ops = std::array{
-        std::pair{util::Category::MINUS, Action{ActionType::NEGATE}},
-        std::pair{util::Category::PLUS, Action{ActionType::NONE}},
-        std::pair{util::Category::NOT, Action{ActionType::NOT}},
-        std::pair{util::Category::INVERT, Action{ActionType::INV}},
-        std::pair{util::Category::MULTIPLY, Action{ActionType::DEREF}}
+    inline const std::unordered_map<util::Category, Action> unary_ops{
+        {util::Category::MINUS, Action{ActionType::NEGATE}},
+        {util::Category::PLUS, Action{ActionType::NONE}},
+        {util::Category::NOT, Action{ActionType::NOT}},
+        {util::Category::INVERT, Action{ActionType::INV}},
+        {util::Category::MULTIPLY, Action{ActionType::DEREF}}
     };
 
-    constexpr util::Hashmap binary_actions = std::array{
-        std::pair{ActionType::SUB, Action{ActionType::SUB, 1}},
-        std::pair{ActionType::ADD, Action{ActionType::ADD, 1}},
-        std::pair{ActionType::MUL, Action{ActionType::MUL, 2}}
+    inline const std::unordered_map<ActionType, Action> binary_actions{
+        {ActionType::SUB, Action{ActionType::SUB, 1}},
+        {ActionType::ADD, Action{ActionType::ADD, 1}},
+        {ActionType::MUL, Action{ActionType::MUL, 2}}
     };
 
-    constexpr util::Hashmap binary_ops = std::array{
-        std::pair{util::Category::MINUS, binary_actions.force_get(ActionType::SUB)},
-        std::pair{util::Category::PLUS, binary_actions.force_get(ActionType::ADD)},
-        std::pair{util::Category::MULTIPLY, binary_actions.force_get(ActionType::MUL)}
+    inline const std::unordered_map<util::Category, Action> binary_ops{
+        std::pair{util::Category::MINUS, binary_actions.at(ActionType::SUB)},
+        std::pair{util::Category::PLUS, binary_actions.at(ActionType::ADD)},
+        std::pair{util::Category::MULTIPLY, binary_actions.at(ActionType::MUL)}
     };
 }

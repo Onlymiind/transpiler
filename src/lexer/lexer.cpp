@@ -4,8 +4,9 @@
 #include <algorithm>
 #include <sstream>
 #include <cassert>
+#include <unordered_map>
 
-#include "util/hashmap.h"
+#include "util/util.h"
 
 namespace lexer {
     using std::operator""sv;
@@ -110,18 +111,18 @@ namespace lexer {
         return {};
     }
 
-    constexpr util::Hashmap g_keywords = std::array{
-        std::pair{"type"sv, util::Category::TYPE},
-        std::pair{"import"sv, util::Category::IMPORT},
-        std::pair{"enum"sv, util::Category::ENUM},
-        std::pair{"struct"sv, util::Category::STRUCT},
-        std::pair{"union"sv, util::Category::UNION},
-        std::pair{"interface"sv, util::Category::INTERFACE},
-        std::pair{"func"sv, util::Category::FUNC},
-        std::pair{"const"sv, util::Category::CONST},
-        std::pair{"return"sv, util::Category::RETURN},
-        std::pair{"tuple"sv, util::Category::TUPLE},
-        std::pair{"var"sv, util::Category::VAR}
+    static const std::unordered_map<std::string_view, util::Category> g_keywords{
+        {"type"sv, util::Category::TYPE},
+        {"import"sv, util::Category::IMPORT},
+        {"enum"sv, util::Category::ENUM},
+        {"struct"sv, util::Category::STRUCT},
+        {"union"sv, util::Category::UNION},
+        {"interface"sv, util::Category::INTERFACE},
+        {"func"sv, util::Category::FUNC},
+        {"const"sv, util::Category::CONST},
+        {"return"sv, util::Category::RETURN},
+        {"tuple"sv, util::Category::TUPLE},
+        {"var"sv, util::Category::VAR}
     };
 
     std::optional<util::Token> Lexer::get_identifier(std::istream& in) {
@@ -139,8 +140,8 @@ namespace lexer {
         }
         
         
-        if(auto keyword_cat = g_keywords[buf]; keyword_cat) {
-            result.category = *keyword_cat;
+        if(auto keyword_cat_it = g_keywords.find(buf); keyword_cat_it != g_keywords.end()) {
+            result.category = keyword_cat_it->second;
         }
         if (result.category == util::Category::IDENTIFIER) {
             result.value = std::move(buf);
@@ -191,42 +192,42 @@ namespace lexer {
         return in && (buf == "//");
     }
 
-    constexpr util::Hashmap g_multichar_special_tokens = std::array{
-        std::pair{"!="sv, util::Category::NOT_EQUALS},
-        std::pair{"=="sv, util::Category::EQUALS},
-        std::pair{"&&"sv, util::Category::AND},
-        std::pair{"||"sv, util::Category::OR},
-        std::pair{"::"sv, util::Category::NAMESPACE_OP},
-        std::pair{"<="sv, util::Category::LESS_EQ},
-        std::pair{">="sv, util::Category::GREATER_EQ}
+    static const std::unordered_map<std::string_view, util::Category> g_multichar_special_tokens{
+        {"!="sv, util::Category::NOT_EQUALS},
+        {"=="sv, util::Category::EQUALS},
+        {"&&"sv, util::Category::AND},
+        {"||"sv, util::Category::OR},
+        {"::"sv, util::Category::NAMESPACE_OP},
+        {"<="sv, util::Category::LESS_EQ},
+        {">="sv, util::Category::GREATER_EQ}
     };
 
-    constexpr util::Hashmap g_special_tokens = std::array{
-        std::pair{'!', util::Category::NOT},
-        std::pair{'&', util::Category::BIWISE_AND},
-        std::pair{'|', util::Category::BITWISE_OR},
-        std::pair{'/', util::Category::DIVIDE},
-        std::pair{'*', util::Category::MULTIPLY},
-        std::pair{'(', util::Category::LPAREN},
-        std::pair{')', util::Category::RPAREN},
-        std::pair{'{', util::Category::LBRACE},
-        std::pair{'}', util::Category::RBRACE},
-        std::pair{'[', util::Category::LBRACKET},
-        std::pair{']', util::Category::RBRACKET},
-        std::pair{',', util::Category::COMMA},
-        std::pair{'\'', util::Category::SINGLE_QUOTE},
-        std::pair{'"', util::Category::DOUBLE_QUOTE},
-        std::pair{':', util::Category::COLON},
-        std::pair{';', util::Category::SEMICOLON},
-        std::pair{'.', util::Category::DOT},
-        std::pair{'+', util::Category::PLUS},
-        std::pair{'-', util::Category::MINUS},
-        std::pair{'=', util::Category::ASSIGN},
-        std::pair{'?', util::Category::OPTIONAL},
-        std::pair{'<', util::Category::LESS},
-        std::pair{'>', util::Category::GREATER},
-        std::pair{'~', util::Category::INVERT},
-        std::pair{'^', util::Category::XOR}
+    static const std::unordered_map<char, util::Category> g_special_tokens{
+        {'!', util::Category::NOT},
+        {'&', util::Category::BIWISE_AND},
+        {'|', util::Category::BITWISE_OR},
+        {'/', util::Category::DIVIDE},
+        {'*', util::Category::MULTIPLY},
+        {'(', util::Category::LPAREN},
+        {')', util::Category::RPAREN},
+        {'{', util::Category::LBRACE},
+        {'}', util::Category::RBRACE},
+        {'[', util::Category::LBRACKET},
+        {']', util::Category::RBRACKET},
+        {',', util::Category::COMMA},
+        {'\'', util::Category::SINGLE_QUOTE},
+        {'"', util::Category::DOUBLE_QUOTE},
+        {':', util::Category::COLON},
+        {';', util::Category::SEMICOLON},
+        {'.', util::Category::DOT},
+        {'+', util::Category::PLUS},
+        {'-', util::Category::MINUS},
+        {'=', util::Category::ASSIGN},
+        {'?', util::Category::OPTIONAL},
+        {'<', util::Category::LESS},
+        {'>', util::Category::GREATER},
+        {'~', util::Category::INVERT},
+        {'^', util::Category::XOR}
     };
 
     std::optional<util::Token> Lexer::get_special_token(std::istream& in) {
@@ -234,21 +235,22 @@ namespace lexer {
         if(!in) {
             return {};
         }
-
+        
         if(multichar_special_tokens_start_.contains(c)) {
             std::string str(2, '\0');
             str[0] = c;
             str[1] = in.get();
             if(in && g_multichar_special_tokens.contains(str)) {
-                return util::Token{.category = *g_multichar_special_tokens[str], .pos = line_};
+                return util::Token{.category = g_multichar_special_tokens.at(str), .pos = line_};
             }
 
             in.putback(str[1]);
         }
 
         util::Category cat = util::Category::NONE;
-        if(g_special_tokens.contains(c)) {
-            cat = *g_special_tokens[c];
+        auto cat_it = g_special_tokens.find(c);
+        if(cat_it != g_special_tokens.end()) {
+            cat = cat_it->second;
         }
         return util::Token{.category = cat, .pos = line_};
     }

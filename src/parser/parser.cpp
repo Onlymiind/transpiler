@@ -6,7 +6,6 @@
 
 #include "parser/expression.h"
 #include "parser/statement.h"
-#include "util/hashmap.h"
 #include "util/util.h"
 
 namespace parser {
@@ -247,19 +246,23 @@ namespace parser {
     }
 
     Expression Parser::parse_binary_expression_recursive(Expression lhs, uint8_t precedence) {
-        for(auto op = binary_ops[next().category];
-            op && op->precedence >= precedence; op = binary_ops[next().category]) {
+        for(auto op_it = binary_ops.find(next().category);
+            (op_it != binary_ops.end()) && op_it->second.precedence >= precedence;
+            op_it = binary_ops.find(next().category)) {
+
             consume(1);
             auto rhs = parse_unary_expression();
-            for(auto next_op = binary_ops[next().category];
-                next_op && next_op->precedence > op->precedence; next_op = binary_ops[next().category]) {
-                rhs = parse_binary_expression_recursive(std::move(rhs), op->precedence);
+            for(auto next_op_it = binary_ops.find(next().category);
+                (next_op_it != binary_ops.end()) && next_op_it->second.precedence > op_it->second.precedence; 
+                next_op_it = binary_ops.find(next().category)) {
+
+                rhs = parse_binary_expression_recursive(std::move(rhs), op_it->second.precedence);
             }
 
             lhs.expr = Expr{
                 .lhs = file_.arena.allocate<Expression>(std::move(lhs)),
                 .rhs = file_.arena.allocate<Expression>(std::move(rhs)),
-                .action = *op
+                .action = op_it->second
             };
         }
         return lhs;
@@ -268,9 +271,9 @@ namespace parser {
     Expression Parser::parse_unary_expression() {
         // TODO: needs slight refactoring
         Expr result;
-        auto action = unary_ops[next().category];
-        if(action) {
-            result.action = *action;
+        auto action_it = unary_ops.find(next().category);
+        if(action_it != unary_ops.end()) {
+            result.action = action_it->second;
             consume(1);
         }
 
