@@ -91,6 +91,8 @@ namespace checker {
         Expression* value = nullptr;
     };
 
-
+    struct AliasInfo {
+        TypeID underlying_type;
+    };
 
 }

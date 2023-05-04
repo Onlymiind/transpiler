@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <sstream>
 #include <cassert>
+#include <string>
 #include <unordered_map>
 
 #include "util/util.h"
@@ -181,6 +182,11 @@ namespace lexer {
         }
 
         result.value = std::move(buf);
+        if(result.category == util::Category::INTEGER) {
+            result.num = std::stoull(result.value);
+        } else if(result.category == util::Category::FLOAT) {
+            result.f_num = std::stod(result.value);
+        }
 
         return result;
     }
@@ -303,6 +309,28 @@ namespace lexer {
 
         util::Token result {.category = util::Category::CHAR, .pos = line_};
         char c = in.get();
+        if(c == '\\') {
+            c = in.get();
+            if(!in) {
+                return {};
+            }
+#define CASE(x, val) case x: c = val; break
+            switch(c) {
+            case '\'':
+            case '"':
+            case '\\':
+                break;
+            CASE('?', '\?');
+            CASE('a', '\a');
+            CASE('b', '\b');
+            CASE('f', '\f');
+            CASE('n', '\n');
+            CASE('r', '\r');
+            CASE('t', '\t');
+            CASE('v', '\v');
+#undef CASE
+            }
+        }
         if(!in) {
             return {};
         }
