@@ -19,6 +19,7 @@ namespace program {
     using TypeID = size_t;
     using VariableID = size_t;
     
+    //This allows to use same ID type for all types, declared in a program, which is kind of convenient
     enum class TypeKind : TypeID {
         BUILTIN,
         ALIAS = TypeID(1) << (CHAR_BIT * sizeof(size_t) - 2),
