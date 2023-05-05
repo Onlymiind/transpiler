@@ -21,6 +21,7 @@ set(PARSER_MODULE
 set(CHECKER_MODULE
     src/checker/checker.h
     src/checker/checker.cpp
+    src/checker/program.h
 )
 
 set(UTIL_MODULE
