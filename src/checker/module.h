@@ -12,28 +12,13 @@
 #include "parser/parser.h"
 #include "parser/statement.h"
 #include "util/arena.h"
+#include "util/util.h"
 #include "util/variant.h"
 
-namespace program {
+namespace module {
 
     using TypeID = size_t;
     using VariableID = size_t;
-    
-    //This allows to use same ID type for all types, declared in a program, which is kind of convenient
-    enum class TypeKind : TypeID {
-        BUILTIN,
-        ALIAS = TypeID(1) << (CHAR_BIT * sizeof(size_t) - 2),
-        STRUCT = TypeID(1) << (CHAR_BIT * sizeof(size_t) - 1),
-        FUNCTION = TypeID(0b11) << (CHAR_BIT * sizeof(size_t) - 2),
-
-        MASK = TypeID(0b11) << (CHAR_BIT * sizeof(size_t) - 2)
-    };
-
-    inline TypeKind get_kind(TypeID id) {
-        return TypeKind(id & TypeID(TypeKind::MASK));
-    }
-
-    constexpr size_t max_type_id_value = TypeID(-1) ^ TypeID(TypeKind::MASK);
 
     struct Expression;
 
@@ -61,11 +46,12 @@ namespace program {
         util::Variant<VariableID, Literal, BinaryExpression, UnaryExpression, FunctionCall> expr;
         TypeID result_type;
         parser::ActionType action;
+        util::Position pos;
     };
 
     struct Variable {
         TypeID type;
-        Expression* value = nullptr;
+        Expression* initial_value = nullptr;
     };
 
     struct AliasInfo {
@@ -77,16 +63,30 @@ namespace program {
     };
 
     struct FunctionInfo {
-        std::unordered_map<std::string, TypeID> args;
+        std::vector<std::pair<std::string, TypeID>> args;
         std::optional<TypeID> return_type;
     };
 
+    enum class TypeProperties {
+        INTEGRAL, FLOATING_POINT, BOOLEAN, POINTER, CALLABLE
+    };
 
-    class Program {
+    enum class TypeCategory {
+        ALIAS, FUNCTION, STRUCT, BUILTIN
+    };
+
+    struct TypeInfo {
+        std::string name;
+        size_t size;
+        TypeProperties properties;
+        TypeCategory category;
+    };
+
+
+    class Module {
     public:
-        Program(std::vector<parser::File> files);
 
-        std::optional<TypeID> type_by_name(const std::string& name) const;
+        std::optional<TypeID> type_by_name(std::string_view name) const;
         std::optional<TypeID> type_by_decl(const parser::Declaration& decl) const;
 
         std::optional<VariableID> var_by_name(const std::string& name) const;
@@ -106,6 +106,12 @@ namespace program {
         bool is_builtin(TypeID type) const;
         bool is_builtin(const parser::Declaration& decl) const;
 
+        bool is_numeric(TypeID type) const;
+        bool is_integral(TypeID type) const;
+        bool is_floating_point(TypeID type) const;
+        bool is_boolean(TypeID type) const;
+        bool is_callable(TypeID type) const;
+
         TypeID register_type(parser::Declaration decl);
         VariableID register_variable(std::string name, Variable var);
 
@@ -113,6 +119,10 @@ namespace program {
         template<typename... Args>
         Expression* allocate_expression(Args&&... args) {
             return expressions_arena_.allocate(std::forward<Args>(args)...);
+        }
+
+        void reserve_expression_storage(size_t count) {
+            expressions_arena_.reserve(count);
         }
     private:
         std::vector<AliasInfo> aliases_;
@@ -124,11 +134,8 @@ namespace program {
         //should this be here?
         util::Arena<Expression> expressions_arena_;
 
-        //TODO: built-in types handling
-
-        //TODO: can this pattern be optimized to a data structure or smth?
-        std::unordered_map<std::string, TypeID> name_to_type_id_;
-        std::unordered_map<TypeID, std::string> id_to_name_;
+        std::unordered_map<std::string_view, TypeID> name_to_type_id_;
+        std::unordered_map<TypeID, TypeInfo> id_to_name_;
 
         std::unordered_map<std::string, VariableID> name_to_var_id_;
     };

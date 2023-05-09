@@ -27,7 +27,10 @@ namespace util {
 
         template<typename... Args>
         T* allocate(Args&&... args) {
-            return new (allocate_()) T(std::forward<Args>(args)...);
+            //TODO: what if constructor throws?
+            T* result = new (allocate_()) T(std::forward<Args>(args)...);
+            size_++;
+            return result;
         }
 
         void reserve(size_t count) {
@@ -43,6 +46,10 @@ namespace util {
 
         size_t get_block_size() const noexcept{
             return g_block_size;
+        }
+
+        size_t size() const {
+            return size_;
         }
 
         Arena& operator=(const Arena<T>&) = delete;
@@ -86,6 +93,7 @@ namespace util {
 
         std::vector<Block> blocks_;
         size_t last_block_ = 0;
+        size_t size_ = 0;
         static constexpr size_t g_block_size = std::max<size_t>(512 / sizeof(T), 10);
     };
 
@@ -105,6 +113,11 @@ namespace util {
         template<typename T>
         void reserve(size_t count) {
             return std::get<Arena<T>>(arenas_).reserve(count);
+        }
+
+        template<typename T>
+        size_t size() const {
+            return std::get<Arena<T>>(arenas_).size();
         }
     private:
         std::tuple<Arena<Types>...> arenas_;

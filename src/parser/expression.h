@@ -69,6 +69,7 @@ namespace parser {
 
     struct Expression {
         util::Variant<util::Token, Expr, FunctionCall> expr;
+        util::Position pos;
     };
 
     inline bool operator==(const Expression& lhs, const Expression& rhs) {

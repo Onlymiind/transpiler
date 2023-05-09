@@ -182,7 +182,7 @@ namespace util {
     }
 
     struct Position {
-        size_t pos {0};
+        size_t line {0};
         size_t column {0};
     };
 

@@ -250,6 +250,8 @@ namespace parser {
             (op_it != binary_ops.end()) && op_it->second.precedence >= precedence;
             op_it = binary_ops.find(next().category)) {
 
+            util::Position pos = util::Position{next().pos};
+
             consume(1);
             auto rhs = parse_unary_expression();
             for(auto next_op_it = binary_ops.find(next().category);
@@ -264,6 +266,7 @@ namespace parser {
                 .rhs = file_.arena.allocate<Expression>(std::move(rhs)),
                 .action = op_it->second
             };
+            lhs.pos = pos;
         }
         return lhs;
     }
@@ -272,6 +275,7 @@ namespace parser {
         // TODO: needs slight refactoring
         Expr result;
         auto action_it = unary_ops.find(next().category);
+        util::Position pos = util::Position{next().pos};
         if(action_it != unary_ops.end()) {
             result.action = action_it->second;
             consume(1);
@@ -282,11 +286,12 @@ namespace parser {
             return primary;
         }
         result.lhs = file_.arena.allocate<Expression>(std::move(primary));
-        return Expression{std::move(result)};
+        return Expression{std::move(result), pos};
     }
 
     Expression Parser::parse_primary_expression() {
         Expression result;
+        result.pos = util::Position{next().pos};
         switch(next().category) {
         case util::Category::IDENTIFIER:
             //check for a function call
