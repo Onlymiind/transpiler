@@ -20,6 +20,9 @@ namespace module {
     using TypeID = size_t;
     using VariableID = size_t;
 
+    constexpr TypeID g_invalid_typeid = TypeID(-1);
+    constexpr TypeID g_none_type = TypeID(-2);
+
     struct Expression;
 
     struct BinaryExpression {
@@ -50,57 +53,60 @@ namespace module {
     };
 
     struct Variable {
+        std::string name;
         TypeID type;
         Expression* initial_value = nullptr;
     };
 
-    struct AliasInfo {
-        TypeID underlying_type;
-    };
-
-    struct StructInfo {
-        std::unordered_map<std::string, TypeID> fields;
-    };
-
-    struct FunctionInfo {
-        std::vector<std::pair<std::string, TypeID>> args;
-        std::optional<TypeID> return_type;
-    };
-
     enum class TypeProperties {
-        INTEGRAL, FLOATING_POINT, BOOLEAN, POINTER, CALLABLE
+        NONE, INTEGRAL, FLOATING_POINT, BOOLEAN, POINTER, CALLABLE
     };
 
     enum class TypeCategory {
-        ALIAS, FUNCTION, STRUCT, BUILTIN
+        UNKNOWN, ALIAS, FUNCTION, STRUCT, BUILTIN
     };
 
     struct TypeInfo {
         std::string name;
-        size_t size;
-        TypeProperties properties;
-        TypeCategory category;
+        size_t size = 0;
+        TypeProperties properties = TypeProperties::NONE;
+        TypeCategory category = TypeCategory::UNKNOWN;
     };
 
+    struct AliasInfo {
+        TypeInfo info;
+        TypeID underlying_type;
+    };
+
+    struct StructInfo {
+        TypeInfo info;
+        std::vector<Variable> fields;
+    };
+
+    struct FunctionInfo {
+        TypeInfo info;
+        std::vector<Variable> args;
+        std::optional<TypeID> return_type;
+    };
 
     class Module {
     public:
 
-        std::optional<TypeID> type_by_name(std::string_view name) const;
+        std::optional<TypeID> get_type_id(std::string_view name) const;
         std::optional<TypeID> type_by_decl(const parser::Declaration& decl) const;
 
-        std::optional<VariableID> var_by_name(const std::string& name) const;
+        std::optional<VariableID> get_var_id(std::string_view name) const;
 
-        std::string_view name_by_id(TypeID id) const;
+        TypeInfo* get_info(TypeID id);
+        AliasInfo* get_alias_info(TypeID id);
+        StructInfo* get_struct_info(TypeID id);
+        FunctionInfo* get_funtion_info(TypeID id);
 
-        AliasInfo* alias_by_id(TypeID id);
-        StructInfo* struct_by_id(TypeID id);
-        FunctionInfo* function_by_id(TypeID id);
+        const TypeInfo* get_info(TypeID id) const;
+        const AliasInfo* get_alias_info(TypeID id) const;
+        const StructInfo* get_struct_info(TypeID id) const;
 
-        const AliasInfo* alias_by_id(TypeID id) const;
-        const StructInfo* struct_by_id(TypeID id) const;
-        const FunctionInfo* function_by_id(TypeID id) const;
-
+        const FunctionInfo* get_function_info(TypeID id) const;
         bool has_action_support(TypeID id, parser::ActionType action) const;
 
         bool is_builtin(TypeID type) const;
@@ -112,8 +118,13 @@ namespace module {
         bool is_boolean(TypeID type) const;
         bool is_callable(TypeID type) const;
 
-        TypeID register_type(parser::Declaration decl);
-        VariableID register_variable(std::string name, Variable var);
+        TypeID instantiate_union(std::vector<TypeID> variants);
+        TypeID instantiate_tuple(std::vector<TypeID> members);
+
+        TypeID register_alias(AliasInfo info);
+        TypeID register_struct(StructInfo info);
+        TypeID register_function(FunctionInfo info);
+        VariableID register_variable(Variable var);
 
         //TODO: decide on expression storage and allocation
         template<typename... Args>
@@ -125,18 +136,19 @@ namespace module {
             expressions_arena_.reserve(count);
         }
     private:
-        std::vector<AliasInfo> aliases_;
-        std::vector<StructInfo> structs_;
-        std::vector<FunctionInfo> funcions_;
+        TypeID next_id_ = 0;
+        std::deque<AliasInfo> aliases_;
+        std::deque<StructInfo> structs_;
+        std::deque<FunctionInfo> functions_;
 
-        std::vector<Variable> variables_;
+        std::deque<Variable> variables_;
 
         //should this be here?
         util::Arena<Expression> expressions_arena_;
 
         std::unordered_map<std::string_view, TypeID> name_to_type_id_;
-        std::unordered_map<TypeID, TypeInfo> id_to_name_;
+        std::unordered_map<TypeID, TypeInfo*> id_to_name_;
 
-        std::unordered_map<std::string, VariableID> name_to_var_id_;
+        std::unordered_map<std::string_view, VariableID> name_to_var_id_;
     };
 }
