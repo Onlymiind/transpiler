@@ -21,8 +21,8 @@ namespace module {
     }
 
     TypeInfo* Module::get_info(TypeID id) {
-        auto it = id_to_name_.find(id);
-        if(it == id_to_name_.end()) {
+        auto it = id_to_info_.find(id);
+        if(it == id_to_info_.end()) {
             return nullptr;
         }
         return it->second;
@@ -39,8 +39,8 @@ namespace module {
     //FunctionInfo* Module::get_funtion_info(TypeID id);
 
     const TypeInfo* Module::get_info(TypeID id) const {
-        auto it = id_to_name_.find(id);
-        if(it == id_to_name_.end()) {
+        auto it = id_to_info_.find(id);
+        if(it == id_to_info_.end()) {
             return nullptr;
         }
         return it->second;
@@ -122,29 +122,6 @@ namespace module {
 
     //TypeID Module::instantiate_union(std::vector<TypeID> variants);
     //TypeID Module::instantiate_tuple(std::vector<TypeID> members);
-
-    TypeID Module::register_alias(AliasInfo info) {
-        TypeID id = next_id_++;
-        auto& ref = aliases_.emplace_back(std::move(info));
-        id_to_name_[id] = &ref.info;
-        name_to_type_id_[ref.info.name] = id;
-        return id;
-    }
-    TypeID Module::register_struct(StructInfo info) {
-        TypeID id = next_id_++;
-        auto& ref = structs_.emplace_back(std::move(info));
-        id_to_name_[id] = &ref.info;
-        name_to_type_id_[ref.info.name] = id;
-        return id;
-    }
-
-    TypeID Module::register_function(FunctionInfo info) {
-        TypeID id = next_id_++;
-        auto& ref = functions_.emplace_back(std::move(info));
-        id_to_name_[id] = &ref.info;
-        name_to_type_id_[ref.info.name] = id;
-        return id;
-    }
 
     VariableID Module::register_variable(Variable var) {
         VariableID id = next_id_++;

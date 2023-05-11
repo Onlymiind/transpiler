@@ -19,6 +19,13 @@ namespace parser {
         Expression value;
     };
 
+    struct Block;
+
+    struct If {
+        Expression condition;
+        Block* then = nullptr;
+        Block* otherwise = nullptr;
+    };
 
     struct Statement{
         util::Variant<Expression, VariableDecl, Return> smt;

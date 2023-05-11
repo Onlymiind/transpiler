@@ -1,6 +1,7 @@
 #pragma once
 #include <climits>
 #include <cstddef>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 #include <string>
@@ -22,6 +23,15 @@ namespace module {
 
     constexpr TypeID g_invalid_typeid = TypeID(-1);
     constexpr TypeID g_none_type = TypeID(-2);
+
+    enum class TypeKind : TypeID {
+        ALIAS = TypeID(1) << (CHAR_BIT * sizeof(TypeID) - 2),
+        STRUCT = TypeID(0b10) << (CHAR_BIT * sizeof(TypeID) - 2),
+        FUNCTION = TypeID(0b11) << (CHAR_BIT * sizeof(TypeID) - 2),
+
+
+        MASK = FUNCTION
+    };
 
     struct Expression;
 
@@ -105,8 +115,8 @@ namespace module {
         const TypeInfo* get_info(TypeID id) const;
         const AliasInfo* get_alias_info(TypeID id) const;
         const StructInfo* get_struct_info(TypeID id) const;
-
         const FunctionInfo* get_function_info(TypeID id) const;
+        
         bool has_action_support(TypeID id, parser::ActionType action) const;
 
         bool is_builtin(TypeID type) const;
@@ -121,9 +131,18 @@ namespace module {
         TypeID instantiate_union(std::vector<TypeID> variants);
         TypeID instantiate_tuple(std::vector<TypeID> members);
 
-        TypeID register_alias(AliasInfo info);
-        TypeID register_struct(StructInfo info);
-        TypeID register_function(FunctionInfo info);
+        TypeID register_alias(AliasInfo info) { 
+            return register_info(std::move(info), aliases_, TypeKind::ALIAS); 
+        }
+
+        TypeID register_struct(StructInfo info) { 
+            return register_info(std::move(info), structs_, TypeKind::STRUCT); 
+        }
+
+        TypeID register_function(FunctionInfo info) { 
+            return register_info(std::move(info), functions_, TypeKind::FUNCTION); 
+        }
+
         VariableID register_variable(Variable var);
 
         //TODO: decide on expression storage and allocation
@@ -136,6 +155,19 @@ namespace module {
             expressions_arena_.reserve(count);
         }
     private:
+        template<typename T>
+        TypeID register_info(T&& info, std::deque<T>& container, TypeKind kind) {
+            if(container.size() >= ~(size_t(0b11) << (CHAR_BIT * sizeof(size_t) - 2))) {
+                throw std::runtime_error("exceeded maximum possible types per file");
+            }
+
+            size_t id = size_t(kind) | container.size();
+            auto& ref = container.emplace_back(std::forward<T>(info));
+            id_to_info_[id] = &ref.info;
+            name_to_type_id_[ref.info.name]= id;
+            return id;
+        }
+
         TypeID next_id_ = 0;
         std::deque<AliasInfo> aliases_;
         std::deque<StructInfo> structs_;
@@ -147,7 +179,7 @@ namespace module {
         util::Arena<Expression> expressions_arena_;
 
         std::unordered_map<std::string_view, TypeID> name_to_type_id_;
-        std::unordered_map<TypeID, TypeInfo*> id_to_name_;
+        std::unordered_map<TypeID, TypeInfo*> id_to_info_;
 
         std::unordered_map<std::string_view, VariableID> name_to_var_id_;
     };
