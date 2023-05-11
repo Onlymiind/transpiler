@@ -38,8 +38,8 @@ TEST_CASE("Simple expressions") {
     for(const auto& test : test_data) {
         INFO(test.name + ", expression: " + test.str);
         parser::Parser p{lexer::split(test.str)};
-        parser::Expression result = p.parse_expression();
-        REQUIRE(result == test.expected);
+        parser::Expression* result = p.parse_expression();
+        REQUIRE(*result == test.expected);
     }
 }
 
@@ -53,8 +53,8 @@ TEST_CASE("Simple binary expressions") {
         }};
 
         parser::Parser p{lexer::split("a + 10")};
-        parser::Expression result = p.parse_expression();
-        REQUIRE(result == expected);
+        parser::Expression* result = p.parse_expression();
+        REQUIRE(*result == expected);
     }
     {
         util::Arena<parser::Expression> arena;
@@ -65,8 +65,8 @@ TEST_CASE("Simple binary expressions") {
         }};
 
         parser::Parser p{lexer::split("a - 10")};
-        parser::Expression result = p.parse_expression();
-        REQUIRE(result == expected);
+        parser::Expression* result = p.parse_expression();
+        REQUIRE(*result == expected);
     }
     {
         util::Arena<parser::Expression> arena;
@@ -77,7 +77,7 @@ TEST_CASE("Simple binary expressions") {
         }};
 
         parser::Parser p{lexer::split("a * 10")};
-        parser::Expression result = p.parse_expression();
-        REQUIRE(result == expected);
+        parser::Expression* result = p.parse_expression();
+        REQUIRE(*result == expected);
     }
 }

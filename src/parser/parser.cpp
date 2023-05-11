@@ -237,15 +237,15 @@ namespace parser {
         return result;
     }
 
-    Expression Parser::parse_expression() {
+    Expression* Parser::parse_expression() {
         return parse_binary_expression();
     }
 
-    Expression Parser::parse_binary_expression() {
+    Expression* Parser::parse_binary_expression() {
         return parse_binary_expression_recursive(parse_unary_expression(), 0);
     }
 
-    Expression Parser::parse_binary_expression_recursive(Expression lhs, uint8_t precedence) {
+    Expression* Parser::parse_binary_expression_recursive(Expression* lhs, uint8_t precedence) {
         for(auto op_it = binary_ops.find(next().category);
             (op_it != binary_ops.end()) && op_it->second.precedence >= precedence;
             op_it = binary_ops.find(next().category)) {
@@ -258,20 +258,15 @@ namespace parser {
                 (next_op_it != binary_ops.end()) && next_op_it->second.precedence > op_it->second.precedence; 
                 next_op_it = binary_ops.find(next().category)) {
 
-                rhs = parse_binary_expression_recursive(std::move(rhs), op_it->second.precedence);
+                rhs = parse_binary_expression_recursive(rhs, op_it->second.precedence);
             }
 
-            lhs.expr = Expr{
-                .lhs = file_.arena.allocate<Expression>(std::move(lhs)),
-                .rhs = file_.arena.allocate<Expression>(std::move(rhs)),
-                .action = op_it->second
-            };
-            lhs.pos = pos;
+            lhs = file_.arena.allocate<Expression>(Expr{ .lhs = lhs, .rhs = rhs, .action = op_it->second }, pos);
         }
         return lhs;
     }
 
-    Expression Parser::parse_unary_expression() {
+    Expression* Parser::parse_unary_expression() {
         // TODO: needs slight refactoring
         Expr result;
         auto action_it = unary_ops.find(next().category);
@@ -285,25 +280,25 @@ namespace parser {
         if(result.action.type == ActionType::NONE) {
             return primary;
         }
-        result.lhs = file_.arena.allocate<Expression>(std::move(primary));
-        return Expression{std::move(result), pos};
+        result.lhs = primary;
+        return file_.arena.allocate<Expression>(std::move(result), pos);
     }
 
-    Expression Parser::parse_primary_expression() {
-        Expression result;
-        result.pos = util::Position{next().pos};
+    Expression* Parser::parse_primary_expression() {
+        Expression* result = file_.arena.allocate<Expression>();
+        result->pos = util::Position{next().pos};
         switch(next().category) {
         case util::Category::IDENTIFIER:
             //check for a function call
             if(remainder_[1].category == util::Category::LPAREN) {
-                result.expr = parse_function_call();
+                result->expr = parse_function_call();
                 break;
             }
         case util::Category::INTEGER:
         case util::Category::FLOAT:
         case util::Category::STRING:
         case util::Category::CHAR:
-            result.expr = next();
+            result->expr = next();
             consume(1);
             break;
         default:
@@ -347,7 +342,7 @@ namespace parser {
         consume_expected(util::Category::IDENTIFIER, "function call");
         consume_expected(util::Category::LPAREN, "function call");
         while(next().category != util::Category::RPAREN) {
-            result.args.push_back(file_.arena.allocate<Expression>(parse_expression()));
+            result.args.push_back(parse_expression());
             if(next().category != util::Category::RPAREN) {
                 consume_expected(util::Category::COMMA, "function call");
             }

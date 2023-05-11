@@ -64,15 +64,15 @@ namespace parser {
 
         Declaration parse_function_decl(bool unnamed = false);
 
-        Expression parse_expression();
+        Expression* parse_expression();
 
-        Expression parse_binary_expression();
+        Expression* parse_binary_expression();
 
-        Expression parse_binary_expression_recursive(Expression lhs, uint8_t precedence);
+        Expression* parse_binary_expression_recursive(Expression* lhs, uint8_t precedence);
 
-        Expression parse_unary_expression();
+        Expression* parse_unary_expression();
 
-        Expression parse_primary_expression();
+        Expression* parse_primary_expression();
 
         FunctionCall parse_function_call();
 

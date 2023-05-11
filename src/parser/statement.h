@@ -10,25 +10,25 @@
 
 namespace parser {
     struct Return {
-        Expression value;
+        Expression* value;
     };
 
     struct VariableDecl {
         std::string name;
         Declaration type;
-        Expression value;
+        Expression* value;
     };
 
     struct Block;
 
     struct If {
-        Expression condition;
+        Expression* condition;
         Block* then = nullptr;
         Block* otherwise = nullptr;
     };
 
     struct Statement{
-        util::Variant<Expression, VariableDecl, Return> smt;
+        util::Variant<Expression*, VariableDecl, Return> smt;
     };
 
     struct Block {

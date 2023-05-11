@@ -36,7 +36,7 @@ namespace util {
         void reserve(size_t count) {
             size_t capacity = 0;
             for(size_t i = last_block_; i < blocks_.size(); i++) {
-                capacity += blocks_[i].size - blocks_[i].capacity;
+                capacity += blocks_[i].size - blocks_[i].occupied;
             }
             if(count <= capacity) {
                 return;
