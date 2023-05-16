@@ -84,14 +84,15 @@ namespace parser {
     TypeInfo Parser::parse_type_declaration() {
         consume_expected(util::Category::TYPE, "type declaration");
         TypeInfo info;
-        info.declaration.name = next().value;
+        info.declaration = file_.arena.allocate<Declaration>();
+        info.declaration->name = next().value;
         consume_expected(util::Category::IDENTIFIER, "type declaration");
 
-        info.declaration.generic_params = parse_generic_params();
+        info.declaration->generic_params = parse_generic_params();
 
         if(next().is_type_modifier()) {
-            info.declaration.type = DeclarationType::ALIAS;
-            info.declaration.underlying_type = file_.arena.allocate<Declaration>(parse_type());
+            info.declaration->type = DeclarationType::ALIAS;
+            info.declaration->underlying_type = file_.arena.allocate<Declaration>(parse_type());
             return info;
         }
 
@@ -99,14 +100,14 @@ namespace parser {
         case util::Category::IDENTIFIER:
         case util::Category::TUPLE:
         case util::Category::UNION:
-            info.declaration.type = DeclarationType::ALIAS;
-            info.declaration.underlying_type = file_.arena.allocate<Declaration>(parse_type());
+            info.declaration->type = DeclarationType::ALIAS;
+            info.declaration->underlying_type = file_.arena.allocate<Declaration>(parse_type());
             consume_expected(util::Category::SEMICOLON, "alias declaration");
             return info;
         case util::Category::STRUCT:
-            info.declaration.type = DeclarationType::STRUCT;
+            info.declaration->type = DeclarationType::STRUCT;
             consume(1);
-            info.declaration.fields = parse_struct_def();
+            info.declaration->fields = parse_struct_def();
             return info;
         case util::Category::ENUM:
         case util::Category::INTERFACE:
@@ -116,15 +117,17 @@ namespace parser {
         }
     }
 
-    std::unordered_map<std::string, Declaration> Parser::parse_struct_def() {
+    std::vector<std::pair<std::string, Declaration*>> Parser::parse_struct_def() {
         consume_expected(util::Category::LBRACE, "struct definition");
-        std::unordered_map<std::string, Declaration> result;
+        std::vector<std::pair<std::string, Declaration*>> result;
+        std::pair<std::string, Declaration*> field;
         while(next().category != util::Category::RBRACE) {
-            do_with_recovery(util::Category::SEMICOLON, [&result, this]() {
-                auto& field = result[next().value];
+            do_with_recovery(util::Category::SEMICOLON, [&result, &field, this]() {
+                field.first = next().value;
                 consume_expected(util::Category::IDENTIFIER, "struct definition");
                 consume_expected(util::Category::COLON, "struct definition");
-                field = parse_type();
+                field.second = file_.arena.allocate<Declaration>(parse_type());
+                result.emplace_back(std::move(field));
                 consume_expected(util::Category::SEMICOLON, "struct definition");
             });
         }
@@ -133,7 +136,7 @@ namespace parser {
         return result;
     }
 
-    Declaration Parser::parse_function_decl(bool unnamed) {
+    Declaration* Parser::parse_function_decl(bool unnamed) {
         consume_expected(util::Category::FUNC, "function declaration");
         Declaration result{.type = DeclarationType::FUNCTION};
         if(!unnamed) {
@@ -145,6 +148,7 @@ namespace parser {
 
         consume_expected(util::Category::LPAREN, "function declaration");
         size_t unnamed_param_cnt{0};
+        std::pair<std::string, Declaration*> param;
         while(next().category != util::Category::RPAREN) {
             std::string param_name;
             if(remainder_[1].category == util::Category::COLON) {
@@ -155,8 +159,9 @@ namespace parser {
                 param_name = std::to_string(unnamed_param_cnt);
                 unnamed_param_cnt++;
             }
-            auto& param = result.fields[param_name];
-            param = parse_type();
+            param.first = param_name;
+            param.second = file_.arena.allocate<Declaration>(parse_type());
+            result.fields.emplace_back(std::move(param));
             if(next().category != util::Category::RPAREN) {
                 consume_expected(util::Category::COMMA, "function declaration");
             }
@@ -171,7 +176,7 @@ namespace parser {
             result.return_type = file_.arena.allocate<Declaration>(parse_type());
         }
 
-        return result;
+        return file_.arena.allocate<Declaration>(std::move(result));
     }
 
     VariableDecl Parser::parse_variable() {
@@ -202,7 +207,7 @@ namespace parser {
         return result;
     }
 
-    Declaration Parser::parse_type() {
+    Declaration* Parser::parse_type() {
         Declaration result;
         for(;next().is_type_modifier(); consume(1)) {
             switch(next().category) {
@@ -234,7 +239,7 @@ namespace parser {
         }
         consume(1);
         result.generic_params = parse_generic_params();
-        return result;
+        return file_.arena.allocate<Declaration>(std::move(result));
     }
 
     Expression* Parser::parse_expression() {

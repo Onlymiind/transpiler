@@ -19,7 +19,7 @@
 namespace parser {
 
     struct TypeInfo {
-        Declaration declaration;
+        Declaration* declaration;
         Block function_definition;
     };
 
@@ -58,11 +58,11 @@ namespace parser {
 
         TypeInfo parse_type_declaration();
 
-        Declaration parse_type();
+        Declaration* parse_type();
 
-        std::unordered_map<std::string, Declaration> parse_struct_def();
+        std::vector<std::pair<std::string, Declaration*>> parse_struct_def();
 
-        Declaration parse_function_decl(bool unnamed = false);
+        Declaration* parse_function_decl(bool unnamed = false);
 
         Expression* parse_expression();
 

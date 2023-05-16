@@ -16,6 +16,10 @@ namespace util {
         };
     public:
         Arena() noexcept = default;
+        explicit Arena(size_t block_size)
+            :block_size_(block_size)
+        {}
+
         Arena(const Arena<T>&) = delete;
         Arena(Arena<T>&&) noexcept = default;
 
@@ -45,7 +49,7 @@ namespace util {
         }
 
         size_t get_block_size() const noexcept{
-            return g_block_size;
+            return block_size_;
         }
 
         size_t size() const {
@@ -57,7 +61,7 @@ namespace util {
     private:
         T* allocate_() {
             if(!has_space()) {
-                allocate_block(g_block_size);
+                allocate_block(block_size_);
             }
 
             return next();
@@ -94,7 +98,7 @@ namespace util {
         std::vector<Block> blocks_;
         size_t last_block_ = 0;
         size_t size_ = 0;
-        static constexpr size_t g_block_size = std::max<size_t>(512 / sizeof(T), 10);
+        size_t block_size_ = std::max<size_t>(512 / sizeof(T), 10);
     };
 
     template<typename... Types>

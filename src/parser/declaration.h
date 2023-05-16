@@ -41,7 +41,7 @@ namespace parser {
     };
 
     struct Declaration {
-        std::unordered_map<std::string, Declaration> fields;
+        std::vector<std::pair<std::string, Declaration*>> fields;
         std::vector<GenericParam> generic_params;
         std::vector<TypeModifiers> modifiers;
 

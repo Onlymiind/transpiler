@@ -18,20 +18,33 @@
 
 namespace module {
 
-    using TypeID = size_t;
+    using TypeID = uint64_t;
     using VariableID = size_t;
 
-    constexpr TypeID g_invalid_typeid = TypeID(-1);
+    constexpr TypeID g_invalid_typeid = 0;
     constexpr TypeID g_none_type = TypeID(-2);
 
-    enum class TypeKind : TypeID {
-        ALIAS = TypeID(1) << (CHAR_BIT * sizeof(TypeID) - 2),
-        STRUCT = TypeID(0b10) << (CHAR_BIT * sizeof(TypeID) - 2),
-        FUNCTION = TypeID(0b11) << (CHAR_BIT * sizeof(TypeID) - 2),
+    constexpr TypeID g_max_type_id = uint64_t(-1) - (uint64_t(0xff) << 56);
 
-
-        MASK = FUNCTION
+    enum class TypeKind : uint8_t {
+        ALIAS = 1, STRUCT, FUNCTION, MODIFIED_TYPE, BUILTIN
     };
+
+    inline TypeKind get_kind(TypeID id) noexcept {
+        return TypeKind((id >> 56) & 0xff);
+    }
+
+    inline uint64_t get_index(TypeID id) noexcept {
+        return id & g_max_type_id;
+    }
+
+    inline TypeID make_type_id(TypeKind kind, uint64_t index) {
+        if (index > g_max_type_id) {
+            throw std::out_of_range("out of range of valid ids for type kind: " + std::to_string(int(kind)));
+        }
+
+        return (uint64_t(kind) << 56) | index;
+    }
 
     struct Expression;
 
@@ -47,7 +60,7 @@ namespace module {
     };
 
     struct FunctionCall {
-        TypeID function;
+        TypeID function{};
         std::vector<Expression> args;
     };
 
@@ -57,14 +70,14 @@ namespace module {
 
     struct Expression {
         util::Variant<VariableID, Literal, BinaryExpression, UnaryExpression, FunctionCall> expr;
-        TypeID result_type;
+        std::optional<TypeID> result_type;
         parser::ActionType action;
         util::Position pos;
     };
 
     struct Variable {
         std::string name;
-        TypeID type;
+        TypeID type{};
         Expression* initial_value = nullptr;
     };
 
@@ -84,26 +97,27 @@ namespace module {
     };
 
     struct AliasInfo {
-        TypeInfo info;
-        TypeID underlying_type;
+        TypeID underlying_type{};
     };
 
     struct StructInfo {
-        TypeInfo info;
         std::vector<Variable> fields;
     };
 
     struct FunctionInfo {
-        TypeInfo info;
         std::vector<Variable> args;
         std::optional<TypeID> return_type;
+    };
+
+    struct ModifiedType {
+        std::vector<parser::TypeModifiers> modifiers;
+        TypeID underlying_type{};
     };
 
     class Module {
     public:
 
         std::optional<TypeID> get_type_id(std::string_view name) const;
-        std::optional<TypeID> type_by_decl(const parser::Declaration& decl) const;
 
         std::optional<VariableID> get_var_id(std::string_view name) const;
 
@@ -131,16 +145,20 @@ namespace module {
         TypeID instantiate_union(std::vector<TypeID> variants);
         TypeID instantiate_tuple(std::vector<TypeID> members);
 
-        TypeID register_alias(AliasInfo info) { 
-            return register_info(std::move(info), aliases_, TypeKind::ALIAS); 
+        TypeID register_alias(AliasInfo info, TypeInfo general_info) { 
+            return register_info(std::move(info), std::move(general_info), aliases_, TypeKind::ALIAS); 
         }
 
-        TypeID register_struct(StructInfo info) { 
-            return register_info(std::move(info), structs_, TypeKind::STRUCT); 
+        TypeID register_struct(StructInfo info, TypeInfo general_info) { 
+            return register_info(std::move(info), std::move(general_info), structs_, TypeKind::STRUCT); 
         }
 
-        TypeID register_function(FunctionInfo info) { 
-            return register_info(std::move(info), functions_, TypeKind::FUNCTION); 
+        TypeID register_function(FunctionInfo info, TypeInfo general_info) { 
+            return register_info(std::move(info), std::move(general_info), functions_, TypeKind::FUNCTION); 
+        }
+
+        TypeID register_modified_type(ModifiedType info, TypeInfo general_info) {
+            return register_info(std::move(info), std::move(general_info), modified_types_, TypeKind::MODIFIED_TYPE);
         }
 
         VariableID register_variable(Variable var);
@@ -156,15 +174,14 @@ namespace module {
         }
     private:
         template<typename T>
-        TypeID register_info(T&& info, std::deque<T>& container, TypeKind kind) {
-            if(container.size() >= ~(size_t(0b11) << (CHAR_BIT * sizeof(size_t) - 2))) {
-                throw std::runtime_error("exceeded maximum possible types per file");
-            }
-
-            size_t id = size_t(kind) | container.size();
+        TypeID register_info(T&& info, TypeInfo general_info, std::deque<T>& container, TypeKind kind) {
+            TypeID id = make_type_id(kind, container.size());
             auto& ref = container.emplace_back(std::forward<T>(info));
-            id_to_info_[id] = &ref.info;
-            name_to_type_id_[ref.info.name]= id;
+            TypeInfo& gen_info = id_to_info_[id];
+            gen_info = std::move(general_info);
+            if(!gen_info.name.empty()) {
+                name_to_type_id_[gen_info.name] = id;
+            }
             return id;
         }
 
@@ -172,6 +189,8 @@ namespace module {
         std::deque<AliasInfo> aliases_;
         std::deque<StructInfo> structs_;
         std::deque<FunctionInfo> functions_;
+        std::deque<ModifiedType> modified_types_;
+        std::deque<TypeInfo> type_infos_;
 
         std::deque<Variable> variables_;
 
@@ -179,7 +198,7 @@ namespace module {
         util::Arena<Expression> expressions_arena_;
 
         std::unordered_map<std::string_view, TypeID> name_to_type_id_;
-        std::unordered_map<TypeID, TypeInfo*> id_to_info_;
+        std::unordered_map<TypeID, TypeInfo> id_to_info_;
 
         std::unordered_map<std::string_view, VariableID> name_to_var_id_;
     };
