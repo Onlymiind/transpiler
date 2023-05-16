@@ -45,7 +45,7 @@ namespace util {
             if(count <= capacity) {
                 return;
             }
-            allocate_block(count - capacity);
+            allocate_block(std::max(count - capacity, block_size_));
         }
 
         size_t get_block_size() const noexcept{
