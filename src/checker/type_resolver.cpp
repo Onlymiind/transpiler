@@ -4,11 +4,25 @@
 #include <unordered_map>
 #include <vector>
 
+#include "checker/checker.h"
 #include "checker/module.h"
+#include "parser/declaration.h"
 
 
 namespace type_resolver {
-        std::string make_name(const parser::Declaration& decl) {
+
+    //TODO: insert custom error type here
+    template<typename T>
+    T force_unwrap(std::optional<T> val) {
+        if(!val) {
+            throw 1;
+        }
+
+        return *val;
+    }
+
+
+    std::string make_name(const parser::Declaration& decl) {
         if(!decl.name.empty()) {
             return decl.name;
         }
@@ -42,12 +56,63 @@ namespace type_resolver {
         return name;
     }
 
-    struct Node {
-        
-        std::vector<Node*> dependencies;
-    };
-
     module::Module resolve_types(parser::File file, std::vector<module::TypeInfo> predefined_types) {
-        std::unordered_map<std::string, Node> name_to_node;
+        module::Module result;
+        //First pass: register all the types
+        //The definition of all of them will be filled in the second pass
+        for(auto& decl : file.types) {
+            switch(decl.declaration->type) {
+            case parser::DeclarationType::ALIAS:
+                result.register_alias(module::AliasInfo{}, module::TypeInfo{.name = decl.declaration->name, .category = module::TypeCategory::ALIAS});
+                break;
+            case parser::DeclarationType::STRUCT: {
+                module::StructInfo info;
+                for(auto& field : decl.declaration->fields) {
+                    info.fields.emplace_back(module::Variable{field.first});
+                }
+                result.register_struct(std::move(info), module::TypeInfo{.name = decl.declaration->name, .category = module::TypeCategory::STRUCT});
+                break;
+            }
+            case parser::DeclarationType::FUNCTION:
+                break;
+            case parser::DeclarationType::TUPLE:
+                break;
+            case parser::DeclarationType::UNION:
+                break;
+            }
+        }
+
+        //Second pass
+        for(auto& decl : file.types) {
+            module::TypeID id = *result.get_type_id(decl.declaration->name);
+            switch(decl.declaration->type) {
+            case parser::DeclarationType::ALIAS:{
+                module::AliasInfo* info = result.get_alias_info(id);
+                auto maybe_id = result.get_type_id(decl.declaration->underlying_type->name);
+                if(!maybe_id) {
+                    throw checker::CheckerError("unknown type: " + decl.declaration->underlying_type->name);
+                }
+                info->underlying_type = *maybe_id;
+                break;
+            }
+            case parser::DeclarationType::STRUCT: {
+                module::StructInfo* info = result.get_struct_info(id);
+                for(size_t i = 0; i < info->fields.size(); ++info) {
+                    auto maybe_id = result.get_type_id(decl.declaration->fields[i].first);
+                    if(!maybe_id) {
+                        throw checker::CheckerError("unknown type: " + decl.declaration->fields[i].first);
+                    }
+                    info->fields[i].type = *maybe_id;
+                }
+                break;
+            }
+            case parser::DeclarationType::FUNCTION:
+                break;
+            case parser::DeclarationType::TUPLE:
+                break;
+            case parser::DeclarationType::UNION:
+                break;
+            }
+        }
     }
 }

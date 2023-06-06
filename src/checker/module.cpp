@@ -25,7 +25,7 @@ namespace module {
         if(it == id_to_info_.end()) {
             return nullptr;
         }
-        return it->second;
+        return &it->second;
     }
 
     AliasInfo* Module::get_alias_info(TypeID id) {
@@ -43,7 +43,7 @@ namespace module {
         if(it == id_to_info_.end()) {
             return nullptr;
         }
-        return it->second;
+        return &it->second;
     }
 
     const AliasInfo* Module::get_alias_info(TypeID id) const {

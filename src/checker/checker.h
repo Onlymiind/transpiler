@@ -34,7 +34,7 @@ namespace checker {
         void check_variable();
 
         const parser::Declaration& type_info(TypeID id) const {
-            return file_.types[id].declaration;
+            return *file_.types[id].declaration;
         }
 
         std::optional<TypeID> type_id_by_name(std::string_view name) const {

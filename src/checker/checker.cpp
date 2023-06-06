@@ -8,14 +8,14 @@ namespace checker {
     {
         for(size_t i = 0; i < file_.types.size(); i++) {
             const auto& decl = file_.types[i];
-            if(name_to_type_.contains(decl.declaration.name)) {
+            if(name_to_type_.contains(decl.declaration->name)) {
                 if(err_out_) {
-                    *err_out_ << "redeclaration: " << decl.declaration.name << std::endl;
+                    *err_out_ << "redeclaration: " << decl.declaration->name << std::endl;
                 }
                 continue;
             }
 
-            name_to_type_[decl.declaration.name] = i;
+            name_to_type_[decl.declaration->name] = i;
         }
     }
 
@@ -23,8 +23,8 @@ namespace checker {
         const auto& info = type_info(id);
 
         for(const auto& [param_name, type] : info.fields) {
-            if(!type_id_by_name(type.name)) {
-                error("in function ", info.name, "unknown argument type: ", type.name);
+            if(!type_id_by_name(type->name)) {
+                error("in function ", info.name, "unknown argument type: ", type->name);
             }
         }
 

@@ -92,7 +92,7 @@ namespace parser {
 
         if(next().is_type_modifier()) {
             info.declaration->type = DeclarationType::ALIAS;
-            info.declaration->underlying_type = file_.arena.allocate<Declaration>(parse_type());
+            info.declaration->underlying_type = parse_type();
             return info;
         }
 
@@ -101,7 +101,7 @@ namespace parser {
         case util::Category::TUPLE:
         case util::Category::UNION:
             info.declaration->type = DeclarationType::ALIAS;
-            info.declaration->underlying_type = file_.arena.allocate<Declaration>(parse_type());
+            info.declaration->underlying_type = parse_type();
             consume_expected(util::Category::SEMICOLON, "alias declaration");
             return info;
         case util::Category::STRUCT:
@@ -126,7 +126,7 @@ namespace parser {
                 field.first = next().value;
                 consume_expected(util::Category::IDENTIFIER, "struct definition");
                 consume_expected(util::Category::COLON, "struct definition");
-                field.second = file_.arena.allocate<Declaration>(parse_type());
+                field.second = parse_type();
                 result.emplace_back(std::move(field));
                 consume_expected(util::Category::SEMICOLON, "struct definition");
             });
@@ -160,7 +160,7 @@ namespace parser {
                 unnamed_param_cnt++;
             }
             param.first = param_name;
-            param.second = file_.arena.allocate<Declaration>(parse_type());
+            param.second = parse_type();
             result.fields.emplace_back(std::move(param));
             if(next().category != util::Category::RPAREN) {
                 consume_expected(util::Category::COMMA, "function declaration");
@@ -173,7 +173,7 @@ namespace parser {
         };
 
         if(!decl_end.contains(next().category)) {
-            result.return_type = file_.arena.allocate<Declaration>(parse_type());
+            result.return_type = parse_type();
         }
 
         return file_.arena.allocate<Declaration>(std::move(result));
