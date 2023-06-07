@@ -29,14 +29,23 @@ namespace module {
     }
 
     AliasInfo* Module::get_alias_info(TypeID id) {
-        if(id >= g_none_type || aliases_.size() <= id) {
+        uint64_t index = get_index(id);
+        if(id >= g_none_type || aliases_.size() <= index) {
             return nullptr;
         }
-        return &aliases_[id];
+        return &aliases_[index];
     }
 
     //StructInfo* Module::get_struct_info(TypeID id);
     //FunctionInfo* Module::get_funtion_info(TypeID id);
+
+    StructInfo* Module::get_struct_info(TypeID id) {
+        uint64_t index = get_index(id);
+        if(id >= g_none_type || structs_.size() <= index) {
+            return nullptr;
+        }
+        return &structs_[index];
+    }
 
     const TypeInfo* Module::get_info(TypeID id) const {
         auto it = id_to_info_.find(id);
@@ -44,27 +53,6 @@ namespace module {
             return nullptr;
         }
         return &it->second;
-    }
-
-    const AliasInfo* Module::get_alias_info(TypeID id) const {
-        if(id >= g_none_type || aliases_.size() <= id) {
-            return nullptr;
-        }
-        return &aliases_[id];
-    }
-
-    const StructInfo* Module::get_struct_info(TypeID id) const {
-        if(id >= g_none_type || structs_.size() <= id) {
-            return nullptr;
-        }
-        return &structs_[id];
-    }
-
-    const FunctionInfo* Module::get_function_info(TypeID id) const {
-        if(id >= g_none_type || functions_.size() <= id) {
-            return nullptr;
-        }
-        return &functions_[id];
     }
 
     bool Module::has_action_support(TypeID id, parser::ActionType action) const {
@@ -118,6 +106,13 @@ namespace module {
     bool Module::is_callable(TypeID type) const {
         auto info = get_info(type);
         return info && info->properties == TypeProperties::CALLABLE;
+    }
+
+    TypeID Module::register_builtin(TypeInfo info) {
+        TypeID id = make_type_id(TypeKind::BUILTIN, next_id_++);
+        id_to_info_[id] = std::move(info);
+        name_to_type_id_[id_to_info_[id].name] = id;
+        return id;
     }
 
     //TypeID Module::instantiate_union(std::vector<TypeID> variants);

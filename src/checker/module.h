@@ -161,6 +161,8 @@ namespace module {
             return register_info(std::move(info), std::move(general_info), modified_types_, TypeKind::MODIFIED_TYPE);
         }
 
+        TypeID register_builtin(TypeInfo info);
+
         VariableID register_variable(Variable var);
 
         //TODO: decide on expression storage and allocation
@@ -190,7 +192,6 @@ namespace module {
         std::deque<StructInfo> structs_;
         std::deque<FunctionInfo> functions_;
         std::deque<ModifiedType> modified_types_;
-        std::deque<TypeInfo> type_infos_;
 
         std::deque<Variable> variables_;
 

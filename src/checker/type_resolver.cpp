@@ -11,17 +11,6 @@
 
 namespace type_resolver {
 
-    //TODO: insert custom error type here
-    template<typename T>
-    T force_unwrap(std::optional<T> val) {
-        if(!val) {
-            throw 1;
-        }
-
-        return *val;
-    }
-
-
     std::string make_name(const parser::Declaration& decl) {
         if(!decl.name.empty()) {
             return decl.name;
@@ -58,8 +47,13 @@ namespace type_resolver {
 
     module::Module resolve_types(parser::File file, std::vector<module::TypeInfo> predefined_types) {
         module::Module result;
+
+        for(auto& info : predefined_types) {
+            result.register_builtin(std::move(info));
+        }
+
         //First pass: register all the types
-        //The definition of all of them will be filled in the second pass
+        //Their definitions will be filled in the second pass
         for(auto& decl : file.types) {
             switch(decl.declaration->type) {
             case parser::DeclarationType::ALIAS:
@@ -97,8 +91,8 @@ namespace type_resolver {
             }
             case parser::DeclarationType::STRUCT: {
                 module::StructInfo* info = result.get_struct_info(id);
-                for(size_t i = 0; i < info->fields.size(); ++info) {
-                    auto maybe_id = result.get_type_id(decl.declaration->fields[i].first);
+                for(size_t i = 0; i < info->fields.size(); ++i) {
+                    auto maybe_id = result.get_type_id(decl.declaration->fields[i].second->name);
                     if(!maybe_id) {
                         throw checker::CheckerError("unknown type: " + decl.declaration->fields[i].first);
                     }
@@ -114,5 +108,7 @@ namespace type_resolver {
                 break;
             }
         }
+
+        return result;
     }
 }
