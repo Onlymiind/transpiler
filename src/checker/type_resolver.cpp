@@ -52,7 +52,7 @@ namespace type_resolver {
             result.register_builtin(std::move(info));
         }
 
-        //First pass: register all the types
+        //First pass: register all user-declared types
         //Their definitions will be filled in the second pass
         for(auto& decl : file.types) {
             switch(decl.declaration->type) {
@@ -61,47 +61,57 @@ namespace type_resolver {
                 break;
             case parser::DeclarationType::STRUCT: {
                 module::StructInfo info;
+                info.fields.reserve(decl.declaration->fields.size());
                 for(auto& field : decl.declaration->fields) {
                     info.fields.emplace_back(module::Variable{field.first});
                 }
                 result.register_struct(std::move(info), module::TypeInfo{.name = decl.declaration->name, .category = module::TypeCategory::STRUCT});
                 break;
             }
-            case parser::DeclarationType::FUNCTION:
-                break;
-            case parser::DeclarationType::TUPLE:
-                break;
-            case parser::DeclarationType::UNION:
+            default:
                 break;
             }
         }
 
+        auto get_id = [&result](const std::string& name) -> module::TypeID {
+            auto maybe_id = result.get_type_id(name);
+            if(!maybe_id) {
+                throw checker::CheckerError("unknown type: " + name);
+            }
+
+            return *maybe_id;
+        };
+
         //Second pass
+        //TODO: anonymous types, pointers, optionals etc.
         for(auto& decl : file.types) {
             module::TypeID id = *result.get_type_id(decl.declaration->name);
             switch(decl.declaration->type) {
             case parser::DeclarationType::ALIAS:{
                 module::AliasInfo* info = result.get_alias_info(id);
-                auto maybe_id = result.get_type_id(decl.declaration->underlying_type->name);
-                if(!maybe_id) {
-                    throw checker::CheckerError("unknown type: " + decl.declaration->underlying_type->name);
-                }
-                info->underlying_type = *maybe_id;
+                info->underlying_type = get_id(decl.declaration->underlying_type->name);
                 break;
             }
             case parser::DeclarationType::STRUCT: {
                 module::StructInfo* info = result.get_struct_info(id);
                 for(size_t i = 0; i < info->fields.size(); ++i) {
-                    auto maybe_id = result.get_type_id(decl.declaration->fields[i].second->name);
-                    if(!maybe_id) {
-                        throw checker::CheckerError("unknown type: " + decl.declaration->fields[i].first);
-                    }
-                    info->fields[i].type = *maybe_id;
+                    info->fields[i].type = get_id(decl.declaration->fields[i].second->name);
                 }
                 break;
             }
-            case parser::DeclarationType::FUNCTION:
+            case parser::DeclarationType::FUNCTION: {
+                module::FunctionInfo info;
+                if(decl.declaration->return_type){
+                    info.return_type = get_id(decl.declaration->return_type->name);
+                }
+                info.args.reserve(decl.declaration->fields.size());
+                for(auto& param : decl.declaration->fields) {
+                    info.args.emplace_back(module::Variable{.name = param.first, .type = get_id(param.second->name)});
+                }
+
+                result.register_function(std::move(info), module::TypeInfo{.name = decl.declaration->name, .category = module::TypeCategory::FUNCTION});
                 break;
+            }
             case parser::DeclarationType::TUPLE:
                 break;
             case parser::DeclarationType::UNION:
