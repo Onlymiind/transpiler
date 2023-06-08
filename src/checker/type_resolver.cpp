@@ -12,7 +12,7 @@
 namespace type_resolver {
 
     std::string make_name(const parser::Declaration& decl) {
-        if(!decl.name.empty()) {
+        if(!(decl.name.empty() || decl.type == parser::DeclarationType::FUNCTION)) {
             return decl.name;
         }
 
@@ -42,6 +42,25 @@ namespace type_resolver {
             name.push_back('>');
         }
 
+        if(!decl.fields.empty()) {
+            name += '(';
+        }
+        bool first = true;
+        for(const auto& field : decl.fields) {
+            name.reserve(field.second->name.size() + 1);
+            if(!first) {
+                name += ',';
+            }
+            name += field.second->name;
+            first = false;
+        }   
+        if(!decl.fields.empty()) {
+            name += ')';
+        }
+        if(decl.return_type) {
+            name += decl.return_type->name;
+        }
+
         return name;
     }
 
@@ -57,7 +76,7 @@ namespace type_resolver {
         for(auto& decl : file.types) {
             switch(decl.declaration->type) {
             case parser::DeclarationType::ALIAS:
-                result.register_alias(module::AliasInfo{}, module::TypeInfo{.name = decl.declaration->name, .category = module::TypeCategory::ALIAS});
+                result.register_alias(module::AliasInfo{}, module::TypeInfo{.name = decl.declaration->name});
                 break;
             case parser::DeclarationType::STRUCT: {
                 module::StructInfo info;
@@ -65,7 +84,7 @@ namespace type_resolver {
                 for(auto& field : decl.declaration->fields) {
                     info.fields.emplace_back(module::Variable{field.first});
                 }
-                result.register_struct(std::move(info), module::TypeInfo{.name = decl.declaration->name, .category = module::TypeCategory::STRUCT});
+                result.register_struct(std::move(info), module::TypeInfo{.name = decl.declaration->name});
                 break;
             }
             default:
@@ -109,7 +128,7 @@ namespace type_resolver {
                     info.args.emplace_back(module::Variable{.name = param.first, .type = get_id(param.second->name)});
                 }
 
-                result.register_function(std::move(info), module::TypeInfo{.name = decl.declaration->name, .category = module::TypeCategory::FUNCTION});
+                result.register_function(std::move(info), module::TypeInfo{.name = make_name(*decl.declaration)});
                 break;
             }
             case parser::DeclarationType::TUPLE:

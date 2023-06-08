@@ -85,15 +85,10 @@ namespace module {
         NONE, INTEGRAL, FLOATING_POINT, BOOLEAN, POINTER, CALLABLE
     };
 
-    enum class TypeCategory {
-        UNKNOWN, ALIAS, FUNCTION, STRUCT, BUILTIN
-    };
-
     struct TypeInfo {
         std::string name;
         size_t size = 0;
         TypeProperties properties = TypeProperties::NONE;
-        TypeCategory category = TypeCategory::UNKNOWN;
     };
 
     struct AliasInfo {

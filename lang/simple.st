@@ -10,4 +10,4 @@ type Bar struct {
 
 type Barz Bar;
 
-func foo(arg0 : u8, arg1 : u8, arg2 : Foo) {}
+func foo(arg0 : u8, arg1 : u8, arg2 : Foo) Barz {}
