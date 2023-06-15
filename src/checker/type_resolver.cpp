@@ -8,6 +8,7 @@
 #include "checker/checker.h"
 #include "checker/module.h"
 #include "parser/declaration.h"
+#include "util/error_handler.h"
 
 
 namespace type_resolver {
@@ -17,8 +18,8 @@ namespace type_resolver {
         return std::to_string(id++);
     }
 
-    module::Module resolve_types(parser::File file, std::vector<module::TypeInfo> predefined_types) {
-        module::Module result;
+    module::Module resolve_types(parser::File file, std::vector<module::TypeInfo> predefined_types, util::ErrorHandler& err) {
+        module::Module result{err};
 
         for(auto& info : predefined_types) {
             result.register_builtin(std::move(info));
@@ -26,22 +27,28 @@ namespace type_resolver {
 
         //First pass: register all user-declared types
         //Their definitions will be filled in the second pass
-        for(auto& decl : file.types) {
-            switch(decl.declaration->type) {
-            case parser::DeclarationType::ALIAS:
-                result.register_alias(module::AliasInfo{}, module::TypeInfo{.name = decl.declaration->name});
-                break;
-            case parser::DeclarationType::STRUCT: {
-                module::StructInfo info;
-                info.fields.reserve(decl.declaration->fields.size());
-                for(auto& field : decl.declaration->fields) {
-                    info.fields.emplace_back(module::Variable{field.first});
+        std::unordered_set<size_t> err_types;
+        for(size_t i = 0; i < file.types.size(); ++i) {
+            auto& decl = file.types[i];
+            try {
+                switch(decl.declaration->type) {
+                case parser::DeclarationType::ALIAS:
+                    result.register_alias(module::AliasInfo{}, module::TypeInfo{.name = decl.declaration->name});
+                    break;
+                case parser::DeclarationType::STRUCT: {
+                    module::StructInfo info;
+                    info.fields.reserve(decl.declaration->fields.size());
+                    for(auto& field : decl.declaration->fields) {
+                        info.fields.emplace_back(module::Variable{field.first});
+                    }
+                    result.register_struct(std::move(info), module::TypeInfo{.name = decl.declaration->name});
+                    break;
                 }
-                result.register_struct(std::move(info), module::TypeInfo{.name = decl.declaration->name});
-                break;
-            }
-            default:
-                break;
+                default:
+                    break;
+                }
+            } catch(const util::CheckerError&) {
+                err_types.emplace(i);
             }
         }
 
@@ -56,7 +63,11 @@ namespace type_resolver {
 
         //Second pass
         //TODO: anonymous types, pointers, optionals etc.
-        for(auto& decl : file.types) {
+        for(size_t i = 0; i < file.types.size(); ++i) {
+            if(err_types.contains(i)) {
+                continue;
+            }
+            auto& decl = file.types[i];
             module::TypeID id = *result.get_type_id(decl.declaration->name);
             switch(decl.declaration->type) {
             case parser::DeclarationType::ALIAS:{

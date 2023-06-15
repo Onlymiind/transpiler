@@ -41,10 +41,13 @@ namespace util {
         }
 
         template<typename... MsgArgs>
-        [[noreturn]] void checker_error(size_t pos, MsgArgs&&... args) {
-            error<CheckerError>(pos, std::forward<MsgArgs>(args)...);
+        [[noreturn]] void checker_error(MsgArgs&&... args) {
+            error<CheckerError>(0, std::forward<MsgArgs>(args)...);
         }
 
+        bool error_occured() const {
+            return error_occured_;
+        }
     private:
         bool error_occured_ = false;
         std::ostream* err_out_ = nullptr;

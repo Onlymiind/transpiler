@@ -109,6 +109,9 @@ namespace module {
     }
 
     TypeID Module::register_builtin(TypeInfo info) {
+        if(name_to_type_id_.contains(info.name)) {
+            err_->checker_error("type " + info.name + " already declared");
+        }
         TypeID id = make_type_id(TypeKind::BUILTIN, next_id_++);
         id_to_info_[id] = std::move(info);
         name_to_type_id_[id_to_info_[id].name] = id;

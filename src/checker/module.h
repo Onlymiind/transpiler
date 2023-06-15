@@ -15,6 +15,7 @@
 #include "util/arena.h"
 #include "util/util.h"
 #include "util/variant.h"
+#include "util/error_handler.h"
 
 namespace module {
 
@@ -111,6 +112,9 @@ namespace module {
 
     class Module {
     public:
+        Module(util::ErrorHandler& err)
+            : err_(&err)
+        {}
 
         std::optional<TypeID> get_type_id(std::string_view name) const;
 
@@ -172,6 +176,9 @@ namespace module {
     private:
         template<typename T>
         TypeID register_info(T&& info, TypeInfo general_info, std::deque<T>& container, TypeKind kind) {
+            if(name_to_type_id_.contains(general_info.name)) {
+                err_->checker_error("type " + general_info.name + " already declared");
+            }
             TypeID id = make_type_id(kind, container.size());
             auto& ref = container.emplace_back(std::forward<T>(info));
             TypeInfo& gen_info = id_to_info_[id];
@@ -197,5 +204,7 @@ namespace module {
         std::unordered_map<TypeID, TypeInfo> id_to_info_;
 
         std::unordered_map<std::string_view, VariableID> name_to_var_id_;
+
+        util::ErrorHandler* err_;
     };
 }

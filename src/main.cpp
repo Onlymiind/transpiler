@@ -23,9 +23,13 @@ int main() {
         std::cout << e.what() << std::endl;
     }
 
-    auto m = type_resolver::resolve_types(std::move(file), {module::TypeInfo{.name = "u8"}});
+    auto m = type_resolver::resolve_types(std::move(file), {module::TypeInfo{.name = "u8"}}, err);
 
-    std::cout << "Done" << '\n';
+    if (err.error_occured()){
+        std::cout << "Failed\n";
+    } else {
+        std::cout << "Done\n";
+    }
 
-    return 10;
+    return 0;
 }
