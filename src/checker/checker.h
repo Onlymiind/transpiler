@@ -17,12 +17,6 @@ namespace checker {
     using TypeID = size_t;
     using VariableID = size_t;
 
-    class CheckerError : public std::runtime_error {
-    public:
-        using std::runtime_error::runtime_error;
-        using std::runtime_error::operator=;
-    };
-
     class Checker {
     public:
         Checker(parser::File&& file, std::ostream* err_out);
@@ -48,7 +42,7 @@ namespace checker {
 
         template<typename... Args>
         [[noreturn]] void error(Args... args) {
-            throw CheckerError(util::sprint(std::forward<Args>(args)...));
+            throw util::CheckerError(util::sprint(std::forward<Args>(args)...));
         }
     private:
         parser::File file_;

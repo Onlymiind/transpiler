@@ -1,5 +1,6 @@
 #include "checker/type_resolver.h"
 
+#include <string>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
@@ -12,56 +13,8 @@
 namespace type_resolver {
 
     std::string make_name(const parser::Declaration& decl) {
-        if(!(decl.name.empty() || decl.type == parser::DeclarationType::FUNCTION)) {
-            return decl.name;
-        }
-
-        std::string name;
-        switch (decl.type) {
-        case parser::DeclarationType::UNION:
-            name += "union";
-            break;
-        case parser::DeclarationType::TUPLE:
-            name += "tuple";
-            break;
-        case parser::DeclarationType::FUNCTION:
-            name += "func";
-            break;
-        }
-
-        if(!decl.generic_params.empty()) {
-            name.push_back('<');
-        }
-        for(size_t i = 0; i < decl.generic_params.size(); i++) {
-            if (i != 0) {
-                name.push_back(',');
-            }
-            name += decl.generic_params[i].name;
-        }
-        if(!decl.generic_params.empty()) {
-            name.push_back('>');
-        }
-
-        if(!decl.fields.empty()) {
-            name += '(';
-        }
-        bool first = true;
-        for(const auto& field : decl.fields) {
-            name.reserve(field.second->name.size() + 1);
-            if(!first) {
-                name += ',';
-            }
-            name += field.second->name;
-            first = false;
-        }   
-        if(!decl.fields.empty()) {
-            name += ')';
-        }
-        if(decl.return_type) {
-            name += decl.return_type->name;
-        }
-
-        return name;
+        static uint64_t id = 0;
+        return std::to_string(id++);
     }
 
     module::Module resolve_types(parser::File file, std::vector<module::TypeInfo> predefined_types) {
@@ -95,7 +48,7 @@ namespace type_resolver {
         auto get_id = [&result](const std::string& name) -> module::TypeID {
             auto maybe_id = result.get_type_id(name);
             if(!maybe_id) {
-                throw checker::CheckerError("unknown type: " + name);
+                throw util::CheckerError("unknown type: " + name);
             }
 
             return *maybe_id;

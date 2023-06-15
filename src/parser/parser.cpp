@@ -6,6 +6,7 @@
 
 #include "parser/expression.h"
 #include "parser/statement.h"
+#include "util/error_handler.h"
 #include "util/util.h"
 
 namespace parser {
@@ -21,9 +22,9 @@ namespace parser {
         return it - tokens.begin();
     }
 
-    File parse(std::vector<util::Token> tokens) {
+    File parse(std::vector<util::Token> tokens, util::ErrorHandler& err) {
         //TODO: report errors
-        Parser p{std::move(tokens), &std::cout};
+        Parser p{std::move(tokens), err};
         return p.parse();
     }
 
@@ -40,7 +41,7 @@ namespace parser {
                 // TODO: parse import
                 util::Token::Pos pos = next().pos;
                 consume(1);
-                error(pos, "imports are not implemented");
+                err_->parser_error(pos, "imports are not implemented");
                 break;
             }
             case util::Category::TYPE:
@@ -111,9 +112,9 @@ namespace parser {
             return info;
         case util::Category::ENUM:
         case util::Category::INTERFACE:
-            error(next().pos, "not implemented");
+            err_->parser_error(next().pos, "not implemented");
         default:
-            errorn(next().pos, "type declaration: expected one of the: type_name, tuple, union, enum, struct, got ", next().category);
+            err_->parser_error(next().pos, "type declaration: expected one of the: type_name, tuple, union, enum, struct, got ", next().category);
         }
     }
 
@@ -218,7 +219,7 @@ namespace parser {
                 result.modifiers.push_back(TypeModifiers::POINTER);
                 break;
             default:
-                error(next().pos, "not implemented");
+                err_->parser_error(next().pos, "not implemented");
             }
         }
 
@@ -235,7 +236,7 @@ namespace parser {
         case util::Category::FUNC:
             return parse_function_decl(true);
         default:
-            errorn(next().pos, "type: expected one of the type_name, union, tuple, got: ", next().category);
+            err_->parser_error(next().pos, "type: expected one of the type_name, union, tuple, got: ", next().category);
         }
         consume(1);
         result.generic_params = parse_generic_params();
@@ -307,7 +308,7 @@ namespace parser {
             consume(1);
             break;
         default:
-            errorn(next().pos, "primary expression: unexpected token: ", next().category);
+            err_->parser_error(next().pos, "primary expression: unexpected token: ", next().category);
         }
 
         return result;
@@ -354,10 +355,5 @@ namespace parser {
         }
         consume(1);
         return std::move(result);
-    }
-
-    void Parser::error(size_t pos, const std::string& msg) {
-        errors_.emplace_back(util::Error{pos, msg});
-        throw ParserError{"pos " + std::to_string(pos) + ", parser error: " + msg};
     }
 }

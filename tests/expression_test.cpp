@@ -10,6 +10,7 @@
 #include "parser/parser.h"
 #include "lexer/lexer.h"
 #include "util/arena.h"
+#include "util/error_handler.h"
 
 struct TestData {
     std::string name;
@@ -35,15 +36,17 @@ inline std::array test_data{
 };
 
 TEST_CASE("Simple expressions") {
+    util::ErrorHandler dummy_err;
     for(const auto& test : test_data) {
         INFO(test.name + ", expression: " + test.str);
-        parser::Parser p{lexer::split(test.str)};
+        parser::Parser p{lexer::split(test.str), dummy_err};
         parser::Expression* result = p.parse_expression();
         REQUIRE(*result == test.expected);
     }
 }
 
 TEST_CASE("Simple binary expressions") {
+    util::ErrorHandler dummy_err;
     {
         util::Arena<parser::Expression> arena;
         parser::Expression expected = parser::Expression{parser::Expr{
@@ -52,7 +55,7 @@ TEST_CASE("Simple binary expressions") {
             .action = parser::binary_actions.at(parser::ActionType::ADD),
         }};
 
-        parser::Parser p{lexer::split("a + 10")};
+        parser::Parser p{lexer::split("a + 10"), dummy_err};
         parser::Expression* result = p.parse_expression();
         REQUIRE(*result == expected);
     }
@@ -64,7 +67,7 @@ TEST_CASE("Simple binary expressions") {
             .action = parser::binary_actions.at(parser::ActionType::SUB),
         }};
 
-        parser::Parser p{lexer::split("a - 10")};
+        parser::Parser p{lexer::split("a - 10"), dummy_err};
         parser::Expression* result = p.parse_expression();
         REQUIRE(*result == expected);
     }
@@ -76,7 +79,7 @@ TEST_CASE("Simple binary expressions") {
             .action = parser::binary_actions.at(parser::ActionType::MUL),
         }};
 
-        parser::Parser p{lexer::split("a * 10")};
+        parser::Parser p{lexer::split("a * 10"), dummy_err};
         parser::Expression* result = p.parse_expression();
         REQUIRE(*result == expected);
     }

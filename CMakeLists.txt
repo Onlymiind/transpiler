@@ -32,6 +32,7 @@ set(UTIL_MODULE
     src/util/util.cpp
     src/util/arena.h
     src/util/variant.h
+    src/util/error_handler.h
 )
 
 add_library(transpiler_lib

@@ -12,6 +12,7 @@
 
 #include "util/util.h"
 #include "util/arena.h"
+#include "util/error_handler.h"
 #include "parser/expression.h"
 #include "parser/statement.h"
 #include "parser/declaration.h"
@@ -31,20 +32,13 @@ namespace parser {
 
     std::optional<size_t> first_not_comment(util::Tokens tokens);
 
-    File parse(std::vector<util::Token> tokens);
-
-    // just so it is distinct from std::runtime_error
-    class ParserError : public std::runtime_error {
-    public:
-        using std::runtime_error::runtime_error;
-        using std::runtime_error::operator=;
-    };
+    File parse(std::vector<util::Token> tokens, util::ErrorHandler& err);
 
     class Parser {
     public:
         Parser() = default;
-        Parser(std::vector<util::Token> tokens, std::ostream* err_out = nullptr) 
-            : tokens_{std::move(tokens)}, err_out_{err_out}
+        Parser(std::vector<util::Token> tokens, util::ErrorHandler& err) 
+            : tokens_{std::move(tokens)}, err_{&err}
         {}
 
 
@@ -90,7 +84,7 @@ namespace parser {
 
         inline void consume_expected(util::Category expected, const std::string& err_prefix = "") {
             if(next().category != expected) {
-                errorn(next().pos, err_prefix, ": expected ", expected, ", got ", remainder_[0].category);
+                err_->parser_error(next().pos, err_prefix, ": expected ", expected, ", got ", remainder_[0].category);
             }
 
             consume(1);
@@ -106,29 +100,19 @@ namespace parser {
         void do_with_recovery(util::Category recovery_point, Function func) {
             try {
                 func();
-            } catch (const ParserError& e) {
-                if(err_out_) {
-                    *err_out_ << e.what() << '\n';
-                }
+            } catch (const util::ParserError& e) {
                 auto pos = find_in_current_scope(remainder_, recovery_point);
                 consume(pos ? *pos + 1: remainder_.size());
             }
         }
 
-        // pushes an error to errors_ and throws ParserError
-        [[noreturn]] void error(size_t pos, const std::string& msg);
-
-        template<typename... T>
-        [[noreturn]] void errorn(size_t pos, T&&... msg_args) {
-            error(pos, util::sprint(std::forward<T>(msg_args)...));
-        }
     private:
         std::vector<util::Token> tokens_;
         std::vector<util::Error> errors_;
 
         File file_;
 
-        std::ostream* err_out_ = nullptr;
+        util::ErrorHandler* err_ = nullptr;
 
         util::Tokens remainder_ = tokens_;
     };
