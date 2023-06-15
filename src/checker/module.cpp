@@ -3,8 +3,8 @@
 
 namespace module {
     std::optional<TypeID> Module::get_type_id(std::string_view name) const {
-        auto it = name_to_type_id_.find(name);
-        if(it == name_to_type_id_.end()) {
+        auto it = sym_table_.find(name);
+        if(it == sym_table_.end()) {
             return {};
         }
         return it->second;
@@ -109,12 +109,9 @@ namespace module {
     }
 
     TypeID Module::register_builtin(TypeInfo info) {
-        if(name_to_type_id_.contains(info.name)) {
-            err_->checker_error("type " + info.name + " already declared");
-        }
         TypeID id = make_type_id(TypeKind::BUILTIN, next_id_++);
+        add_name(info.name, id);
         id_to_info_[id] = std::move(info);
-        name_to_type_id_[id_to_info_[id].name] = id;
         return id;
     }
 
@@ -123,8 +120,9 @@ namespace module {
 
     VariableID Module::register_variable(Variable var) {
         VariableID id = next_id_++;
-        auto& ref = variables_.emplace_back(std::move(var));
-        name_to_var_id_[ref.name] = id;
+        add_name(var.name, var.type);
+        name_to_var_id_[var.name] = id;
+        variables_.emplace_back(std::move(var));
         return id;
     }
 }

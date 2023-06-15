@@ -152,15 +152,14 @@ namespace module {
             return register_info(std::move(info), std::move(general_info), structs_, TypeKind::STRUCT); 
         }
 
-        TypeID register_function(FunctionInfo info, TypeInfo general_info) { 
-            return register_info(std::move(info), std::move(general_info), functions_, TypeKind::FUNCTION); 
-        }
 
         TypeID register_modified_type(ModifiedType info, TypeInfo general_info) {
             return register_info(std::move(info), std::move(general_info), modified_types_, TypeKind::MODIFIED_TYPE);
         }
 
         TypeID register_builtin(TypeInfo info);
+
+        TypeID register_function(FunctionInfo info, TypeInfo general_info);
 
         VariableID register_variable(Variable var);
 
@@ -176,17 +175,21 @@ namespace module {
     private:
         template<typename T>
         TypeID register_info(T&& info, TypeInfo general_info, std::deque<T>& container, TypeKind kind) {
-            if(name_to_type_id_.contains(general_info.name)) {
-                err_->checker_error("type " + general_info.name + " already declared");
-            }
             TypeID id = make_type_id(kind, container.size());
-            auto& ref = container.emplace_back(std::forward<T>(info));
-            TypeInfo& gen_info = id_to_info_[id];
-            gen_info = std::move(general_info);
-            if(!gen_info.name.empty()) {
-                name_to_type_id_[gen_info.name] = id;
-            }
+            add_name(general_info.name, id);
+            container.emplace_back(std::forward<T>(info));
+            id_to_info_[id] = std::move(general_info);
             return id;
+        }
+
+        void add_name(std::string_view name, TypeID type_id) {
+            if(name.empty()) {
+                return;
+            }
+            if(sym_table_.contains(name)) {
+                err_->checker_error("name " + std::string{name} + " already declared");
+            }
+            sym_table_[name] = type_id;
         }
 
         TypeID next_id_ = 0;
@@ -200,7 +203,7 @@ namespace module {
         //should this be here?
         util::Arena<Expression> expressions_arena_;
 
-        std::unordered_map<std::string_view, TypeID> name_to_type_id_;
+        std::unordered_map<std::string_view, TypeID> sym_table_;
         std::unordered_map<TypeID, TypeInfo> id_to_info_;
 
         std::unordered_map<std::string_view, VariableID> name_to_var_id_;
