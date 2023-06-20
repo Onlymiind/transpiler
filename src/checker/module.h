@@ -7,6 +7,7 @@
 #include <string>
 #include <optional>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "parser/declaration.h"
 #include "parser/expression.h"
@@ -19,28 +20,27 @@
 
 namespace module {
 
-    using TypeID = uint64_t;
-    using VariableID = size_t;
+    using ID = uint64_t;
 
-    constexpr TypeID g_invalid_typeid = 0;
-    constexpr TypeID g_none_type = TypeID(-2);
+    constexpr ID g_invalid_id = 0;
+    constexpr ID g_none_type = ID(-2);
 
-    constexpr TypeID g_max_type_id = uint64_t(-1) - (uint64_t(0xff) << 56);
+    constexpr ID g_max_id = uint64_t(-1) - (uint64_t(0xff) << 56);
 
-    enum class TypeKind : uint8_t {
-        ALIAS = 1, STRUCT, FUNCTION, MODIFIED_TYPE, BUILTIN
+    enum class IDKind : uint8_t {
+        ALIAS = 1, STRUCT, FUNCTION, MODIFIED_TYPE, BUILTIN, VARIABLE
     };
 
-    inline TypeKind get_kind(TypeID id) noexcept {
-        return TypeKind((id >> 56) & 0xff);
+    inline IDKind get_kind(ID id) noexcept {
+        return IDKind((id >> 56) & 0xff);
     }
 
-    inline uint64_t get_index(TypeID id) noexcept {
-        return id & g_max_type_id;
+    inline uint64_t get_index(ID id) noexcept {
+        return id & g_max_id;
     }
 
-    inline TypeID make_type_id(TypeKind kind, uint64_t index) {
-        if (index > g_max_type_id) {
+    inline ID make_id(IDKind kind, uint64_t index) {
+        if (index > g_max_id) {
             throw std::out_of_range("out of range of valid ids for type kind: " + std::to_string(int(kind)));
         }
 
@@ -61,7 +61,7 @@ namespace module {
     };
 
     struct FunctionCall {
-        TypeID function{};
+        ID function{};
         std::vector<Expression> args;
     };
 
@@ -70,44 +70,39 @@ namespace module {
     };
 
     struct Expression {
-        util::Variant<VariableID, Literal, BinaryExpression, UnaryExpression, FunctionCall> expr;
-        std::optional<TypeID> result_type;
+        util::Variant<ID, Literal, BinaryExpression, UnaryExpression, FunctionCall> expr;
+        std::optional<ID> result_type;
         parser::ActionType action;
         util::Position pos;
     };
 
     struct Variable {
-        std::string name;
-        TypeID type{};
+        ID type{};
         Expression* initial_value = nullptr;
     };
 
-    enum class TypeProperties {
-        NONE, INTEGRAL, FLOATING_POINT, BOOLEAN, POINTER, CALLABLE
-    };
-
-    struct TypeInfo {
+    struct Field {
         std::string name;
-        size_t size = 0;
-        TypeProperties properties = TypeProperties::NONE;
+        ID type;
+        Expression* default_value = nullptr;
     };
 
     struct AliasInfo {
-        TypeID underlying_type{};
+        ID underlying_type{};
     };
 
     struct StructInfo {
-        std::vector<Variable> fields;
+        std::vector<Field> fields;
     };
 
     struct FunctionInfo {
-        std::vector<Variable> args;
-        std::optional<TypeID> return_type;
+        std::vector<Field> args;
+        std::optional<ID> return_type;
     };
 
     struct ModifiedType {
         std::vector<parser::TypeModifiers> modifiers;
-        TypeID underlying_type{};
+        ID underlying_type{};
     };
 
     class Module {
@@ -116,52 +111,36 @@ namespace module {
             : err_(&err)
         {}
 
-        std::optional<TypeID> get_type_id(std::string_view name) const;
+        std::optional<ID> get_type_id(const std::string& name) const;
 
-        std::optional<VariableID> get_var_id(std::string_view name) const;
+        std::optional<ID> get_var_id(const std::string& name) const;
 
-        TypeInfo* get_info(TypeID id);
-        AliasInfo* get_alias_info(TypeID id);
-        StructInfo* get_struct_info(TypeID id);
-        FunctionInfo* get_funtion_info(TypeID id);
+        AliasInfo* get_alias_info(ID id);
+        StructInfo* get_struct_info(ID id);
+        FunctionInfo* get_funtion_info(ID id);
 
-        const TypeInfo* get_info(TypeID id) const;
-        const AliasInfo* get_alias_info(TypeID id) const;
-        const StructInfo* get_struct_info(TypeID id) const;
-        const FunctionInfo* get_function_info(TypeID id) const;
-        
-        bool has_action_support(TypeID id, parser::ActionType action) const;
+        const AliasInfo* get_alias_info(ID id) const;
+        const StructInfo* get_struct_info(ID id) const;
+        const FunctionInfo* get_function_info(ID id) const;
 
-        bool is_builtin(TypeID type) const;
-        bool is_builtin(const parser::Declaration& decl) const;
-
-        bool is_numeric(TypeID type) const;
-        bool is_integral(TypeID type) const;
-        bool is_floating_point(TypeID type) const;
-        bool is_boolean(TypeID type) const;
-        bool is_callable(TypeID type) const;
-
-        TypeID instantiate_union(std::vector<TypeID> variants);
-        TypeID instantiate_tuple(std::vector<TypeID> members);
-
-        TypeID register_alias(AliasInfo info, TypeInfo general_info) { 
-            return register_info(std::move(info), std::move(general_info), aliases_, TypeKind::ALIAS); 
+        ID register_alias(AliasInfo info, const std::string& name) { 
+            return register_info(std::move(info), name, aliases_, IDKind::ALIAS); 
         }
 
-        TypeID register_struct(StructInfo info, TypeInfo general_info) { 
-            return register_info(std::move(info), std::move(general_info), structs_, TypeKind::STRUCT); 
+        ID register_struct(StructInfo info, const std::string& name) { 
+            return register_info(std::move(info), name, structs_, IDKind::STRUCT); 
         }
 
 
-        TypeID register_modified_type(ModifiedType info, TypeInfo general_info) {
-            return register_info(std::move(info), std::move(general_info), modified_types_, TypeKind::MODIFIED_TYPE);
+        ID register_modified_type(ModifiedType info, const std::string& name) {
+            return register_info(std::move(info), name, modified_types_, IDKind::MODIFIED_TYPE);
         }
 
-        TypeID register_builtin(TypeInfo info);
+        ID register_builtin(const std::string& name);
 
-        TypeID register_function(FunctionInfo info, TypeInfo general_info);
+        ID register_function(FunctionInfo info, const std::string& name);
 
-        VariableID register_variable(Variable var);
+        ID register_variable(Variable var, const std::string& name);
 
         //TODO: decide on expression storage and allocation
         template<typename... Args>
@@ -174,39 +153,33 @@ namespace module {
         }
     private:
         template<typename T>
-        TypeID register_info(T&& info, TypeInfo general_info, std::deque<T>& container, TypeKind kind) {
-            TypeID id = make_type_id(kind, container.size());
-            add_name(general_info.name, id);
+        ID register_info(T&& info, const std::string& name, std::deque<T>& container, IDKind kind) {
+            ID id = make_id(kind, container.size());
+            add_name(name, id);
             container.emplace_back(std::forward<T>(info));
-            id_to_info_[id] = std::move(general_info);
             return id;
         }
 
-        void add_name(std::string_view name, TypeID type_id) {
+        void add_name(const std::string& name, ID type_id) {
             if(name.empty()) {
                 return;
             }
             if(sym_table_.contains(name)) {
-                err_->checker_error("name " + std::string{name} + " already declared");
+                err_->checker_error("name " + name + " already declared");
             }
             sym_table_[name] = type_id;
         }
 
-        TypeID next_id_ = 0;
         std::deque<AliasInfo> aliases_;
         std::deque<StructInfo> structs_;
         std::deque<FunctionInfo> functions_;
         std::deque<ModifiedType> modified_types_;
-
         std::deque<Variable> variables_;
 
         //should this be here?
         util::Arena<Expression> expressions_arena_;
 
-        std::unordered_map<std::string_view, TypeID> sym_table_;
-        std::unordered_map<TypeID, TypeInfo> id_to_info_;
-
-        std::unordered_map<std::string_view, VariableID> name_to_var_id_;
+        std::unordered_map<std::string, ID> sym_table_;
 
         util::ErrorHandler* err_;
     };

@@ -23,7 +23,7 @@ int main() {
         std::cout << e.what() << std::endl;
     }
 
-    auto m = type_resolver::resolve_types(std::move(file), {module::TypeInfo{.name = "u8"}}, err);
+    auto m = type_resolver::resolve_types(std::move(file), {"u8"}, err);
 
     if (err.error_occured()){
         std::cout << "Failed\n";

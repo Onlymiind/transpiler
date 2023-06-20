@@ -8,7 +8,9 @@
 #include "checker/checker.h"
 #include "checker/module.h"
 #include "parser/declaration.h"
+#include "parser/expression.h"
 #include "util/error_handler.h"
+#include "util/util.h"
 
 
 namespace type_resolver {
@@ -18,7 +20,7 @@ namespace type_resolver {
         return std::to_string(id++);
     }
 
-    module::Module resolve_types(parser::File file, std::vector<module::TypeInfo> predefined_types, util::ErrorHandler& err) {
+    module::Module resolve_types(parser::File file, std::vector<std::string> predefined_types, util::ErrorHandler& err) {
         module::Module result{err};
 
         for(auto& info : predefined_types) {
@@ -33,15 +35,15 @@ namespace type_resolver {
             try {
                 switch(decl.declaration->type) {
                 case parser::DeclarationType::ALIAS:
-                    result.register_alias(module::AliasInfo{}, module::TypeInfo{.name = decl.declaration->name});
+                    result.register_alias(module::AliasInfo{}, decl.declaration->name);
                     break;
                 case parser::DeclarationType::STRUCT: {
                     module::StructInfo info;
                     info.fields.reserve(decl.declaration->fields.size());
                     for(auto& field : decl.declaration->fields) {
-                        info.fields.emplace_back(module::Variable{field.first});
+                        info.fields.emplace_back(module::Field{field.first});
                     }
-                    result.register_struct(std::move(info), module::TypeInfo{.name = decl.declaration->name});
+                    result.register_struct(std::move(info), decl.declaration->name);
                     break;
                 }
                 default:
@@ -52,7 +54,7 @@ namespace type_resolver {
             }
         }
 
-        auto get_id = [&result](const std::string& name) -> module::TypeID {
+        auto get_id = [&result](const std::string& name) -> module::ID {
             auto maybe_id = result.get_type_id(name);
             if(!maybe_id) {
                 throw util::CheckerError("unknown type: " + name);
@@ -68,7 +70,7 @@ namespace type_resolver {
                 continue;
             }
             auto& decl = file.types[i];
-            module::TypeID id = *result.get_type_id(decl.declaration->name);
+            module::ID id = *result.get_type_id(decl.declaration->name);
             switch(decl.declaration->type) {
             case parser::DeclarationType::ALIAS:{
                 module::AliasInfo* info = result.get_alias_info(id);
@@ -83,25 +85,34 @@ namespace type_resolver {
                 break;
             }
             case parser::DeclarationType::FUNCTION: {
-                module::FunctionInfo info;
+                module::FunctionInfo info{};
                 if(decl.declaration->return_type){
                     info.return_type = get_id(decl.declaration->return_type->name);
                 }
                 info.args.reserve(decl.declaration->fields.size());
                 for(auto& param : decl.declaration->fields) {
-                    info.args.emplace_back(module::Variable{.name = param.first, .type = get_id(param.second->name)});
+                    info.args.emplace_back(module::Field{.name = param.first, .type = get_id(param.second->name)});
                 }
 
-                result.register_function(std::move(info), module::TypeInfo{.name = make_name(*decl.declaration)});
+                result.register_function(std::move(info), decl.declaration->name);
                 break;
             }
-            case parser::DeclarationType::TUPLE:
-                break;
-            case parser::DeclarationType::UNION:
+            default:
+                err.checker_error("unknown declaration type", decl.declaration->type);
                 break;
             }
         }
 
         return result;
+    }
+
+    module::Expression* resolve_expression(const module::Module& module, parser::Expression expr, util::ErrorHandler err) {
+        if(expr.expr.is<util::Token>()) {
+
+        } else if(expr.expr.is<parser::Expr>()) {
+            
+        } else if(expr.expr.is<parser::FunctionCall>()) {
+            err.checker_error("function calls not supported");
+        }
     }
 }
