@@ -6,6 +6,9 @@ set(CMAKE_CXX_STANDARD 20)
 set(LEXER_MODULE
     src/lexer/lexer.h
     src/lexer/lexer.cpp
+
+    src/lexer2/lexer.h
+    src/lexer2/lexer.cpp
 )
 
 set(PARSER_MODULE
@@ -44,6 +47,9 @@ add_library(transpiler_lib
 
 add_executable(transpiler
     src/main.cpp
+
+    src/types/token.h
+    src/types/token.cpp
 )
 
 add_executable(tests

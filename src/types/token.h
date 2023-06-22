@@ -1,30 +1,13 @@
 #pragma once
-#include <algorithm>
-#include <cstddef>
 #include <cstdint>
-#include <span>
-#include <string>
-#include <vector>
-#include <variant>
-#include <ostream>
-#include <sstream>
-#include <iterator>
 #include <string_view>
-#include <type_traits>
-#include <unordered_map>
-#include <unordered_set>
-#include <optional>
+#include <string>
+#include <span>
+#include <iostream>
 
-namespace util {
-    struct Error {
-        size_t pos = 0;
-        std::string msg;
-    };
 
-    inline std::ostream& operator<<(std::ostream& out, const Error& err) {
-        out << "Error on pos " << err.pos << ", message: " << err.msg;
-        return out;
-    }
+namespace types {
+    using StringRef = const std::string*;
 
     enum class Category : uint8_t {
         NONE,
@@ -181,26 +164,21 @@ namespace util {
     }
 
     struct Position {
-        size_t line {0};
-        size_t column {0};
+        size_t line = 0;
+        size_t byte = 0;
     };
 
     struct Token {
-        using Pos = size_t;
 
         Category category {Category::NONE};
-        Pos pos {0};
-        std::string value;
+        Position pos;
+        StringRef value = nullptr;
 
         union {
             uint64_t num;
             double f_num;
             char c;
         };
-
-        inline constexpr bool is_type_modifier() const noexcept {
-            return util::is_type_modifier(category);
-        }
     };
 
     std::ostream& operator<<(std::ostream& out, const Token& token);
@@ -298,40 +276,4 @@ namespace util {
 
         Token eof_ = Token{.category = Category::END_OF_FILE};
     };
-
-    template<typename Key, typename Val>
-    inline std::unordered_map<Val, Key> inverse(const std::unordered_map<Key, Val>& map) {
-        std::unordered_map<Val, Key> inverse;
-        inverse.reserve(map.size());
-        std::transform(map.begin(), map.end(), std::inserter(inverse, inverse.begin()), [](const auto& pair) {
-            return std::pair<Val, Key>{pair.second, pair.first};
-        });
-
-        return inverse;
-    }
-
-    size_t consume_scope(Tokens tokens, size_t start, std::pair<Category, Category> scope_delimiters);
-
-    std::optional<size_t> consume_scopes(Tokens tokens, size_t start, std::unordered_map<Category, Category> scope_delimiters);
-
-    Tokens split(Tokens& tokens, Category delim);
-
-    std::optional<size_t> find_in_current_scope(Tokens tokens, Category cat);
-
-    std::optional<std::pair<util::Category, size_t>> find_in_current_scope(Tokens tokens, const std::unordered_set<Category>& categories);
-
-    template<typename T, typename... Args>
-    concept Function = std::is_invocable_v<T, Args...>;
-
-    template<typename... T>
-    std::string sprint(T... args) {
-        std::ostringstream out;
-        (out << ... << args);
-        return out.str();
-    }
-
-    template<typename T>
-    constexpr bool deep_eq(T* lhs, T* rhs) {
-        return (!lhs && !rhs) || *lhs == *rhs;
-    }
 }

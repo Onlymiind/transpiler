@@ -183,4 +183,22 @@ namespace module {
 
         util::ErrorHandler* err_;
     };
+
+    using VariableID = size_t;
+
+    class Scope {
+    public:
+        VariableID register_varable();
+
+        std::optional<VariableID> get_var_id(const std::string& name);
+
+        Variable* get_info(VariableID id);
+    private:
+        Scope* parent_ = nullptr;
+        Module* module_ = nullptr;
+
+        std::deque<Variable> variables_;
+
+        std::unordered_map<std::string, VariableID> sym_table_;
+    };
 }

@@ -98,7 +98,8 @@ namespace type_resolver {
                 break;
             }
             default:
-                err.checker_error("unknown declaration type", decl.declaration->type);
+                //TODO: print declaration type as string
+                err.checker_error("unknown declaration type", int(decl.declaration->type));
                 break;
             }
         }
@@ -110,7 +111,7 @@ namespace type_resolver {
         if(expr.expr.is<util::Token>()) {
 
         } else if(expr.expr.is<parser::Expr>()) {
-            
+
         } else if(expr.expr.is<parser::FunctionCall>()) {
             err.checker_error("function calls not supported");
         }
