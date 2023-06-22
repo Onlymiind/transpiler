@@ -156,9 +156,46 @@ namespace lexer {
         return result;
     }
 
-    std::optional<types::Token> Lexer::get_special_token(){}
+    std::optional<types::Token> Lexer::get_numeric() {
+        types::Token result{.category = types::Category::INTEGER, .pos = current_pos_};
+        std::string buf;
+        auto get_digits = [this, &buf]() {
+            char c = next();
+            while(in_ && std::isdigit(c)) {
+                buf.push_back(c);
+                c = next();
+            }
+            putback(c);
+        };
 
-    std::optional<types::Token> Lexer::get_numeric(){}
+        get_digits();
+
+        if(in_.peek() == '.') {
+            result.category = types::Category::FLOAT;
+            buf.push_back(next());
+            get_digits();
+        }
+
+        if(std::tolower(in_.peek()) == 'e') {
+            result.category = types::Category::FLOAT;
+            buf.push_back(next());
+            char c = in_.peek();
+            if(c == '-' || c == '+') {
+                buf.push_back(next());
+            }
+            get_digits();
+        }
+
+        if(result.category == types::Category::INTEGER) {
+            result.num = std::stoull(buf);
+        } else if(result.category == types::Category::FLOAT) {
+            result.f_num = std::stod(buf);
+        }
+
+        return result;
+    }
+
+    std::optional<types::Token> Lexer::get_special_token(){}
 
     std::optional<types::Token> Lexer::get_string(){}
 
