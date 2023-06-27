@@ -161,14 +161,14 @@ namespace types {
         return out;
     }
 
-    inline constexpr bool is_type_modifier(Category cat) noexcept {
-        return cat == Category::OPTIONAL || cat == Category::MULTIPLY;
-    }
-
     struct Token {
         size_t pos;
         util::Variant<std::monostate, util::StringConstRef, uint64_t, double, char> value;
         Category category {Category::NONE};
+
+        inline bool is_type_modifier() const {
+             return category == Category::OPTIONAL || category == Category::MULTIPLY;
+        }
     };
 
     std::ostream& operator<<(std::ostream& out, const Token& token);

@@ -16,23 +16,22 @@ inline constexpr std::string_view out_fname{"/home/onlymind/mine/cpp/projects/tr
 int main() {
     std::ifstream in{in_fname.data(), std::ios::in};
 
-    // parser::File file;
+    parser::File file;
     util::ErrorHandler err{&std::cout};
     util::StringAllocator alloc;
-    // try {
-    //     file = parser::parse(lexer::Lexer{}.split(in), err);
-    // } catch (const std::exception& e) {
-    //     std::cout << e.what() << std::endl;
-    // }
+    try {
+        file = parser::parse(lexer::Lexer{in, alloc, err}.split(), err);
+    } catch (const std::exception& e) {
+        std::cout << e.what() << std::endl;
+    }
 
-    // auto m = type_resolver::resolve_types(std::move(file), {"u8"}, err);
+    auto m = type_resolver::resolve_types(std::move(file), {"u8"}, err);
 
-    // if (err.error_occured()){
-    //     std::cout << "Failed\n";
-    // } else {
-    //     std::cout << "Done\n";
-    // }
-    auto tok = lexer::Lexer{in, alloc, err}.split();
+    if (err.error_occured()){
+        std::cout << "Failed\n";
+    } else {
+        std::cout << "Done\n";
+    }
 
     return 0;
 }

@@ -73,7 +73,7 @@ namespace module {
         util::Variant<ID, Literal, BinaryExpression, UnaryExpression, FunctionCall> expr;
         std::optional<ID> result_type;
         parser::ActionType action;
-        util::Position pos;
+        size_t pos;
     };
 
     struct Variable {

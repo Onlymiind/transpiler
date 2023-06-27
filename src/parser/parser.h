@@ -16,6 +16,7 @@
 #include "parser/expression.h"
 #include "parser/statement.h"
 #include "parser/declaration.h"
+#include "types/token.h"
 
 namespace parser {
 
@@ -30,14 +31,14 @@ namespace parser {
         util::ArenaPool<Declaration, Expression> arena;
     };
 
-    std::optional<size_t> first_not_comment(util::Tokens tokens);
+    std::optional<size_t> first_not_comment(types::Tokens tokens);
 
-    File parse(std::vector<util::Token> tokens, util::ErrorHandler& err);
+    File parse(std::vector<types::Token> tokens, util::ErrorHandler& err);
 
     class Parser {
     public:
         Parser() = default;
-        Parser(std::vector<util::Token> tokens, util::ErrorHandler& err) 
+        Parser(std::vector<types::Token> tokens, util::ErrorHandler& err) 
             : tokens_{std::move(tokens)}, err_{&err}
         {}
 
@@ -74,7 +75,7 @@ namespace parser {
 
         Block parse_block();
 
-        inline const util::Token& next() noexcept {
+        inline const types::Token& next() noexcept {
             return remainder_[0];
         }
 
@@ -82,7 +83,7 @@ namespace parser {
             remainder_ = remainder_.subspan(count);
         }
 
-        inline void consume_expected(util::Category expected, const std::string& err_prefix = "") {
+        inline void consume_expected(types::Category expected, const std::string& err_prefix = "") {
             if(next().category != expected) {
                 err_->parser_error(next().pos, err_prefix, ": expected ", expected, ", got ", remainder_[0].category);
             }
@@ -91,29 +92,29 @@ namespace parser {
         }
 
         inline void ignore_comments() {
-            while(next().category == util::Category::COMMENT) {
+            while(next().category == types::Category::COMMENT) {
                 consume(1);
             }
         }
 
         template<util::Function Function>
-        void do_with_recovery(util::Category recovery_point, Function func) {
+        void do_with_recovery(types::Category recovery_point, Function func) {
             try {
                 func();
             } catch (const util::ParserError& e) {
-                auto pos = find_in_current_scope(remainder_, recovery_point);
+                auto pos = util::find_in_current_scope(remainder_, recovery_point);
                 consume(pos ? *pos + 1: remainder_.size());
             }
         }
 
     private:
-        std::vector<util::Token> tokens_;
+        std::vector<types::Token> tokens_;
         std::vector<util::Error> errors_;
 
         File file_;
 
         util::ErrorHandler* err_ = nullptr;
 
-        util::Tokens remainder_ = tokens_;
+        types::Tokens remainder_ = tokens_;
     };
 }

@@ -28,7 +28,7 @@ namespace parser {
     };
 
     struct Import {
-        util::Tokens tokens;
+        types::Tokens tokens;
     };
 
     struct Comment {

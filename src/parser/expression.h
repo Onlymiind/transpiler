@@ -11,6 +11,7 @@
 #include "util/util.h"
 #include "util/arena.h"
 #include "util/variant.h"
+#include "types/token.h"
 
 namespace parser {
     enum class ActionType: uint8_t {
@@ -68,8 +69,8 @@ namespace parser {
     bool operator==(const FunctionCall& lhs, const FunctionCall& rhs);
 
     struct Expression {
-        util::Variant<util::Token, Expr, FunctionCall> expr;
-        util::Position pos;
+        util::Variant<types::Token, Expr, FunctionCall> expr;
+        size_t pos;
     };
 
     inline bool operator==(const Expression& lhs, const Expression& rhs) {
@@ -82,14 +83,14 @@ namespace parser {
 
     Expression integer(uint64_t val);
 
-    Expression ident(std::string val);
+    Expression ident(util::StringConstRef val);
 
-    inline const std::unordered_map<util::Category, Action> unary_ops{
-        {util::Category::MINUS, Action{ActionType::NEGATE}},
-        {util::Category::PLUS, Action{ActionType::NONE}},
-        {util::Category::NOT, Action{ActionType::NOT}},
-        {util::Category::INVERT, Action{ActionType::INV}},
-        {util::Category::MULTIPLY, Action{ActionType::DEREF}}
+    inline const std::unordered_map<types::Category, Action> unary_ops{
+        {types::Category::MINUS, Action{ActionType::NEGATE}},
+        {types::Category::PLUS, Action{ActionType::NONE}},
+        {types::Category::NOT, Action{ActionType::NOT}},
+        {types::Category::INVERT, Action{ActionType::INV}},
+        {types::Category::MULTIPLY, Action{ActionType::DEREF}}
     };
 
     inline const std::unordered_map<ActionType, Action> binary_actions{
@@ -98,9 +99,9 @@ namespace parser {
         {ActionType::MUL, Action{ActionType::MUL, 2}}
     };
 
-    inline const std::unordered_map<util::Category, Action> binary_ops{
-        std::pair{util::Category::MINUS, binary_actions.at(ActionType::SUB)},
-        std::pair{util::Category::PLUS, binary_actions.at(ActionType::ADD)},
-        std::pair{util::Category::MULTIPLY, binary_actions.at(ActionType::MUL)}
+    inline const std::unordered_map<types::Category, Action> binary_ops{
+        std::pair{types::Category::MINUS, binary_actions.at(ActionType::SUB)},
+        std::pair{types::Category::PLUS, binary_actions.at(ActionType::ADD)},
+        std::pair{types::Category::MULTIPLY, binary_actions.at(ActionType::MUL)}
     };
 }

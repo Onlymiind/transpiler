@@ -1,4 +1,5 @@
 #include "parser/expression.h"
+#include "util/arena.h"
 #include "util/util.h"
 
 #include <sstream>
@@ -25,25 +26,23 @@ namespace parser {
         std::stringstream out;
         out << val;
     
-        return Expression{util::Token{
-            .category = util::Category::FLOAT,
-            .value = out.str(),
-            .f_num = val
+        return Expression{types::Token{
+            .value = val,
+            .category = types::Category::FLOAT,
         }};
     }
 
     Expression integer(uint64_t val) {
-        return Expression{util::Token{
-            .category = util::Category::INTEGER,
-            .value = std::to_string(val),
-            .num = val
+        return Expression{types::Token{
+            .value = val,
+            .category = types::Category::INTEGER,
         }};
     }
 
-    Expression ident(std::string val) {
-        return Expression{util::Token{
-            .category = util::Category::IDENTIFIER,
-            .value = std::move(val),
+    Expression ident(util::StringConstRef val) {
+        return Expression{types::Token{
+            .value = val,
+            .category = types::Category::IDENTIFIER,
         }};
     }
 }

@@ -5,7 +5,7 @@
 
 namespace util {
 
-    std::ostream& operator<<(std::ostream& out, const Token& token) {
+    std::ostream& operator<<(std::ostream& out, const types::Token& token) {
         if(!token.value.empty()) {
             out << "value: " << token.value << ", ";
         }
@@ -14,7 +14,7 @@ namespace util {
         return out;
     }
 
-    size_t consume_scope(Tokens tokens, size_t start, std::pair<Category, Category> scope_delimiters) {
+    size_t consume_scope(types::Tokens tokens, size_t start, std::pair<types::Category, types::Category> scope_delimiters) {
         if(start >= tokens.size() || tokens[start].category != scope_delimiters.first) {
             return start;
         }
@@ -36,12 +36,12 @@ namespace util {
         return i;
     }
 
-    std::optional<size_t> consume_scopes(Tokens tokens, size_t start, std::unordered_map<Category, Category> scope_delimiters) {
+    std::optional<size_t> consume_scopes(types::Tokens tokens, size_t start, std::unordered_map<types::Category, types::Category> scope_delimiters) {
         if(start >= tokens.size() || !scope_delimiters.contains(tokens[start].category)) {
             return start;
         }
 
-        std::stack<Category> scope;
+        std::stack<types::Category> scope;
         auto inverse = util::inverse(scope_delimiters);
         size_t i = start;
         for(; i < tokens.size(); i++) {
@@ -63,14 +63,14 @@ namespace util {
         return i;
     }
 
-    Tokens split(Tokens& tokens, Category delim) {
+    types::Tokens split(types::Tokens& tokens, types::Category delim) {
         if(tokens.empty()) {
             return tokens;
         }
 
         auto offset = find_in_current_scope(tokens, delim);
         if(!offset) {
-            return Tokens{};
+            return types::Tokens{};
         }
 
         auto result = tokens.subspan(0, *offset);
@@ -78,16 +78,16 @@ namespace util {
         return result;
     }
 
-    std::optional<size_t> find_in_current_scope(Tokens tokens, util::Category cat) {
+    std::optional<size_t> find_in_current_scope(types::Tokens tokens, types::Category cat) {
         size_t scope{};
         for(size_t i = 0; i < tokens.size(); i++) {
             
             // "{" will be consumed by util::consume_scope, so check for it here 
-            if(cat == util::Category::LBRACE && tokens[i].category == cat) {
+            if(cat == types::Category::LBRACE && tokens[i].category == cat) {
                 return i;
             }
 
-            i = util::consume_scope(tokens, i, {util::Category::LBRACE, util::Category::RBRACE});
+            i = util::consume_scope(tokens, i, {types::Category::LBRACE, types::Category::RBRACE});
             if(i >= tokens.size()) {
                 break;
             }
@@ -100,19 +100,19 @@ namespace util {
         return {};
     }
 
-    std::optional<std::pair<util::Category, size_t>> find_in_current_scope(Tokens tokens, const std::unordered_set<Category>& categories) {
+    std::optional<std::pair<types::Category, size_t>> find_in_current_scope(types::Tokens tokens, const std::unordered_set<types::Category>& categories) {
         size_t scope{};
-        bool has_lbrace = categories.contains(Category::LBRACE);
+        bool has_lbrace = categories.contains(types::Category::LBRACE);
         for(size_t i = 0; i < tokens.size(); i++) {
 
-            Category cat = tokens[i].category;
+            types::Category cat = tokens[i].category;
             
             // "{" will be consumed by util::consume_scope, so check for it here 
-            if(has_lbrace && cat == Category::LBRACE) {
+            if(has_lbrace && cat == types::Category::LBRACE) {
                 return std::pair{cat, i};
             }
 
-            i = util::consume_scope(tokens, i, {util::Category::LBRACE, util::Category::RBRACE});
+            i = util::consume_scope(tokens, i, {types::Category::LBRACE, types::Category::RBRACE});
             if(i >= tokens.size()) {
                 break;
             }

@@ -10,9 +10,9 @@
 #include "util/util.h"
 
 namespace parser {
-    std::optional<size_t> first_not_comment(util::Tokens tokens) {
+    std::optional<size_t> first_not_comment(types::Tokens tokens) {
         auto it = std::find_if(tokens.begin(), tokens.end(), [](const auto& token){
-            return token.category != util::Category::COMMENT;
+            return token.category != types::Category::COMMENT;
         });
 
         if(it == tokens.end()) {
@@ -22,7 +22,7 @@ namespace parser {
         return it - tokens.begin();
     }
 
-    File parse(std::vector<util::Token> tokens, util::ErrorHandler& err) {
+    File parse(std::vector<types::Token> tokens, util::ErrorHandler& err) {
         //TODO: report errors
         Parser p{std::move(tokens), err};
         return p.parse();
@@ -37,20 +37,20 @@ namespace parser {
             }
 
             switch(next().category) {
-            case util::Category::IMPORT: {
+            case types::Category::IMPORT: {
                 // TODO: parse import
-                util::Token::Pos pos = next().pos;
+                types::Token::Pos pos = next().pos;
                 consume(1);
                 err_->parser_error(pos, "imports are not implemented");
                 break;
             }
-            case util::Category::TYPE:
+            case types::Category::TYPE:
                 file_.types.emplace_back(parse_type_declaration());
                 break;
-            case util::Category::VAR:
+            case types::Category::VAR:
                 file_.variables.emplace_back(parse_variable());
                 break;
-            case util::Category::FUNC:
+            case types::Category::FUNC:
                 file_.types.emplace_back(parse_function());
                 break;
             default:
@@ -62,19 +62,19 @@ namespace parser {
     }
 
     std::vector<GenericParam> Parser::parse_generic_params() {
-        if(next().category != util::Category::LESS) {
+        if(next().category != types::Category::LESS) {
             return {};
         }
         consume(1);
 
         std::vector<GenericParam> result;
         result.emplace_back(GenericParam{next().value});
-        consume_expected(util::Category::IDENTIFIER, "generic params");
+        consume_expected(types::Category::IDENTIFIER, "generic params");
 
-        while(next().category != util::Category::GREATER) {
-            consume_expected(util::Category::COMMA, "generic params");
+        while(next().category != types::Category::GREATER) {
+            consume_expected(types::Category::COMMA, "generic params");
             result.emplace_back(GenericParam{next().value});
-            consume_expected(util::Category::IDENTIFIER, "generic params");
+            consume_expected(types::Category::IDENTIFIER, "generic params");
         }
 
         consume(1);
@@ -83,11 +83,11 @@ namespace parser {
     }
 
     TypeInfo Parser::parse_type_declaration() {
-        consume_expected(util::Category::TYPE, "type declaration");
+        consume_expected(types::Category::TYPE, "type declaration");
         TypeInfo info;
         info.declaration = file_.arena.allocate<Declaration>();
         info.declaration->name = next().value;
-        consume_expected(util::Category::IDENTIFIER, "type declaration");
+        consume_expected(types::Category::IDENTIFIER, "type declaration");
 
         info.declaration->generic_params = parse_generic_params();
 
@@ -98,20 +98,20 @@ namespace parser {
         }
 
         switch(next().category) {
-        case util::Category::IDENTIFIER:
-        case util::Category::TUPLE:
-        case util::Category::UNION:
+        case types::Category::IDENTIFIER:
+        case types::Category::TUPLE:
+        case types::Category::UNION:
             info.declaration->type = DeclarationType::ALIAS;
             info.declaration->underlying_type = parse_type();
-            consume_expected(util::Category::SEMICOLON, "alias declaration");
+            consume_expected(types::Category::SEMICOLON, "alias declaration");
             return info;
-        case util::Category::STRUCT:
+        case types::Category::STRUCT:
             info.declaration->type = DeclarationType::STRUCT;
             consume(1);
             info.declaration->fields = parse_struct_def();
             return info;
-        case util::Category::ENUM:
-        case util::Category::INTERFACE:
+        case types::Category::ENUM:
+        case types::Category::INTERFACE:
             err_->parser_error(next().pos, "not implemented");
         default:
             err_->parser_error(next().pos, "type declaration: expected one of the: type_name, tuple, union, enum, struct, got ", next().category);
@@ -119,43 +119,43 @@ namespace parser {
     }
 
     std::vector<std::pair<std::string, Declaration*>> Parser::parse_struct_def() {
-        consume_expected(util::Category::LBRACE, "struct definition");
+        consume_expected(types::Category::LBRACE, "struct definition");
         std::vector<std::pair<std::string, Declaration*>> result;
         std::pair<std::string, Declaration*> field;
-        while(next().category != util::Category::RBRACE) {
-            do_with_recovery(util::Category::SEMICOLON, [&result, &field, this]() {
+        while(next().category != types::Category::RBRACE) {
+            do_with_recovery(types::Category::SEMICOLON, [&result, &field, this]() {
                 field.first = next().value;
-                consume_expected(util::Category::IDENTIFIER, "struct definition");
-                consume_expected(util::Category::COLON, "struct definition");
+                consume_expected(types::Category::IDENTIFIER, "struct definition");
+                consume_expected(types::Category::COLON, "struct definition");
                 field.second = parse_type();
                 result.emplace_back(std::move(field));
-                consume_expected(util::Category::SEMICOLON, "struct definition");
+                consume_expected(types::Category::SEMICOLON, "struct definition");
             });
         }
-        consume_expected(util::Category::RBRACE, "struct definition");
+        consume_expected(types::Category::RBRACE, "struct definition");
 
         return result;
     }
 
     Declaration* Parser::parse_function_decl(bool unnamed) {
-        consume_expected(util::Category::FUNC, "function declaration");
+        consume_expected(types::Category::FUNC, "function declaration");
         Declaration result{.type = DeclarationType::FUNCTION};
         if(!unnamed) {
             result.name = next().value;
-            consume_expected(util::Category::IDENTIFIER, "function declaration");
+            consume_expected(types::Category::IDENTIFIER, "function declaration");
         }
 
         result.generic_params = parse_generic_params();
 
-        consume_expected(util::Category::LPAREN, "function declaration");
+        consume_expected(types::Category::LPAREN, "function declaration");
         size_t unnamed_param_cnt{0};
         std::pair<std::string, Declaration*> param;
-        while(next().category != util::Category::RPAREN) {
+        while(next().category != types::Category::RPAREN) {
             std::string param_name;
-            if(remainder_[1].category == util::Category::COLON) {
+            if(remainder_[1].category == types::Category::COLON) {
                 param_name = next().value;
-                consume_expected(util::Category::IDENTIFIER, "function declaration");
-                consume_expected(util::Category::COLON, "function declaration");
+                consume_expected(types::Category::IDENTIFIER, "function declaration");
+                consume_expected(types::Category::COLON, "function declaration");
             } else {
                 param_name = std::to_string(unnamed_param_cnt);
                 unnamed_param_cnt++;
@@ -163,14 +163,14 @@ namespace parser {
             param.first = param_name;
             param.second = parse_type();
             result.fields.emplace_back(std::move(param));
-            if(next().category != util::Category::RPAREN) {
-                consume_expected(util::Category::COMMA, "function declaration");
+            if(next().category != types::Category::RPAREN) {
+                consume_expected(types::Category::COMMA, "function declaration");
             }
         }
         consume(1);
 
-        static const std::unordered_set<util::Category> decl_end{
-            util::Category::COMMA, util::Category::SEMICOLON, util::Category::LBRACE
+        static const std::unordered_set<types::Category> decl_end{
+            types::Category::COMMA, types::Category::SEMICOLON, types::Category::LBRACE
         };
 
         if(!decl_end.contains(next().category)) {
@@ -181,25 +181,25 @@ namespace parser {
     }
 
     VariableDecl Parser::parse_variable() {
-        consume_expected(util::Category::VAR, "variable declaration");
+        consume_expected(types::Category::VAR, "variable declaration");
         VariableDecl result;
         result.name = next().value;
-        consume_expected(util::Category::IDENTIFIER, "variable declaration");
-        consume_expected(util::Category::COLON, "variable declaration");
+        consume_expected(types::Category::IDENTIFIER, "variable declaration");
+        consume_expected(types::Category::COLON, "variable declaration");
         result.type = parse_type();
-        if(next().category == util::Category::ASSIGN) {
+        if(next().category == types::Category::ASSIGN) {
             consume(1);
             result.value = parse_expression();
         }
 
-        consume_expected(util::Category::SEMICOLON, "variable declaration");
+        consume_expected(types::Category::SEMICOLON, "variable declaration");
         return result;
     }
 
     TypeInfo Parser::parse_function() {
         TypeInfo result;
         result.declaration = parse_function_decl();
-        if(next().category == util::Category::SEMICOLON) {
+        if(next().category == types::Category::SEMICOLON) {
             consume(1);
             return result;
         }
@@ -212,10 +212,10 @@ namespace parser {
         Declaration result;
         for(;next().is_type_modifier(); consume(1)) {
             switch(next().category) {
-            case util::Category::OPTIONAL:
+            case types::Category::OPTIONAL:
                 result.modifiers.push_back(TypeModifiers::OPTIONAL);
                 break;
-            case util::Category::MULTIPLY:
+            case types::Category::MULTIPLY:
                 result.modifiers.push_back(TypeModifiers::POINTER);
                 break;
             default:
@@ -224,16 +224,16 @@ namespace parser {
         }
 
         switch(next().category) {
-        case util::Category::IDENTIFIER:
+        case types::Category::IDENTIFIER:
             result.name = next().value;
             break;
-        case util::Category::TUPLE:
+        case types::Category::TUPLE:
             result.type = DeclarationType::TUPLE;
             break;
-        case util::Category::UNION:
+        case types::Category::UNION:
             result.type = DeclarationType::UNION;
             break;
-        case util::Category::FUNC:
+        case types::Category::FUNC:
             return parse_function_decl(true);
         default:
             err_->parser_error(next().pos, "type: expected one of the type_name, union, tuple, got: ", next().category);
@@ -256,7 +256,7 @@ namespace parser {
             (op_it != binary_ops.end()) && op_it->second.precedence >= precedence;
             op_it = binary_ops.find(next().category)) {
 
-            util::Position pos = util::Position{next().pos};
+            size_t pos = next().pos;
 
             consume(1);
             auto rhs = parse_unary_expression();
@@ -276,7 +276,7 @@ namespace parser {
         // TODO: needs slight refactoring
         Expr result;
         auto action_it = unary_ops.find(next().category);
-        util::Position pos = util::Position{next().pos};
+        size_t pos = next().pos;
         if(action_it != unary_ops.end()) {
             result.action = action_it->second;
             consume(1);
@@ -292,18 +292,18 @@ namespace parser {
 
     Expression* Parser::parse_primary_expression() {
         Expression* result = file_.arena.allocate<Expression>();
-        result->pos = util::Position{next().pos};
+        result->pos = next().pos;
         switch(next().category) {
-        case util::Category::IDENTIFIER:
+        case types::Category::IDENTIFIER:
             //check for a function call
-            if(remainder_[1].category == util::Category::LPAREN) {
+            if(remainder_[1].category == types::Category::LPAREN) {
                 result->expr = parse_function_call();
                 break;
             }
-        case util::Category::INTEGER:
-        case util::Category::FLOAT:
-        case util::Category::STRING:
-        case util::Category::CHAR:
+        case types::Category::INTEGER:
+        case types::Category::FLOAT:
+        case types::Category::STRING:
+        case types::Category::CHAR:
             result->expr = next();
             consume(1);
             break;
@@ -315,10 +315,10 @@ namespace parser {
     }
 
     Block Parser::parse_block() {
-        consume_expected(util::Category::LBRACE);
+        consume_expected(types::Category::LBRACE);
         Block result;
-        while(next().category != util::Category::RBRACE) {
-            do_with_recovery(util::Category::SEMICOLON, [this, &result](){result.statements.emplace_back(parse_statement());});
+        while(next().category != types::Category::RBRACE) {
+            do_with_recovery(types::Category::SEMICOLON, [this, &result](){result.statements.emplace_back(parse_statement());});
         }
         consume(1);
         return result;
@@ -327,17 +327,17 @@ namespace parser {
     Statement Parser::parse_statement() {
         Statement result;
         switch(next().category) {
-        case util::Category::RETURN:
+        case types::Category::RETURN:
             consume(1);
             result.smt = Return{parse_expression()};
-            consume_expected(util::Category::SEMICOLON);
+            consume_expected(types::Category::SEMICOLON);
             break;
-        case util::Category::VAR:
+        case types::Category::VAR:
             result.smt = parse_variable();
             break;
         default:
             result.smt = parse_expression();
-            consume_expected(util::Category::SEMICOLON);
+            consume_expected(types::Category::SEMICOLON);
         }   
         return result;
     }
@@ -345,12 +345,12 @@ namespace parser {
     FunctionCall Parser::parse_function_call() {
         FunctionCall result;
         result.func_name = next().value;
-        consume_expected(util::Category::IDENTIFIER, "function call");
-        consume_expected(util::Category::LPAREN, "function call");
-        while(next().category != util::Category::RPAREN) {
+        consume_expected(types::Category::IDENTIFIER, "function call");
+        consume_expected(types::Category::LPAREN, "function call");
+        while(next().category != types::Category::RPAREN) {
             result.args.push_back(parse_expression());
-            if(next().category != util::Category::RPAREN) {
-                consume_expected(util::Category::COMMA, "function call");
+            if(next().category != types::Category::RPAREN) {
+                consume_expected(types::Category::COMMA, "function call");
             }
         }
         consume(1);
