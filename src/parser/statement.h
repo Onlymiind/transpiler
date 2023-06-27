@@ -14,7 +14,7 @@ namespace parser {
     };
 
     struct VariableDecl {
-        std::string name;
+        util::StringConstRef name;
         Declaration* type;
         Expression* value;
     };

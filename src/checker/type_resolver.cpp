@@ -5,7 +5,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "checker/checker.h"
 #include "checker/module.h"
 #include "parser/declaration.h"
 #include "parser/expression.h"

@@ -62,7 +62,7 @@ namespace parser {
     }
 
     struct FunctionCall {
-        std::string func_name;
+        util::StringConstRef func_name;
         std::vector<Expression*> args;
     };
 

@@ -82,7 +82,7 @@ namespace module {
     };
 
     struct Field {
-        std::string name;
+        util::StringConstRef name;
         ID type;
         Expression* default_value = nullptr;
     };
@@ -111,9 +111,9 @@ namespace module {
             : err_(&err)
         {}
 
-        std::optional<ID> get_type_id(const std::string& name) const;
+        std::optional<ID> get_type_id(util::StringConstRef name) const;
 
-        std::optional<ID> get_var_id(const std::string& name) const;
+        std::optional<ID> get_var_id(util::StringConstRef name) const;
 
         AliasInfo* get_alias_info(ID id);
         StructInfo* get_struct_info(ID id);
@@ -123,24 +123,24 @@ namespace module {
         const StructInfo* get_struct_info(ID id) const;
         const FunctionInfo* get_function_info(ID id) const;
 
-        ID register_alias(AliasInfo info, const std::string& name) { 
+        ID register_alias(AliasInfo info, util::StringConstRef name) { 
             return register_info(std::move(info), name, aliases_, IDKind::ALIAS); 
         }
 
-        ID register_struct(StructInfo info, const std::string& name) { 
+        ID register_struct(StructInfo info, util::StringConstRef name) { 
             return register_info(std::move(info), name, structs_, IDKind::STRUCT); 
         }
 
 
-        ID register_modified_type(ModifiedType info, const std::string& name) {
+        ID register_modified_type(ModifiedType info, util::StringConstRef name) {
             return register_info(std::move(info), name, modified_types_, IDKind::MODIFIED_TYPE);
         }
 
-        ID register_builtin(const std::string& name);
+        ID register_builtin(util::StringConstRef name);
 
-        ID register_function(FunctionInfo info, const std::string& name);
+        ID register_function(FunctionInfo info, util::StringConstRef name);
 
-        ID register_variable(Variable var, const std::string& name);
+        ID register_variable(Variable var, util::StringConstRef name);
 
         //TODO: decide on expression storage and allocation
         template<typename... Args>

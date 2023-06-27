@@ -42,7 +42,7 @@ namespace parser {
     };
 
     struct Declaration {
-        std::vector<std::pair<std::string, Declaration*>> fields;
+        std::vector<std::pair<util::StringConstRef, Declaration*>> fields;
         std::vector<GenericParam> generic_params;
         std::vector<TypeModifiers> modifiers;
 

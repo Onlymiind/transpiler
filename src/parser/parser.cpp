@@ -23,9 +23,9 @@ namespace parser {
         return it - tokens.begin();
     }
 
-    File parse(std::vector<types::Token> tokens, util::ErrorHandler& err) {
+    File parse(std::vector<types::Token> tokens, util::StringAllocator& allocator, util::ErrorHandler& err) {
         //TODO: report errors
-        Parser p{std::move(tokens), err};
+        Parser p{std::move(tokens), allocator, err};
         return p.parse();
     }
 
@@ -69,17 +69,13 @@ namespace parser {
         consume(1);
 
         std::vector<GenericParam> result;
-        if(next().value.is<util::StringConstRef>()) {
-            result.emplace_back(GenericParam{next().value.get<util::StringConstRef>()});
-        }
-        consume_expected(types::Category::IDENTIFIER, "generic params");
+        auto name = consume_expected(types::Category::IDENTIFIER, "generic params");
+        result.emplace_back(GenericParam{name.value.get<util::StringConstRef>()});
 
         while(next().category != types::Category::GREATER) {
             consume_expected(types::Category::COMMA, "generic params");
-            if(next().value.is<util::StringConstRef>()) {
-                result.emplace_back(GenericParam{next().value.get<util::StringConstRef>()});
-            }
-            consume_expected(types::Category::IDENTIFIER, "generic params");
+            name = consume_expected(types::Category::IDENTIFIER, "generic params");
+            result.emplace_back(GenericParam{name.value.get<util::StringConstRef>()});
         }
 
         consume(1);
@@ -91,10 +87,8 @@ namespace parser {
         consume_expected(types::Category::TYPE, "type declaration");
         TypeInfo info;
         info.declaration = file_.arena.allocate<Declaration>();
-        if(next().value.is<util::StringConstRef>()) {
-            info.declaration->name = next().value.get<util::StringConstRef>();
-        }
-        consume_expected(types::Category::IDENTIFIER, "type declaration");
+        auto name = consume_expected(types::Category::IDENTIFIER, "type declaration");
+        info.declaration->name = name.value.get<util::StringConstRef>();
 
         info.declaration->generic_params = parse_generic_params();
 
@@ -125,14 +119,14 @@ namespace parser {
         }
     }
 
-    std::vector<std::pair<std::string, Declaration*>> Parser::parse_struct_def() {
+    std::vector<std::pair<util::StringConstRef, Declaration*>> Parser::parse_struct_def() {
         consume_expected(types::Category::LBRACE, "struct definition");
-        std::vector<std::pair<std::string, Declaration*>> result;
-        std::pair<std::string, Declaration*> field;
+        std::vector<std::pair<util::StringConstRef, Declaration*>> result;
+        std::pair<util::StringConstRef, Declaration*> field;
         while(next().category != types::Category::RBRACE) {
             do_with_recovery(types::Category::SEMICOLON, [&result, &field, this]() {
-                field.first = next().value;
-                consume_expected(types::Category::IDENTIFIER, "struct definition");
+                auto name = consume_expected(types::Category::IDENTIFIER, "struct definition");
+                field.first = name.value.get<util::StringConstRef>();
                 consume_expected(types::Category::COLON, "struct definition");
                 field.second = parse_type();
                 result.emplace_back(std::move(field));
@@ -148,23 +142,23 @@ namespace parser {
         consume_expected(types::Category::FUNC, "function declaration");
         Declaration result{.type = DeclarationType::FUNCTION};
         if(!unnamed) {
-            result.name = next().value;
-            consume_expected(types::Category::IDENTIFIER, "function declaration");
+            auto name = consume_expected(types::Category::IDENTIFIER, "function declaration");
+            result.name = name.value.get<util::StringConstRef>();
         }
 
         result.generic_params = parse_generic_params();
 
         consume_expected(types::Category::LPAREN, "function declaration");
         size_t unnamed_param_cnt{0};
-        std::pair<std::string, Declaration*> param;
+        std::pair<util::StringConstRef, Declaration*> param;
         while(next().category != types::Category::RPAREN) {
-            std::string param_name;
+            util::StringConstRef param_name;
             if(remainder_[1].category == types::Category::COLON) {
-                param_name = next().value;
-                consume_expected(types::Category::IDENTIFIER, "function declaration");
+                auto name = consume_expected(types::Category::IDENTIFIER, "function declaration");
+                param_name = name.value.get<util::StringConstRef>();
                 consume_expected(types::Category::COLON, "function declaration");
             } else {
-                param_name = std::to_string(unnamed_param_cnt);
+                param_name = allocator_.allocate(std::to_string(unnamed_param_cnt));
                 unnamed_param_cnt++;
             }
             param.first = param_name;
@@ -190,8 +184,8 @@ namespace parser {
     VariableDecl Parser::parse_variable() {
         consume_expected(types::Category::VAR, "variable declaration");
         VariableDecl result;
-        result.name = next().value;
-        consume_expected(types::Category::IDENTIFIER, "variable declaration");
+        auto name = consume_expected(types::Category::IDENTIFIER, "variable declaration");
+        result.name = name.value.get<util::StringConstRef>();
         consume_expected(types::Category::COLON, "variable declaration");
         result.type = parse_type();
         if(next().category == types::Category::ASSIGN) {
@@ -232,7 +226,7 @@ namespace parser {
 
         switch(next().category) {
         case types::Category::IDENTIFIER:
-            result.name = next().value;
+            result.name = next().value.get<util::StringConstRef>();
             break;
         case types::Category::TUPLE:
             result.type = DeclarationType::TUPLE;
@@ -351,8 +345,8 @@ namespace parser {
 
     FunctionCall Parser::parse_function_call() {
         FunctionCall result;
-        result.func_name = next().value;
-        consume_expected(types::Category::IDENTIFIER, "function call");
+        auto name = consume_expected(types::Category::IDENTIFIER, "function call");
+        result.func_name = name.value.get<util::StringConstRef>();
         consume_expected(types::Category::LPAREN, "function call");
         while(next().category != types::Category::RPAREN) {
             result.args.push_back(parse_expression());

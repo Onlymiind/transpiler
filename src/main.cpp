@@ -20,13 +20,12 @@ int main() {
     util::ErrorHandler err{&std::cout};
     util::StringAllocator alloc;
     try {
-        file = parser::parse(lexer::Lexer{in, alloc, err}.split(), err);
+        file = parser::parse(lexer::Lexer{in, alloc, err}.split(), alloc, err);
     } catch (const std::exception& e) {
         std::cout << e.what() << std::endl;
     }
 
     auto m = type_resolver::resolve_types(std::move(file), {"u8"}, err);
-
     if (err.error_occured()){
         std::cout << "Failed\n";
     } else {
