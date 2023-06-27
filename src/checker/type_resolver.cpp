@@ -108,7 +108,7 @@ namespace type_resolver {
     }
 
     module::Expression* resolve_expression(const module::Module& module, parser::Expression expr, util::ErrorHandler err) {
-        if(expr.expr.is<util::Token>()) {
+        if(expr.expr.is<types::Token>()) {
 
         } else if(expr.expr.is<parser::Expr>()) {
 

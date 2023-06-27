@@ -21,7 +21,7 @@ namespace util {
         {}
 
         template<typename T>
-        constexpr bool is() noexcept {
+        constexpr bool is() const noexcept {
             return std::holds_alternative<T>(val_);
         }
 
@@ -32,6 +32,16 @@ namespace util {
 
         template<typename T>
         constexpr T& get() {
+            return std::get<T>(val_);
+        }
+
+        template<typename T>
+        constexpr const T* get_if() const noexcept {
+            return std::get_if<T>(&val_);
+        }
+
+        template<typename T>
+        constexpr const T& get() const {
             return std::get<T>(val_);
         }
 

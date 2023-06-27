@@ -5,6 +5,7 @@
 #include <vector>
 #include <unordered_map>
 
+#include "util/arena.h"
 #include "util/util.h"
 #include "parser/expression.h"
 
@@ -37,7 +38,7 @@ namespace parser {
     };
 
     struct GenericParam {
-        std::string name;
+        util::StringConstRef name;
     };
 
     struct Declaration {
@@ -45,7 +46,7 @@ namespace parser {
         std::vector<GenericParam> generic_params;
         std::vector<TypeModifiers> modifiers;
 
-        std::string name;
+        util::StringConstRef name;
         Declaration* return_type = nullptr;
         Declaration* underlying_type = nullptr;
         DeclarationType type = DeclarationType::UNKNOWN;

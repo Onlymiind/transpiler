@@ -6,6 +6,7 @@
 
 #include "parser/expression.h"
 #include "parser/statement.h"
+#include "util/arena.h"
 #include "util/error_handler.h"
 #include "util/util.h"
 
@@ -39,7 +40,7 @@ namespace parser {
             switch(next().category) {
             case types::Category::IMPORT: {
                 // TODO: parse import
-                types::Token::Pos pos = next().pos;
+                size_t pos = next().pos;
                 consume(1);
                 err_->parser_error(pos, "imports are not implemented");
                 break;
@@ -68,12 +69,16 @@ namespace parser {
         consume(1);
 
         std::vector<GenericParam> result;
-        result.emplace_back(GenericParam{next().value});
+        if(next().value.is<util::StringConstRef>()) {
+            result.emplace_back(GenericParam{next().value.get<util::StringConstRef>()});
+        }
         consume_expected(types::Category::IDENTIFIER, "generic params");
 
         while(next().category != types::Category::GREATER) {
             consume_expected(types::Category::COMMA, "generic params");
-            result.emplace_back(GenericParam{next().value});
+            if(next().value.is<util::StringConstRef>()) {
+                result.emplace_back(GenericParam{next().value.get<util::StringConstRef>()});
+            }
             consume_expected(types::Category::IDENTIFIER, "generic params");
         }
 
@@ -86,7 +91,9 @@ namespace parser {
         consume_expected(types::Category::TYPE, "type declaration");
         TypeInfo info;
         info.declaration = file_.arena.allocate<Declaration>();
-        info.declaration->name = next().value;
+        if(next().value.is<util::StringConstRef>()) {
+            info.declaration->name = next().value.get<util::StringConstRef>();
+        }
         consume_expected(types::Category::IDENTIFIER, "type declaration");
 
         info.declaration->generic_params = parse_generic_params();
