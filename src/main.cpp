@@ -3,10 +3,11 @@
 #include <filesystem>
 
 #include "checker/module.h"
-#include "lexer/lexer.h"
+#include "lexer2/lexer.h"
 #include "parser/parser.h"
 #include "checker/checker.h"
 #include "checker/type_resolver.h"
+#include "util/arena.h"
 #include "util/error_handler.h"
 
 inline constexpr std::string_view in_fname{"/home/onlymind/mine/cpp/projects/transpiler/lang/simple.st"};
@@ -15,21 +16,23 @@ inline constexpr std::string_view out_fname{"/home/onlymind/mine/cpp/projects/tr
 int main() {
     std::ifstream in{in_fname.data(), std::ios::in};
 
-    parser::File file;
+    // parser::File file;
     util::ErrorHandler err{&std::cout};
-    try {
-        file = parser::parse(lexer::Lexer{}.split(in), err);
-    } catch (const std::exception& e) {
-        std::cout << e.what() << std::endl;
-    }
+    util::StringAllocator alloc;
+    // try {
+    //     file = parser::parse(lexer::Lexer{}.split(in), err);
+    // } catch (const std::exception& e) {
+    //     std::cout << e.what() << std::endl;
+    // }
 
-    auto m = type_resolver::resolve_types(std::move(file), {"u8"}, err);
+    // auto m = type_resolver::resolve_types(std::move(file), {"u8"}, err);
 
-    if (err.error_occured()){
-        std::cout << "Failed\n";
-    } else {
-        std::cout << "Done\n";
-    }
+    // if (err.error_occured()){
+    //     std::cout << "Failed\n";
+    // } else {
+    //     std::cout << "Done\n";
+    // }
+    auto tok = lexer::Lexer{in, alloc, err}.split();
 
     return 0;
 }

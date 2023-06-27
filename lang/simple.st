@@ -14,4 +14,8 @@ type Foo Bar;
 
 type Bar u8;
 
-func foo(arg0 : u8, arg1 : u8, arg2 : Foo) Barz {}
+func foo(arg0 : u8, arg1 : u8, arg2 : Foo) Barz {
+    "dassj;aijfdk\n\n\t";
+    't';
+    '\t';
+}

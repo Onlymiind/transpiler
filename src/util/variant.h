@@ -1,4 +1,7 @@
 #pragma once 
+#include "util/arena.h"
+#include <ostream>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -7,6 +10,8 @@ namespace util {
     //this is just a wrapper to provide a more convenient interface to std::variant
     template<typename... Args>
     class Variant {
+        template<typename... Args1>
+        friend std::ostream& operator<<(std::ostream& out, const Variant<Args1...> v);
     public:
         Variant() = default;
 
@@ -33,7 +38,26 @@ namespace util {
         constexpr bool operator==(const Variant<Args...> other) const {
             return val_ == other.val_;
         }
+
+        constexpr bool empty() const {
+            return std::holds_alternative<std::monostate>(val_);
+        }
     private:
         std::variant<Args...> val_;
     };
+
+    template<typename... Args>
+    std::ostream& operator<<(std::ostream& out, const Variant<Args...> v) {
+        std::visit([&out](const auto& val) {
+            using typ = std::decay_t<decltype(val)>;
+            if constexpr (std::is_same_v<std::monostate, typ>) {
+                return;
+            } else if constexpr (std::is_same_v<util::StringConstRef, typ>){
+                out << *val;
+            } else {
+                out << val;
+            }
+        }, v.val_);
+        return out;
+    }
 }
