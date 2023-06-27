@@ -1,6 +1,7 @@
 #pragma once
 #include "types/token.h"
 #include "util/error_handler.h"
+#include "util/arena.h"
 
 #include <unordered_set>
 #include <string>
@@ -11,15 +12,13 @@
 
 
 namespace lexer {
-    
-    using StringStorage = std::unordered_set<std::string>;
 
     bool is_special_token(char c);
 
     class Lexer {
     public:
-        Lexer(std::istream& in, std::unordered_set<std::string>& string_storage, util::ErrorHandler& err) noexcept
-            : in_(in), string_storage_(string_storage), err_(err)
+        Lexer(std::istream& in, util::StringAllocator& allocator, util::ErrorHandler& err) noexcept
+            : in_(in), allocator_(allocator), err_(err)
         {}
 
         std::vector<types::Token> split();
@@ -38,8 +37,6 @@ namespace lexer {
 
         void consume_expected(char expected);
 
-        bool consume_expected(std::string_view str);
-
         void consume_spaces();
 
         bool consume_comment();
@@ -48,13 +45,12 @@ namespace lexer {
         char next();
         void putback(char c);
 
-        types::StringRef store_string(std::string str);
+        char get_char_literal();
 
-        types::Position current_pos_;
-        std::stack<size_t> prev_line_len_;
+        size_t current_pos_;
 
         std::istream& in_;
-        std::unordered_set<std::string>& string_storage_;
+        util::StringAllocator& allocator_;
         util::ErrorHandler& err_;
 
     };

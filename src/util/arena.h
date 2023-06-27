@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <span>
 #include <tuple>
+#include <unordered_set>
 
 namespace util {
 
@@ -125,5 +126,18 @@ namespace util {
         }
     private:
         std::tuple<Arena<Types>...> arenas_;
+    };
+
+    using StringConstRef = const std::string*;
+
+    class StringAllocator {
+    public:
+        StringAllocator() = default;
+
+        StringConstRef allocate(std::string str) {
+            return &*storage_.emplace(std::move(str)).first;
+        }
+    private:
+        std::unordered_set<std::string> storage_;
     };
 }

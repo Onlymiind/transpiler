@@ -5,9 +5,11 @@
 #include <span>
 #include <iostream>
 
+#include "util/arena.h"
+#include "util/variant.h"
+
 
 namespace types {
-    using StringRef = const std::string*;
 
     enum class Category : uint8_t {
         NONE,
@@ -163,22 +165,10 @@ namespace types {
         return cat == Category::OPTIONAL || cat == Category::MULTIPLY;
     }
 
-    struct Position {
-        size_t line = 0;
-        size_t byte = 0;
-    };
-
     struct Token {
-
+        size_t pos;
+        util::Variant<std::monostate, util::StringConstRef, uint64_t, double, char> value;
         Category category {Category::NONE};
-        Position pos;
-        StringRef value = nullptr;
-
-        union {
-            uint64_t num;
-            double f_num;
-            char c;
-        };
     };
 
     std::ostream& operator<<(std::ostream& out, const Token& token);
@@ -271,7 +261,7 @@ namespace types {
 
     private:
         constexpr inline Token make_eof(const Token& token) const noexcept {
-            return Token{.category = Category::END_OF_FILE, .pos = token.pos};
+            return Token{.pos = token.pos, .category = Category::END_OF_FILE};
         }
 
         Token eof_ = Token{.category = Category::END_OF_FILE};

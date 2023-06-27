@@ -7,7 +7,7 @@ namespace types {
         }
 
         out << "category: " << to_string(token.category) 
-            << " line: " << token.pos.line << " byte: " << token.pos.byte;
+            << " byte offset: " << token.pos;
         return out;
     }
 }
