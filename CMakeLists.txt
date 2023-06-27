@@ -6,9 +6,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(LEXER_MODULE
     src/lexer/lexer.h
     src/lexer/lexer.cpp
-
-    src/lexer2/lexer.h
-    src/lexer2/lexer.cpp
 )
 
 set(PARSER_MODULE

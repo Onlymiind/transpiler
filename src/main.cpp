@@ -3,7 +3,7 @@
 #include <filesystem>
 
 #include "checker/module.h"
-#include "lexer2/lexer.h"
+#include "lexer/lexer.h"
 #include "parser/parser.h"
 #include "checker/checker.h"
 #include "checker/type_resolver.h"

@@ -1,318 +1,288 @@
 #include "lexer/lexer.h"
+#include "types/token.h"
+#include <cctype>
 
-#include <iterator>
-#include <algorithm>
-#include <sstream>
-#include <cassert>
-#include <string>
-#include <unordered_map>
-
-#include "util/util.h"
+using namespace std::string_view_literals;
 
 namespace lexer {
-    using std::operator""sv;
 
-    const std::unordered_set<char> Lexer::multichar_special_tokens_start_ = {
-        '!', '=', '&', '|', ':', '<', '>'
-    };
-
-    bool Lexer::eat_expected(std::istream& in, char expected) {
-        char c = in.get();
-        if(!in) {
-            return false;
+    char Lexer::next() {
+        int c = in_.get();
+        if(c != EOF) {
+            ++current_pos_;
         }
 
-        if(c != expected) {
-            in.putback(c);
-            return false;
-        }
-
-        if(c == '\n') {
-            line_++;
-        }
-        return true;
+        return char(c);
     }
 
-    bool Lexer::eat_expected(std::istream& in, std::string_view str) {
-        bool matched = true;
-        size_t i = 0;
-        for(; i < str.size(); i++) {
-            if(!eat_expected(in, str[i])) {
-                matched = false;
-                break;
-            }
+    void Lexer::putback(char c) {
+        if(current_pos_ != 0) {
+            --current_pos_;
         }
-
-        if(matched) {
-            return true;
-        }
-
-        size_t rstart = str.size() - i;
-
-        for(auto it = str.rbegin() + rstart; it != str.rend(); it++) {
-            in.putback(*it);
-        }
-
-        return false;
+        in_.putback(c);
     }
 
-    void Lexer::eat_spaces(std::istream& in) {
-        char c = in.get();
-        while(in && std::isspace(c)) {
-            if(c == '\n') {
-                line_++;
-            }
-            c = in.get();
-        }
-        in.putback(c);
-    }
-
-    std::optional<util::Token> Lexer::get_comment(std::istream& in) {
-        if(eat_expected(in, "//")) {
-            util::Token result{.category = util::Category::COMMENT, .pos = line_};
-            std::string buf;
-            std::getline(in, buf);
-            result.value = std::move(buf);
-            line_++;
-            return result;
-        } // else if(eat_expected(in, "/*")) {
-            // TODO
-            // util::Token result{.pos = line_, .category = util::Category::MULTILINE_COMMENT};
-            // std::getline(in, result.word, "*/");
-            // line_++;
-            // return result;
-        // }
-
-        return {};
-    }
-
-    std::optional<util::Token> Lexer::get_word(std::istream& in) {
-        std::string result;
-        char c = in.peek();
-        if(!in) {
-            return {};
-        }
-        
-        if(std::isspace(c)) {
-            return {};
-        } else if(is_comment(in)) {
-            return get_comment(in);
-        } else if(c == '"') {
-            return get_string(in);
-        } else if(c == '\'') {
-            return get_char(in);
-        } else if(is_special_token(c)) {
-            return get_special_token(in);
-        } else if(std::isalpha(c) || c == '_') {
-            return get_identifier(in);
-        } else if(std::isdigit(c)) {
-            return get_numeric(in);
-        }
-
-        return {};
-    }
-
-    static const std::unordered_map<std::string_view, util::Category> g_keywords{
-        {"type"sv, util::Category::TYPE},
-        {"import"sv, util::Category::IMPORT},
-        {"enum"sv, util::Category::ENUM},
-        {"struct"sv, util::Category::STRUCT},
-        {"union"sv, util::Category::UNION},
-        {"interface"sv, util::Category::INTERFACE},
-        {"func"sv, util::Category::FUNC},
-        {"const"sv, util::Category::CONST},
-        {"return"sv, util::Category::RETURN},
-        {"tuple"sv, util::Category::TUPLE},
-        {"var"sv, util::Category::VAR}
-    };
-
-    std::optional<util::Token> Lexer::get_identifier(std::istream& in) {
-        util::Token result{.category = util::Category::IDENTIFIER, .pos = line_};
-        std::string buf;
-        char c = in.get();
-        while(in && !(is_special_token(c) || std::isspace(c))) {
-            buf.push_back(c);
-            c = in.get();
-        }
-        in.putback(c);
-
-        if(buf == "_") {
-            result.category = util::Category::BLANK;
-        }
-        
-        
-        if(auto keyword_cat_it = g_keywords.find(buf); keyword_cat_it != g_keywords.end()) {
-            result.category = keyword_cat_it->second;
-        }
-        if (result.category == util::Category::IDENTIFIER) {
-            result.value = std::move(buf);
-        }
-
-        return result;
-    }
-
-    std::optional<util::Token> Lexer::get_numeric(std::istream& in) {
-        util::Token result{.category = util::Category::INTEGER, .pos = line_};
-
-        std::string buf;
-        auto get_digits = [&buf](std::istream& in) {
-            char c = in.get();
-            while(in && std::isdigit(c)) {
-                buf.push_back(c);
-                c = in.get();
-            }
-            in.putback(c);
-        };
-
-        get_digits(in);
-
-        if(in.peek() == '.') {
-            buf.push_back(in.get());
-            result.category = util::Category::FLOAT;
-            get_digits(in);
-        }
-
-        if(std::tolower(in.peek()) == 'e') {
-            buf.push_back(in.get());
-            char c = in.peek();
-            if(c == '-' || c == '+') {
-                buf.push_back(in.get());
-            }
-            get_digits(in);
-        }
-
-        result.value = std::move(buf);
-        if(result.category == util::Category::INTEGER) {
-            result.num = std::stoull(result.value);
-        } else if(result.category == util::Category::FLOAT) {
-            result.f_num = std::stod(result.value);
-        }
-
-        return result;
-    }
-
-    bool Lexer::is_comment(std::istream& in) {
-        std::string buf{{static_cast<char>(in.get()), static_cast<char>(in.peek())}};
-        in.putback(buf[0]);
-
-        return in && (buf == "//");
-    }
-
-    static const std::unordered_map<std::string_view, util::Category> g_multichar_special_tokens{
-        {"!="sv, util::Category::NOT_EQUALS},
-        {"=="sv, util::Category::EQUALS},
-        {"&&"sv, util::Category::AND},
-        {"||"sv, util::Category::OR},
-        {"::"sv, util::Category::NAMESPACE_OP},
-        {"<="sv, util::Category::LESS_EQ},
-        {">="sv, util::Category::GREATER_EQ}
-    };
-
-    static const std::unordered_map<char, util::Category> g_special_tokens{
-        {'!', util::Category::NOT},
-        {'&', util::Category::BIWISE_AND},
-        {'|', util::Category::BITWISE_OR},
-        {'/', util::Category::DIVIDE},
-        {'*', util::Category::MULTIPLY},
-        {'(', util::Category::LPAREN},
-        {')', util::Category::RPAREN},
-        {'{', util::Category::LBRACE},
-        {'}', util::Category::RBRACE},
-        {'[', util::Category::LBRACKET},
-        {']', util::Category::RBRACKET},
-        {',', util::Category::COMMA},
-        {'\'', util::Category::SINGLE_QUOTE},
-        {'"', util::Category::DOUBLE_QUOTE},
-        {':', util::Category::COLON},
-        {';', util::Category::SEMICOLON},
-        {'.', util::Category::DOT},
-        {'+', util::Category::PLUS},
-        {'-', util::Category::MINUS},
-        {'=', util::Category::ASSIGN},
-        {'?', util::Category::OPTIONAL},
-        {'<', util::Category::LESS},
-        {'>', util::Category::GREATER},
-        {'~', util::Category::INVERT},
-        {'^', util::Category::XOR}
-    };
-
-    std::optional<util::Token> Lexer::get_special_token(std::istream& in) {
-        char c = in.get();
-        if(!in) {
-            return {};
-        }
-        
-        if(multichar_special_tokens_start_.contains(c)) {
-            std::string str(2, '\0');
-            str[0] = c;
-            str[1] = in.get();
-            if(in && g_multichar_special_tokens.contains(str)) {
-                return util::Token{.category = g_multichar_special_tokens.at(str), .pos = line_};
-            }
-
-            in.putback(str[1]);
-        }
-
-        util::Category cat = util::Category::NONE;
-        auto cat_it = g_special_tokens.find(c);
-        if(cat_it != g_special_tokens.end()) {
-            cat = cat_it->second;
-        }
-        return util::Token{.category = cat, .pos = line_};
-    }
-
-    std::vector<util::Token> Lexer::split(std::istream& in) {
-        std::vector<util::Token> result;
-        auto buf = get_word(in);
-
-        while(in) {
-            if(buf) {
-                result.emplace_back(std::move(*buf));
-            }
-            eat_spaces(in);
-            buf = get_word(in);
-        }
-
-        if(buf) {
-            result.emplace_back(std::move(*buf));
-        }
-
-        return result;
-    }
-
-    constexpr bool Lexer::is_special_token(char c) {
+    bool is_special_token(char c) {
         return !(std::isalnum(c) || c == '_');
     }
 
-    std::optional<util::Token> Lexer::get_string(std::istream& in) {
-        if(!eat_expected(in, '"')) {
-            return {};
-        }
+    std::vector<types::Token> Lexer::split() {
+        std::vector<types::Token> result;
 
-        util::Token result{.category = util::Category::STRING, .pos = line_};
-        
-        for(char c = in.get(); in && c != '"'; c = in.get()) {
-            result.value.push_back(c);
-        }
-
-        if(!in) {
-            return {};
+        while(in_) {
+            consume_spaces();
+            auto buf = get_token();
+            if(buf) {
+                result.push_back(*buf);
+            }
         }
 
         return result;
     }
 
-    std::optional<util::Token> Lexer::get_char(std::istream& in) {
-        if(!eat_expected(in, '\'')) {
+    void Lexer::consume_spaces() {
+        while(in_) {
+            char c = in_.peek();
+            if(std::isspace(c)) {
+                next();
+            } else if((c == '/' && !consume_comment()) || c != '/') {
+                break;
+            }
+        }
+    }
+
+    bool Lexer::consume_comment() {
+        if(in_.peek() != '/') {
+            return false;
+        }
+        next();
+        char c = in_.peek();
+        if(c == '/') {
+            next();
+            while(in_ && next() != '\n');
+            return true;
+        } else if (c == '*') {
+            next();
+            while(in_) {
+                c = next();
+                if(c == '/') {
+                    //allow properly nested comments
+                    consume_comment();
+                } else if(c == '*') {
+                    c = next();
+                    if(c == '/') {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        //else
+        putback('/');
+        return false;
+    }
+
+    std::optional<types::Token> Lexer::get_token() {
+        char c = in_.peek();
+        if(!in_) {
             return {};
         }
 
-        util::Token result {.category = util::Category::CHAR, .pos = line_};
-        char c = in.get();
+        if(std::isalpha(c)) {
+            return get_identifier();
+        } else if(std::isdigit(c)) {
+            return get_numeric();
+        } else if(c == '"') {
+            return get_string();
+        } else if(c == '\'') {
+            return get_char();
+        }
+        
+        return get_special_token();
+    }
+
+
+    static const std::unordered_map<std::string_view, types::Category> g_keywords{
+        {"type"sv, types::Category::TYPE},
+        {"import"sv, types::Category::IMPORT},
+        {"enum"sv, types::Category::ENUM},
+        {"struct"sv, types::Category::STRUCT},
+        {"union"sv, types::Category::UNION},
+        {"interface"sv, types::Category::INTERFACE},
+        {"func"sv, types::Category::FUNC},
+        {"const"sv, types::Category::CONST},
+        {"return"sv, types::Category::RETURN},
+        {"tuple"sv, types::Category::TUPLE},
+        {"var"sv, types::Category::VAR}
+    };
+    std::optional<types::Token> Lexer::get_identifier() {
+        types::Token result{.pos = current_pos_, .category = types::Category::IDENTIFIER};
+        std::string buf;
+        char c = next();
+        if(!in_ || !(std::isalpha(c) || c == '_')) {
+            return {};
+        }
+        while(in_ && (std::isalnum(c) || c == '_')) {
+            buf.push_back(c);
+            c = next();
+        }
+        putback(c);
+
+        if(buf == "_") {
+            result.category = types::Category::BLANK;
+            return result;
+        } else if(auto it = g_keywords.find(buf); it != g_keywords.end()) {
+            result.category = it->second;
+            return result;
+        }
+
+        result.value = allocator_.allocate(std::move(buf));
+        return result;
+    }
+
+    std::optional<types::Token> Lexer::get_numeric() {
+        types::Token result{.pos = current_pos_, .category = types::Category::INTEGER};
+        std::string buf;
+        auto get_digits = [this, &buf]() {
+            char c = next();
+            while(in_ && std::isdigit(c)) {
+                buf.push_back(c);
+                c = next();
+            }
+            putback(c);
+        };
+        if(!std::isdigit(in_.peek())) {
+            return {};
+        }
+
+        get_digits();
+
+        if(in_.peek() == '.') {
+            result.category = types::Category::FLOAT;
+            buf.push_back(next());
+            get_digits();
+        }
+
+        if(std::tolower(in_.peek()) == 'e') {
+            result.category = types::Category::FLOAT;
+            buf.push_back(next());
+            char c = in_.peek();
+            if(c == '-' || c == '+') {
+                buf.push_back(next());
+            }
+            get_digits();
+        }
+
+        if(result.category == types::Category::INTEGER) {
+            result.value = uint64_t(std::stoull(buf));
+        } else if(result.category == types::Category::FLOAT) {
+            result.value = std::stod(buf);
+        }
+
+        return result;
+    }
+
+    static const std::unordered_set<char> g_multichar_special_tokens_start = {
+        '!', '=', '&', '|', ':', '<', '>'
+    };
+    static const std::unordered_map<std::string_view, types::Category> g_multichar_special_tokens{
+        {"!="sv, types::Category::NOT_EQUALS},
+        {"=="sv, types::Category::EQUALS},
+        {"&&"sv, types::Category::AND},
+        {"||"sv, types::Category::OR},
+        {"::"sv, types::Category::NAMESPACE_OP},
+        {"<="sv, types::Category::LESS_EQ},
+        {">="sv, types::Category::GREATER_EQ}
+    };
+    static const std::unordered_map<char, types::Category> g_special_tokens{
+        {'!', types::Category::NOT},
+        {'&', types::Category::BIWISE_AND},
+        {'|', types::Category::BITWISE_OR},
+        {'/', types::Category::DIVIDE},
+        {'*', types::Category::MULTIPLY},
+        {'(', types::Category::LPAREN},
+        {')', types::Category::RPAREN},
+        {'{', types::Category::LBRACE},
+        {'}', types::Category::RBRACE},
+        {'[', types::Category::LBRACKET},
+        {']', types::Category::RBRACKET},
+        {',', types::Category::COMMA},
+        {'\'', types::Category::SINGLE_QUOTE},
+        {'"', types::Category::DOUBLE_QUOTE},
+        {':', types::Category::COLON},
+        {';', types::Category::SEMICOLON},
+        {'.', types::Category::DOT},
+        {'+', types::Category::PLUS},
+        {'-', types::Category::MINUS},
+        {'=', types::Category::ASSIGN},
+        {'?', types::Category::OPTIONAL},
+        {'<', types::Category::LESS},
+        {'>', types::Category::GREATER},
+        {'~', types::Category::INVERT},
+        {'^', types::Category::XOR}
+    };
+    std::optional<types::Token> Lexer::get_special_token(){
+        if(!is_special_token(in_.peek())) {
+            return {};
+        }
+        char c = next();
+        if(g_multichar_special_tokens_start.contains(c)) {
+            types::Token result = {.pos = current_pos_};
+            std::string tok = {c, char(in_.peek())};
+            if(in_ && g_multichar_special_tokens.contains(tok)) {
+                result.category = g_multichar_special_tokens.at(tok);
+                next();
+                return result;
+            }
+        }
+
+        auto it = g_special_tokens.find(c);
+        if(it == g_special_tokens.end()) {
+            err_.lexer_error(current_pos_, "unexpected symbol: " + std::string{c});
+        }
+        return types::Token{.pos = current_pos_, .category = it->second};
+    }
+
+    std::optional<types::Token> Lexer::get_string(){
+        if(in_.peek() != '"') {
+            return {};
+        }
+        types::Token result = {.pos = current_pos_, .category = types::Category::STRING};
+        next();
+        std::string buf;
+
+        //TODO: should newline char be treated as an error?
+        for(char c = next(); in_ && c != '"'; c = next()) {
+            buf += get_char_literal();
+        }
+        if(!in_) {
+            err_.lexer_error(current_pos_, "expected \" at the end of the string");
+        }
+
+        result.value = allocator_.allocate(std::move(buf));
+        return result;
+    }
+
+    std::optional<types::Token> Lexer::get_char(){
+        if(in_.peek() != '\'') {
+            return {};
+        }
+        types::Token result = {.pos = current_pos_, .category = types::Category::CHAR};
+        next();
+        result.value = get_char_literal();
+        consume_expected('\'');
+        return result;
+    }
+
+    char Lexer::get_char_literal() {
+        char c = next();
+        if(!in_) {
+            err_.lexer_error(current_pos_, "expected a character");
+        }
         if(c == '\\') {
-            c = in.get();
-            if(!in) {
-                return {};
+            c = next();
+            if(!in_) {
+                err_.lexer_error(current_pos_, "unfinished escape sequence");
             }
 #define CASE(x, val) case x: c = val; break
             switch(c) {
@@ -331,22 +301,14 @@ namespace lexer {
 #undef CASE
             }
         }
-        if(!in) {
-            return {};
-        }
 
-        result.value = std::string{static_cast<size_t>(1), c};
-        result.c = c;
-
-        if(!eat_expected(in, '\'')) {
-            return {};
-        }
-
-        return result;
+        return c;
     }
 
-    std::vector<util::Token> split(std::string_view str) {
-        std::stringstream in{str.data(), std::ios_base::in};
-        return Lexer{}.split(in);
+    void Lexer::consume_expected(char expected) {
+        if(!in_ || in_.peek() != expected) {
+            err_.lexer_error(current_pos_, "unexpected symbol: ", in_.peek());
+        }
+        next();
     }
 }

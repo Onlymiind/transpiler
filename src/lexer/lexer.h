@@ -1,54 +1,57 @@
 #pragma once
+#include "types/token.h"
+#include "util/error_handler.h"
+#include "util/arena.h"
 
-#include <string>
-#include <istream>
-#include <vector>
-#include <string_view>
-#include <optional>
-#include <cstddef>
-#include <iostream>
 #include <unordered_set>
-#include <unordered_map>
+#include <string>
+#include <iostream>
+#include <vector>
+#include <optional>
+#include <stack>
 
-#include "util/util.h"
 
 namespace lexer {
 
-    std::vector<util::Token> split(std::string_view str);
+    bool is_special_token(char c);
 
-    class Lexer{
+    class Lexer {
     public:
-        Lexer() noexcept = default;
+        Lexer(std::istream& in, util::StringAllocator& allocator, util::ErrorHandler& err) noexcept
+            : in_(in), allocator_(allocator), err_(err)
+        {}
 
-        std::vector<util::Token> split(std::istream& in);
+        std::vector<types::Token> split();
 
-        std::optional<util::Token> get_word(std::istream& in);
+        std::optional<types::Token> get_token();
 
-        std::optional<util::Token> get_special_token(std::istream& in);
+        std::optional<types::Token> get_special_token();
 
-        std::optional<util::Token> get_identifier(std::istream& in);
+        std::optional<types::Token> get_identifier();
 
-        std::optional<util::Token> get_numeric(std::istream& in);
+        std::optional<types::Token> get_numeric();
 
-        std::optional<util::Token> get_string(std::istream& in);
+        std::optional<types::Token> get_string();
 
-        std::optional<util::Token> get_char(std::istream& in);
+        std::optional<types::Token> get_char();
 
-        bool eat_expected(std::istream& in, char expected);
+        void consume_expected(char expected);
 
-        bool eat_expected(std::istream& in, std::string_view str);
+        void consume_spaces();
 
-        void eat_spaces(std::istream& in);
-
-        std::optional<util::Token> get_comment(std::istream& in);
-
-        bool is_comment(std::istream& in);
-
-        constexpr static bool is_special_token(char c);
+        bool consume_comment();
 
     private:
-        size_t line_ = 1;
+        char next();
+        void putback(char c);
 
-        static const std::unordered_set<char> multichar_special_tokens_start_;
+        char get_char_literal();
+
+        size_t current_pos_;
+
+        std::istream& in_;
+        util::StringAllocator& allocator_;
+        util::ErrorHandler& err_;
+
     };
 }
