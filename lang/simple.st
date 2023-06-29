@@ -6,6 +6,7 @@ type Foo struct {
 type Bar struct {
     x: Foo;
     y: u8;
+    z: func(u8, u8) u8;
 }
 
 type Barz Bar;

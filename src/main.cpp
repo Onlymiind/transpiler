@@ -5,7 +5,6 @@
 #include "checker/module.h"
 #include "lexer/lexer.h"
 #include "parser/parser.h"
-#include "checker/checker.h"
 #include "checker/type_resolver.h"
 #include "util/arena.h"
 #include "util/error_handler.h"
@@ -25,7 +24,7 @@ int main() {
         std::cout << e.what() << std::endl;
     }
 
-    auto m = type_resolver::resolve_types(std::move(file), {"u8"}, err);
+    auto m = type_resolver::resolve_types(std::move(file), {"u8"}, alloc, err);
     if (err.error_occured()){
         std::cout << "Failed\n";
     } else {

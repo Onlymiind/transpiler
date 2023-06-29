@@ -8,22 +8,78 @@
 #include "checker/module.h"
 #include "parser/declaration.h"
 #include "parser/expression.h"
+#include "util/arena.h"
 #include "util/error_handler.h"
 #include "util/util.h"
 
 
 namespace type_resolver {
 
-    std::string make_name(const parser::Declaration& decl) {
-        static uint64_t id = 0;
-        return std::to_string(id++);
+    util::StringConstRef make_name(const parser::Declaration& decl, util::StringAllocator& alloc) {
+        if(decl.name) {
+            return decl.name;
+        }
+
+        auto push_ref = [](std::string& str, util::StringConstRef ref) {
+            size_t pos = str.size();
+            str.resize(pos + sizeof(util::StringConstRef));
+            auto& val = *((util::StringConstRef*)(&str[pos]));
+            val = ref;
+        };
+
+        std::string name = "0";
+        name.reserve(sizeof(util::StringConstRef) * (decl.fields.size() + (decl.return_type != nullptr)));
+
+        if(decl.return_type) {
+            push_ref(name, make_name(*decl.return_type, alloc));
+        }
+        for(const auto& [field_name, field] : decl.fields) {
+            push_ref(name, make_name(*field, alloc));
+        }
+
+        return alloc.allocate(std::move(name));
     }
 
-    module::Module resolve_types(parser::File file, std::vector<std::string> predefined_types, util::ErrorHandler& err) {
+    module::ID get_id(module::Module& module, util::StringConstRef name, util::ErrorHandler err) {
+        auto maybe_id = module.get_type_id(name);
+        if(!maybe_id) {
+            if(name) {
+                err.checker_error("unknown type: ", *name);
+            } else {
+                err.checker_error("unknown unnamed type");
+            }
+        }
+
+        return *maybe_id;
+    }
+
+    util::StringConstRef register_unnamed(module::Module& module, const parser::Declaration& decl, util::StringAllocator& alloc, util::ErrorHandler& err) {
+        if(decl.name && !decl.name->empty()) {
+            return decl.name;
+        }
+        if(decl.type != parser::DeclarationType::FUNCTION) {
+            err.checker_error("only unnamed function types are supported");
+        }
+
+        module::FunctionInfo info;
+        if(decl.return_type){
+            info.return_type = get_id(module, decl.return_type->name, err);
+        }
+        info.args.reserve(decl.fields.size());
+        for(auto& param : decl.fields) {
+            info.args.emplace_back(module::Field{.name = param.first, .type = get_id(module, param.second->name, err)});
+        }
+
+        auto name = make_name(decl, alloc);
+        module.register_function(std::move(info), name);
+        return name;
+    }
+
+    module::Module resolve_types(parser::File file, std::vector<std::string> predefined_types, util::StringAllocator& alloc, util::ErrorHandler& err) {
         module::Module result{err};
 
         for(auto& info : predefined_types) {
-            result.register_builtin(std::move(info));
+            result.register_builtin(alloc.allocate(std::move(info)));
         }
 
         //First pass: register all user-declared types
@@ -53,13 +109,8 @@ namespace type_resolver {
             }
         }
 
-        auto get_id = [&result](const std::string& name) -> module::ID {
-            auto maybe_id = result.get_type_id(name);
-            if(!maybe_id) {
-                throw util::CheckerError("unknown type: " + name);
-            }
-
-            return *maybe_id;
+        auto reg_anon = [&result, &alloc, &err] (const parser::Declaration* decl) {
+            return register_unnamed(result, *decl, alloc, err);
         };
 
         //Second pass
@@ -73,24 +124,24 @@ namespace type_resolver {
             switch(decl.declaration->type) {
             case parser::DeclarationType::ALIAS:{
                 module::AliasInfo* info = result.get_alias_info(id);
-                info->underlying_type = get_id(decl.declaration->underlying_type->name);
+                info->underlying_type = get_id(result, reg_anon(decl.declaration->underlying_type), err);
                 break;
             }
             case parser::DeclarationType::STRUCT: {
                 module::StructInfo* info = result.get_struct_info(id);
                 for(size_t i = 0; i < info->fields.size(); ++i) {
-                    info->fields[i].type = get_id(decl.declaration->fields[i].second->name);
+                    info->fields[i].type = get_id(result, reg_anon(decl.declaration->fields[i].second), err);
                 }
                 break;
             }
             case parser::DeclarationType::FUNCTION: {
                 module::FunctionInfo info{};
                 if(decl.declaration->return_type){
-                    info.return_type = get_id(decl.declaration->return_type->name);
+                    info.return_type = get_id(result, reg_anon(decl.declaration->return_type), err);
                 }
                 info.args.reserve(decl.declaration->fields.size());
                 for(auto& param : decl.declaration->fields) {
-                    info.args.emplace_back(module::Field{.name = param.first, .type = get_id(param.second->name)});
+                    info.args.emplace_back(module::Field{.name = param.first, .type = get_id(result, reg_anon(param.second), err)});
                 }
 
                 result.register_function(std::move(info), decl.declaration->name);

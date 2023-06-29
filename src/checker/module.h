@@ -153,19 +153,19 @@ namespace module {
         }
     private:
         template<typename T>
-        ID register_info(T&& info, const std::string& name, std::deque<T>& container, IDKind kind) {
+        ID register_info(T&& info, util::StringConstRef name, std::deque<T>& container, IDKind kind) {
             ID id = make_id(kind, container.size());
             add_name(name, id);
             container.emplace_back(std::forward<T>(info));
             return id;
         }
 
-        void add_name(const std::string& name, ID type_id) {
-            if(name.empty()) {
+        void add_name(util::StringConstRef name, ID type_id) {
+            if(!name || name->empty()) {
                 return;
             }
             if(sym_table_.contains(name)) {
-                err_->checker_error("name " + name + " already declared");
+                err_->checker_error("name " + *name + " already declared");
             }
             sym_table_[name] = type_id;
         }
@@ -179,7 +179,7 @@ namespace module {
         //should this be here?
         util::Arena<Expression> expressions_arena_;
 
-        std::unordered_map<std::string, ID> sym_table_;
+        std::unordered_map<util::StringConstRef, ID> sym_table_;
 
         util::ErrorHandler* err_;
     };
