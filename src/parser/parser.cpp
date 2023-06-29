@@ -4,8 +4,10 @@
 #include <iostream>
 #include <string>
 
+#include "parser/declaration.h"
 #include "parser/expression.h"
 #include "parser/statement.h"
+#include "types/token.h"
 #include "util/arena.h"
 #include "util/error_handler.h"
 #include "util/util.h"
@@ -236,6 +238,13 @@ namespace parser {
             break;
         case types::Category::FUNC:
             return parse_function_decl(true);
+        case types::Category::STRUCT:
+            consume(1);
+            return file_.arena.allocate<Declaration>(Declaration{
+                .fields = parse_struct_def(),
+                .type = DeclarationType::STRUCT,
+            });
+            break;
         default:
             err_->parser_error(next().pos, "type: expected one of the type_name, union, tuple, got: ", next().category);
         }

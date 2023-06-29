@@ -27,12 +27,14 @@ namespace type_resolver {
             val = ref;
         };
 
-        std::string name = "0";
+        std::string name = decl.type == parser::DeclarationType::FUNCTION ? "0" : "1";
         name.reserve(sizeof(util::StringConstRef) * (decl.fields.size() + (decl.return_type != nullptr)));
 
         if(decl.return_type) {
             push_ref(name, make_name(*decl.return_type, alloc));
         }
+
+        //TODO: should names of struct's fields be part of a type?
         for(const auto& [field_name, field] : decl.fields) {
             push_ref(name, make_name(*field, alloc));
         }
@@ -57,22 +59,38 @@ namespace type_resolver {
         if(decl.name) {
             return decl.name;
         }
-        if(decl.type != parser::DeclarationType::FUNCTION) {
-            err.checker_error("only unnamed function types are supported");
-        }
 
-        module::FunctionInfo info;
-        if(decl.return_type){
-            info.return_type = get_id(module, decl.return_type->name, err);
-        }
-        info.args.reserve(decl.fields.size());
-        for(auto& param : decl.fields) {
-            info.args.emplace_back(module::Field{.name = param.first, .type = get_id(module, param.second->name, err)});
-        }
+        if(decl.type == parser::DeclarationType::FUNCTION) {
+            module::FunctionInfo info;
+            if(decl.return_type){
+                info.return_type = get_id(module, register_unnamed(module, *decl.return_type, alloc, err), err);
+            }
+            info.args.reserve(decl.fields.size());
+            for(auto& param : decl.fields) {
+                info.args.emplace_back(module::Field{
+                    .name = param.first, 
+                    .type = get_id(module, register_unnamed(module, *param.second, alloc, err), err)
+                });
+            }
 
-        auto name = make_name(decl, alloc);
-        module.register_function(std::move(info), name);
-        return name;
+            auto name = make_name(decl, alloc);
+            module.register_function(std::move(info), name);
+            return name;
+        } else if(decl.type == parser::DeclarationType::STRUCT) {
+            module::StructInfo info;
+            info.fields.reserve(decl.fields.size());
+            for(auto [name, decl_ptr] : decl.fields) {
+                info.fields.emplace_back(module::Field{
+                    .name = name,
+                    .type = get_id(module, register_unnamed(module, *decl_ptr, alloc, err), err),
+                });
+            }
+            auto name = make_name(decl, alloc);
+            module.register_struct(std::move(info), name);
+            return name;
+        } else {
+            err.checker_error("only anonymous structs and functions supported");
+        }
     }
 
     module::Module resolve_types(parser::File file, std::vector<std::string> predefined_types, util::StringAllocator& alloc, util::ErrorHandler& err) {
