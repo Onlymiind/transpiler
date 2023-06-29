@@ -54,7 +54,7 @@ namespace type_resolver {
     }
 
     util::StringConstRef register_unnamed(module::Module& module, const parser::Declaration& decl, util::StringAllocator& alloc, util::ErrorHandler& err) {
-        if(decl.name && !decl.name->empty()) {
+        if(decl.name) {
             return decl.name;
         }
         if(decl.type != parser::DeclarationType::FUNCTION) {
@@ -157,7 +157,7 @@ namespace type_resolver {
         return result;
     }
 
-    module::Expression* resolve_expression(const module::Module& module, parser::Expression expr, util::ErrorHandler err) {
+    module::Expression* resolve_expression(const module::Module& module, parser::Expression expr, util::ErrorHandler& err) {
         if(expr.expr.is<types::Token>()) {
 
         } else if(expr.expr.is<parser::Expr>()) {
