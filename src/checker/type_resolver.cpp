@@ -132,7 +132,7 @@ namespace type_resolver {
         };
 
         //Second pass
-        //TODO: anonymous types, pointers, optionals etc.
+        //TODO: pointers, optionals etc.
         for(size_t i = 0; i < file.types.size(); ++i) {
             if(err_types.contains(i)) {
                 continue;
