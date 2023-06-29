@@ -34,6 +34,14 @@ namespace module {
         return &structs_[index];
     }
 
+    FunctionInfo* Module::get_function_info(ID id) {
+        uint64_t index = get_index(id);
+        if(id >= g_none_type || functions_.size() <= index) {
+            return nullptr;
+        }
+        return &functions_[index];
+    }
+
     ID Module::register_builtin(util::StringConstRef name) {
         static size_t next_id = 0;
         ID id = make_id(IDKind::BUILTIN, next_id++);

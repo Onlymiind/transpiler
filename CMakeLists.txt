@@ -38,17 +38,17 @@ add_library(transpiler_lib
     ${PARSER_MODULE}
     ${CHECKER_MODULE}
     ${UTIL_MODULE}
-)
-
-add_executable(transpiler
-    src/main.cpp
-
     src/types/token.h
     src/types/token.cpp
 )
 
+add_executable(transpiler
+    src/main.cpp
+)
+
 add_executable(tests
     tests/expression_test.cpp
+    tests/module_test.cpp
 )
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/Catch2)

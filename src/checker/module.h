@@ -117,11 +117,11 @@ namespace module {
 
         AliasInfo* get_alias_info(ID id);
         StructInfo* get_struct_info(ID id);
-        FunctionInfo* get_funtion_info(ID id);
+        FunctionInfo* get_function_info(ID id);
 
-        const AliasInfo* get_alias_info(ID id) const;
-        const StructInfo* get_struct_info(ID id) const;
-        const FunctionInfo* get_function_info(ID id) const;
+        // const AliasInfo* get_alias_info(ID id) const;
+        // const StructInfo* get_struct_info(ID id) const;
+        // const FunctionInfo* get_function_info(ID id) const;
 
         ID register_alias(AliasInfo info, util::StringConstRef name) { 
             return register_info(std::move(info), name, aliases_, IDKind::ALIAS); 
