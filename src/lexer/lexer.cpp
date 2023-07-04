@@ -113,7 +113,8 @@ namespace lexer {
         {"const"sv, types::Category::CONST},
         {"return"sv, types::Category::RETURN},
         {"tuple"sv, types::Category::TUPLE},
-        {"var"sv, types::Category::VAR}
+        {"var"sv, types::Category::VAR},
+        {"elif"sv, types::Category::ELSE_IF}
     };
     std::optional<types::Token> Lexer::get_identifier() {
         types::Token result{.pos = current_pos_, .category = types::Category::IDENTIFIER};
