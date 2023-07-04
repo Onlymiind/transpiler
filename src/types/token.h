@@ -81,6 +81,7 @@ namespace types {
         VAR,
         IF,
         ELSE,
+        ELSE_IF,
         SWITCH,
         CASE,
         DEFAULT,

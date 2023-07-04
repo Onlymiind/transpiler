@@ -22,13 +22,13 @@ namespace parser {
 
     struct TypeInfo {
         Declaration* declaration;
-        Block function_definition;
+        Block* function_definition;
     };
 
     struct File {
         std::vector<TypeInfo> types;
         std::vector<VariableDecl> variables;
-        util::ArenaPool<Declaration, Expression> arena;
+        util::ArenaPool<Declaration, Expression, IfStatement, Block> arena;
     };
 
     std::optional<size_t> first_not_comment(types::Tokens tokens);
@@ -70,9 +70,11 @@ namespace parser {
 
         FunctionCall parse_function_call();
 
+        IfStatement* parse_if();
+
         Statement parse_statement();
 
-        Block parse_block();
+        Block* parse_block();
 
         inline const types::Token& next() noexcept {
             return remainder_[0];

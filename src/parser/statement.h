@@ -21,15 +21,13 @@ namespace parser {
 
     struct Block;
 
-    struct If {
-        Expression* condition;
+    struct IfStatement {
+        Expression* condition = nullptr;
         Block* then = nullptr;
-        Block* otherwise = nullptr;
+        IfStatement* otherwise = nullptr;
     };
 
-    struct Statement{
-        util::Variant<Expression*, VariableDecl, Return> smt;
-    };
+    using Statement = util::Variant<Expression*, VariableDecl, Return, IfStatement*>;
 
     struct Block {
         std::vector<Statement> statements;

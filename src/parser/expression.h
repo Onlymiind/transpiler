@@ -47,7 +47,7 @@ namespace parser {
     inline bool operator==(const Expression& lhs, const Expression& rhs);
 
     struct Block;
-    struct Conditional;
+    struct IfStatement;
 
     struct Expr {
         Expression* lhs = nullptr;

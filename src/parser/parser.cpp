@@ -324,11 +324,11 @@ namespace parser {
         return result;
     }
 
-    Block Parser::parse_block() {
+    Block* Parser::parse_block() {
         consume_expected(types::Category::LBRACE);
-        Block result;
+        auto result = file_.arena.allocate<Block>();
         while(next().category != types::Category::RBRACE) {
-            do_with_recovery(types::Category::SEMICOLON, [this, &result](){result.statements.emplace_back(parse_statement());});
+            do_with_recovery(types::Category::SEMICOLON, [this, &result](){result->statements.emplace_back(parse_statement());});
         }
         consume(1);
         return result;
@@ -339,14 +339,17 @@ namespace parser {
         switch(next().category) {
         case types::Category::RETURN:
             consume(1);
-            result.smt = Return{parse_expression()};
+            result = Return{parse_expression()};
             consume_expected(types::Category::SEMICOLON);
             break;
         case types::Category::VAR:
-            result.smt = parse_variable();
+            result = parse_variable();
+            break;
+        case types::Category::IF:
+            result = parse_if();
             break;
         default:
-            result.smt = parse_expression();
+            result = parse_expression();
             consume_expected(types::Category::SEMICOLON);
         }   
         return result;
@@ -365,5 +368,33 @@ namespace parser {
         }
         consume(1);
         return std::move(result);
+    }
+
+    IfStatement* Parser::parse_if() {
+        auto parse_cond = [this](types::Category start_token, bool has_condition = true) -> IfStatement* {
+            auto result = file_.arena.allocate<IfStatement>();
+            consume_expected(start_token);
+            if(has_condition) {
+                result->condition = parse_expression();
+            }
+            consume_expected(types::Category::LBRACE);
+            result->then = parse_block();
+            consume_expected(types::Category::RBRACE);
+            return result;
+        };
+
+        auto result = parse_cond(types::Category::IF);
+
+        auto otherwise = &result->otherwise;
+        while(next().category == types::Category::ELSE_IF) {
+            *otherwise = parse_cond(types::Category::ELSE_IF);
+            otherwise = &(*otherwise)->otherwise;
+        }
+
+        if(next().category == types::Category::ELSE) {
+            *otherwise = parse_cond(types::Category::ELSE, false);
+        }
+
+        return result;
     }
 }
