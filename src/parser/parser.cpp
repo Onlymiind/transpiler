@@ -253,6 +253,18 @@ namespace parser {
         return file_.arena.allocate<Declaration>(std::move(result));
     }
 
+    bool Parser::is_assigmnent_next() {
+        return next().category == types::Category::IDENTIFIER && remainder_[1].category == types::Category::ASSIGN;
+    }
+
+    Assignment Parser::parse_assignment() {
+        Assignment result;
+        result.name = consume_expected(types::Category::IDENTIFIER).value.get<util::StringConstRef>();
+        consume_expected(types::Category::ASSIGN);
+        result.value = parse_expression();
+        return result;
+    }
+
     Expression* Parser::parse_expression() {
         return parse_binary_expression();
     }
@@ -348,9 +360,17 @@ namespace parser {
         case types::Category::IF:
             result = parse_if();
             break;
+        case types::Category::LOOP:
+            result = parse_loop();
+            break;
         default:
-            result = parse_expression();
+            if(is_assigmnent_next()) {
+                result = parse_assignment();
+            } else {
+                result = parse_expression();
+            }
             consume_expected(types::Category::SEMICOLON);
+            break;
         }   
         return result;
     }
@@ -395,6 +415,23 @@ namespace parser {
             *otherwise = parse_cond(types::Category::ELSE, false);
         }
 
+        return result;
+    }
+
+    Loop Parser::parse_loop() {
+        consume_expected(types::Category::LOOP);
+        Loop result;
+        if(is_assigmnent_next()) {
+            result.init = parse_assignment();
+            consume_expected(types::Category::SEMICOLON);
+            result.condition = parse_expression();
+            consume_expected(types::Category::SEMICOLON);
+            result.step = parse_assignment();
+        } else if(next().category != types::Category::LBRACE) {
+            result.condition = parse_expression();
+        }
+
+        result.body = parse_block();
         return result;
     }
 }

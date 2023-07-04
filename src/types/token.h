@@ -85,7 +85,7 @@ namespace types {
         SWITCH,
         CASE,
         DEFAULT,
-        FOR,
+        LOOP,
         BREAK,
         CONTINUE,
         FALLTHROUGH
@@ -157,6 +157,7 @@ namespace types {
         CASE(ELSE_IF);
         CASE(SWITCH);
         CASE(CASE);
+        CASE(LOOP);
         default: return "";
         }
 #undef CASE

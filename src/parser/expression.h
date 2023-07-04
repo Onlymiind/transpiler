@@ -31,7 +31,8 @@ namespace parser {
         NOT,
         INV,
         LSHIFT,
-        RSHIFT
+        RSHIFT,
+        NOT_EQUALS
     };
 
     struct Action {
@@ -96,12 +97,14 @@ namespace parser {
     inline const std::unordered_map<ActionType, Action> binary_actions{
         {ActionType::SUB, Action{ActionType::SUB, 1}},
         {ActionType::ADD, Action{ActionType::ADD, 1}},
-        {ActionType::MUL, Action{ActionType::MUL, 2}}
+        {ActionType::MUL, Action{ActionType::MUL, 2}},
+        {ActionType::NOT_EQUALS, Action{ActionType::NOT_EQUALS, 0}},
     };
 
     inline const std::unordered_map<types::Category, Action> binary_ops{
-        std::pair{types::Category::MINUS, binary_actions.at(ActionType::SUB)},
-        std::pair{types::Category::PLUS, binary_actions.at(ActionType::ADD)},
-        std::pair{types::Category::MULTIPLY, binary_actions.at(ActionType::MUL)}
+        {types::Category::MINUS, binary_actions.at(ActionType::SUB)},
+        {types::Category::PLUS, binary_actions.at(ActionType::ADD)},
+        {types::Category::MULTIPLY, binary_actions.at(ActionType::MUL)},
+        {types::Category::NOT_EQUALS, binary_actions.at(ActionType::NOT_EQUALS)},
     };
 }

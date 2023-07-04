@@ -5,6 +5,7 @@
 
 #include "parser/expression.h"
 #include "parser/declaration.h"
+#include "util/arena.h"
 #include "util/variant.h"
 
 
@@ -27,7 +28,19 @@ namespace parser {
         IfStatement* otherwise = nullptr;
     };
 
-    using Statement = util::Variant<Expression*, VariableDecl, Return, IfStatement*>;
+    struct Assignment {
+        util::StringConstRef name;
+        Expression* value;
+    };
+
+    struct Loop {
+        util::Variant<std::monostate, Assignment> init;
+        Expression* condition = nullptr;
+        util::Variant<std::monostate, Assignment, Expression*> step;
+        Block* body = nullptr;
+    };
+
+    using Statement = util::Variant<Expression*, VariableDecl, Return, IfStatement*, Assignment, Loop>;
 
     struct Block {
         std::vector<Statement> statements;

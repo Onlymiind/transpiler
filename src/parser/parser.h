@@ -58,6 +58,8 @@ namespace parser {
 
         Declaration* parse_function_decl(bool unnamed = false);
 
+        Assignment parse_assignment();
+
         Expression* parse_expression();
 
         Expression* parse_binary_expression();
@@ -75,6 +77,10 @@ namespace parser {
         Statement parse_statement();
 
         Block* parse_block();
+
+        Loop parse_loop();
+
+        bool is_assigmnent_next();
 
         inline const types::Token& next() noexcept {
             return remainder_[0];
@@ -106,7 +112,10 @@ namespace parser {
                 func();
             } catch (const util::ParserError& e) {
                 auto pos = util::find_in_current_scope(remainder_, recovery_point);
-                consume(pos ? *pos + 1: remainder_.size());
+                if(!pos) {
+                    throw;
+                }
+                consume(*pos + 1);
             }
         }
 

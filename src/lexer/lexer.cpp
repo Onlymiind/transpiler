@@ -114,7 +114,8 @@ namespace lexer {
         {"return"sv, types::Category::RETURN},
         {"tuple"sv, types::Category::TUPLE},
         {"var"sv, types::Category::VAR},
-        {"elif"sv, types::Category::ELSE_IF}
+        {"elif"sv, types::Category::ELSE_IF},
+        {"for"sv, types::Category::LOOP}
     };
     std::optional<types::Token> Lexer::get_identifier() {
         types::Token result{.pos = current_pos_, .category = types::Category::IDENTIFIER};
@@ -253,8 +254,8 @@ namespace lexer {
         std::string buf;
 
         //TODO: should newline char be treated as an error?
-        for(char c = next(); in_ && c != '"'; c = next()) {
-            buf += get_char_literal();
+        for(char c = get_char_literal(); in_ && c != '"'; c = get_char_literal()) {
+            buf += c;
         }
         if(!in_) {
             err_.lexer_error(current_pos_, "expected \" at the end of the string");
