@@ -152,6 +152,11 @@ namespace types {
         CASE(VAR);
         CASE(STRING);
         CASE(CHAR);
+        CASE(IF);
+        CASE(ELSE);
+        CASE(ELSE_IF);
+        CASE(SWITCH);
+        CASE(CASE);
         default: return "";
         }
 #undef CASE
