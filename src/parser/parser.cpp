@@ -104,6 +104,7 @@ namespace parser {
         case types::Category::IDENTIFIER:
         case types::Category::TUPLE:
         case types::Category::UNION:
+        case types::Category::FUNC:
             info.declaration->type = DeclarationType::ALIAS;
             info.declaration->underlying_type = parse_type();
             consume_expected(types::Category::SEMICOLON, "alias declaration");

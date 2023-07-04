@@ -1,0 +1,5 @@
+type test func(u8, u8);
+
+type test1 struct { name: u8; }
+
+type recursive struct { name: func(struct{name: struct{};})};

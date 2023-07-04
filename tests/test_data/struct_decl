@@ -1,0 +1,6 @@
+type test struct {
+    name: u8;
+    name1: u16;
+}
+
+type empty struct {}

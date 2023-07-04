@@ -48,6 +48,7 @@ add_executable(transpiler
 
 add_executable(tests
     tests/expression_test.cpp
+    tests/parser_tests.cpp
     tests/module_test.cpp
 )
 
@@ -62,4 +63,4 @@ target_link_libraries(tests PRIVATE transpiler_lib Catch2WithMain)
 target_include_directories(transpiler_lib PUBLIC ${CMAKE_SOURCE_DIR}/src)
 #target_include_directories(tests PRIVATE ${CMAKE_SOURCE_DIR}/test)
 
-add_test("Transpiler tests" tests)
+add_test("Transpiler tests" tests, WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
