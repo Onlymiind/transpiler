@@ -17,6 +17,9 @@ util::StringAllocator alloc;
 TEST_CASE("parser test") {
     INFO(std::filesystem::current_path());
     for(const auto& entry : std::filesystem::directory_iterator(base_dir)) {
+        if(!entry.is_regular_file()) {
+            continue;
+        }
         util::ErrorHandler err;
         INFO("testing file " + entry.path().filename().string());
         std::ifstream in{entry.path()};
