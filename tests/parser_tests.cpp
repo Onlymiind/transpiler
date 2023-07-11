@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "catch2/internal/catch_stdstreams.hpp"
 #include "lexer/lexer.h"
 #include "parser/parser.h"
 #include "util/arena.h"
@@ -20,7 +21,7 @@ TEST_CASE("parser test") {
         if(!entry.is_regular_file()) {
             continue;
         }
-        util::ErrorHandler err;
+        util::ErrorHandler err{};
         INFO("testing file " + entry.path().filename().string());
         std::ifstream in{entry.path()};
         REQUIRE(in.is_open());

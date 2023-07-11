@@ -165,7 +165,7 @@ namespace module {
                 return;
             }
             if(sym_table_.contains(name)) {
-                err_->checker_error("name " + *name + " already declared");
+                err_->checker_error(0, "name " + *name + " already declared");
             }
             sym_table_[name] = type_id;
         }

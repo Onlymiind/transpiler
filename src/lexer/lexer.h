@@ -47,7 +47,7 @@ namespace lexer {
 
         char get_char_literal();
 
-        size_t current_pos_;
+        size_t current_pos_ = 0;
 
         std::istream& in_;
         util::StringAllocator& allocator_;

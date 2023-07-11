@@ -2,6 +2,8 @@
 #include <cstddef>
 #include <string>
 #include <iostream>
+#include <filesystem>
+#include <set>
 
 #include "util/util.h"
 
@@ -22,18 +24,16 @@ namespace util {
 
     class ErrorHandler {
     public:
-        ErrorHandler(std::ostream* err_out = nullptr)
-            : err_out_(err_out)
-        {}
+        ErrorHandler() = default;
 
         template<typename ErrType, typename... MsgArgs>
         [[noreturn]] void error(size_t pos, MsgArgs&&... args) {
-            error_occured_ = true;
-            std::string msg = "pos: " + std::to_string(pos) + " " + sprint(std::forward<MsgArgs>(args)...);
-            if(err_out_) {
-                *err_out_ << msg << '\n';
-            }
-            throw ErrType(std::move(msg));
+            std::string msg = sprint(std::forward<MsgArgs>(args)...);
+            errors_.emplace(pos, msg);
+
+            //TODO: replace this with debug logging and throw empty error
+            std::string full_msg = "pos: " + std::to_string(pos) + " " + msg;
+            throw ErrType(std::move(full_msg));
         }
 
         template<typename... MsgArgs>
@@ -47,15 +47,28 @@ namespace util {
         }
 
         template<typename... MsgArgs>
-        [[noreturn]] void checker_error(MsgArgs&&... args) {
-            error<CheckerError>(0, std::forward<MsgArgs>(args)...);
+        [[noreturn]] void checker_error(size_t pos, MsgArgs&&... args) {
+            error<CheckerError>(pos, std::forward<MsgArgs>(args)...);
         }
 
         bool error_occured() const {
-            return error_occured_;
+            return !errors_.empty();
         }
+
+        void report_errors(std::ostream& out, const std::filesystem::path& file_path);
     private:
-        bool error_occured_ = false;
-        std::ostream* err_out_ = nullptr;
+        struct Error {
+            size_t pos = 0;
+            std::string msg;
+
+            bool operator<(const Error& other) const {
+                if(pos == other.pos) {
+                    return msg < other.msg;
+                }
+                return pos < other.pos;
+            }
+        };
+
+        std::set<Error> errors_;
     };
 }

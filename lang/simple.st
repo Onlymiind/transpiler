@@ -1,3 +1,9 @@
+type a u8;
+
+type b;
+
+type a b;
+
 func foo() {
     var a: u8;
 

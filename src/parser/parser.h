@@ -21,8 +21,8 @@
 namespace parser {
 
     struct TypeInfo {
-        Declaration* declaration;
-        Block* function_definition;
+        Declaration* declaration = nullptr;
+        Block* function_definition = nullptr;
     };
 
     struct File {

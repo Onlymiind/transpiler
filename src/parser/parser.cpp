@@ -34,31 +34,34 @@ namespace parser {
 
     File Parser::parse() {
         while(!remainder_.empty()) {
-            ignore_comments();
-            if(remainder_.empty()) {
-                break;
-            }
-
-            switch(next().category) {
-            case types::Category::IMPORT: {
-                // TODO: parse import
-                size_t pos = next().pos;
-                consume(1);
-                err_->parser_error(pos, "imports are not implemented");
-                break;
-            }
-            case types::Category::TYPE:
-                file_.types.emplace_back(parse_type_declaration());
-                break;
-            case types::Category::VAR:
-                file_.variables.emplace_back(parse_variable());
-                break;
-            case types::Category::FUNC:
-                file_.types.emplace_back(parse_function());
-                break;
-            default:
-                consume(1);
-            }
+            //TODO: improve error recovery
+            try {
+                ignore_comments();
+                if(remainder_.empty()) {
+                    break;
+                }
+    
+                switch(next().category) {
+                case types::Category::IMPORT: {
+                    // TODO: parse import
+                    size_t pos = next().pos;
+                    consume(1);
+                    err_->parser_error(pos, "imports are not implemented");
+                    break;
+                }
+                case types::Category::TYPE:
+                    file_.types.emplace_back(parse_type_declaration());
+                    break;
+                case types::Category::VAR:
+                    file_.variables.emplace_back(parse_variable());
+                    break;
+                case types::Category::FUNC:
+                    file_.types.emplace_back(parse_function());
+                    break;
+                default:
+                    consume(1);
+                }
+            } catch(const util::ParserError&) {}
         }
 
         return std::exchange(file_, File{});

@@ -46,9 +46,9 @@ namespace type_resolver {
         auto maybe_id = module.get_type_id(name);
         if(!maybe_id) {
             if(name) {
-                err.checker_error("unknown type: ", *name);
+                err.checker_error(0, "unknown type: ", *name);
             } else {
-                err.checker_error("unknown unnamed type");
+                err.checker_error(0, "unknown unnamed type");
             }
         }
 
@@ -89,7 +89,7 @@ namespace type_resolver {
             module.register_struct(std::move(info), name);
             return name;
         } else {
-            err.checker_error("only anonymous structs and functions supported");
+            err.checker_error(0, "only anonymous structs and functions supported");
         }
     }
 
@@ -167,7 +167,7 @@ namespace type_resolver {
             }
             default:
                 //TODO: print declaration type as string
-                err.checker_error("unknown declaration type", int(decl.declaration->type));
+                err.checker_error(0, "unknown declaration type", int(decl.declaration->type));
                 break;
             }
         }
@@ -181,7 +181,7 @@ namespace type_resolver {
         } else if(expr.expr.is<parser::Expr>()) {
 
         } else if(expr.expr.is<parser::FunctionCall>()) {
-            err.checker_error("function calls not supported");
+            err.checker_error(0, "function calls not supported");
         }
     }
 }

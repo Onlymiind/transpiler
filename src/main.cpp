@@ -16,7 +16,7 @@ int main() {
     std::ifstream in{in_fname.data(), std::ios::in};
 
     parser::File file;
-    util::ErrorHandler err{&std::cout};
+    util::ErrorHandler err;
     util::StringAllocator alloc;
     try {
         file = parser::parse(lexer::Lexer{in, alloc, err}.split(), alloc, err);
@@ -25,11 +25,7 @@ int main() {
     }
 
     auto m = type_resolver::resolve_types(std::move(file), {"u8"}, alloc, err);
-    if (err.error_occured()){
-        std::cout << "Failed\n";
-    } else {
-        std::cout << "Done\n";
-    }
+    err.report_errors(std::cout, in_fname);
 
     return 0;
 }
