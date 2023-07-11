@@ -121,7 +121,6 @@ namespace parser {
 
     private:
         std::vector<types::Token> tokens_;
-        std::vector<util::Error> errors_;
 
         File file_;
 
