@@ -115,7 +115,8 @@ namespace lexer {
         {"tuple"sv, types::Category::TUPLE},
         {"var"sv, types::Category::VAR},
         {"elif"sv, types::Category::ELSE_IF},
-        {"for"sv, types::Category::LOOP}
+        {"for"sv, types::Category::LOOP},
+        {"if"sv, types::Category::IF},
     };
     std::optional<types::Token> Lexer::get_identifier() {
         types::Token result{.pos = current_pos_, .category = types::Category::IDENTIFIER};
