@@ -38,12 +38,12 @@ namespace parser {
     };
 
     struct GenericParam {
-        util::StringConstRef name;
+        util::StringConstRef name = nullptr;
     };
 
     struct VariableDecl {
-        util::StringConstRef name;
-        util::StringConstRef type;
+        util::StringConstRef name = nullptr;
+        util::StringConstRef type = nullptr;
         Expression* value;
     };
 
@@ -52,7 +52,7 @@ namespace parser {
         std::vector<GenericParam> generic_params;
         std::vector<TypeModifiers> modifiers;
 
-        util::StringConstRef name;
+        util::StringConstRef name = nullptr;
         util::StringConstRef return_type = nullptr;
         util::StringConstRef underlying_type = nullptr;
         size_t pos = 0;
