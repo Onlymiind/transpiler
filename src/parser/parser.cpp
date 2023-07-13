@@ -94,6 +94,7 @@ namespace parser {
         consume_expected(types::Category::TYPE, "type declaration");
         TypeInfo info;
         info.declaration = file_.arena.allocate<Declaration>();
+        info.declaration->pos = next().pos;
         auto name = consume_expected(types::Category::IDENTIFIER, "type declaration");
         info.declaration->name = name.value.get<util::StringConstRef>();
 
@@ -144,7 +145,7 @@ namespace parser {
 
     Declaration* Parser::parse_function_decl(bool unnamed) {
         consume_expected(types::Category::FUNC, "function declaration");
-        Declaration result{.type = DeclarationType::FUNCTION};
+        Declaration result{.pos = next().pos, .type = DeclarationType::FUNCTION,};
         if(!unnamed) {
             auto name = consume_expected(types::Category::IDENTIFIER, "function declaration");
             result.name = name.value.get<util::StringConstRef>();
@@ -230,30 +231,26 @@ namespace parser {
         case types::Category::IDENTIFIER:
             return consume_expected(types::Category::IDENTIFIER).value.get<util::StringConstRef>();
         case types::Category::TUPLE:
-            consume(1);
-            result.type = DeclarationType::TUPLE;
-            result.generic_params = parse_generic_params();
-            result.name = make_name_p(result, allocator_);
-            file_.add_unnamed_type(TypeInfo{file_.arena.allocate<Declaration>(result)});
-            return result.name;
         case types::Category::UNION:
+            result.type = next().category == types::Category::TUPLE ? DeclarationType::TUPLE : DeclarationType::UNION;
+            result.pos = next().pos;
             consume(1);
-            result.type = DeclarationType::UNION;
             result.generic_params = parse_generic_params();
-            result.name = make_name_p(result, allocator_);
+            result.name = make_name(result, allocator_);
             file_.add_unnamed_type(TypeInfo{file_.arena.allocate<Declaration>(result)});
             return result.name;
         case types::Category::FUNC: {
             auto decl =  parse_function_decl(true);
-            decl->name = make_name_p(*decl, allocator_);
+            decl->name = make_name(*decl, allocator_);
             file_.add_unnamed_type(TypeInfo{decl});
             return decl->name;
         }
         case types::Category::STRUCT: {
+            result.pos = next().pos;
             consume(1);
             result.type = DeclarationType::STRUCT;
             result.fields = parse_struct_def();
-            result.name = make_name_p(result, allocator_);
+            result.name = make_name(result, allocator_);
             file_.add_unnamed_type(TypeInfo{file_.arena.allocate<Declaration>(result)});
             return result.name;
         }

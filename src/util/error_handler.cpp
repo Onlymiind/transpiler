@@ -28,10 +28,21 @@ namespace util {
         for(const auto& err : errors_) {
             //TODO: this assumes that all positions in errors are valid
             size_t line = std::lower_bound(newlines.begin(), newlines.end(), err.pos) - newlines.begin();
-            out << "Error on line " << line << ", byte " << err.pos - newlines[line - 1] + 1 << ", message: " << err.msg;
+            out << "Error on line " << line + 1 << ", byte ";
+            if(line != 0) {
+                out << err.pos - newlines[line - 1] + 1;
+            } else {
+                out << err.pos + 1;
+            }
+            out << ", message: " << err.msg;
             if(err.prev_pos) {
                 line = std::lower_bound(newlines.begin(), newlines.end(), *err.prev_pos) - newlines.begin();
-                out << "line " << line << ", byte " << *err.prev_pos - newlines[line - 1] + 1;
+                out << "line " << line + 1 << ", byte ";
+                if(line != 0) {
+                    out << ", byte " << *err.prev_pos - newlines[line - 1] + 1;
+                } else {
+                    out << *err.prev_pos + 1;
+                }
             }
             out << '\n';
         }

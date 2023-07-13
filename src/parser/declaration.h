@@ -59,7 +59,7 @@ namespace parser {
         DeclarationType type = DeclarationType::UNKNOWN;
     };
 
-    inline util::StringConstRef make_name_p(const Declaration& decl, util::StringAllocator& alloc) {
+    inline util::StringConstRef make_name(const Declaration& decl, util::StringAllocator& alloc) {
         if(decl.name) {
             return decl.name;
         }
