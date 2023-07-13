@@ -32,7 +32,6 @@ namespace parser {
 
         void add_type(TypeInfo info, util::ErrorHandler& err) {
             if(auto prev = types.try_emplace(info.declaration->name, info); !prev.second) {
-                //TODO: report place of first declaration
                 err.redeclaration_error(info.declaration->pos, prev.first->second.declaration->pos);
             }
         }

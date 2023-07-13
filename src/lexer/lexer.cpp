@@ -254,7 +254,7 @@ namespace lexer {
         next();
         std::string buf;
 
-        //TODO: should newline char be treated as an error?
+        //TODO: catch escaping strings
         for(char c = get_char_literal(); in_ && c != '"'; c = get_char_literal()) {
             buf += c;
         }

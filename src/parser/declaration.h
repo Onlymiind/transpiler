@@ -8,6 +8,7 @@
 #include "util/arena.h"
 #include "util/util.h"
 #include "parser/expression.h"
+#include "util/variant.h"
 
 namespace parser {
     enum class DeclarationType : uint8_t {
@@ -58,6 +59,33 @@ namespace parser {
         size_t pos = 0;
         DeclarationType type = DeclarationType::UNKNOWN;
     };
+
+    //TODO: replace Declaration with this. This should simplify code (no explicit tags) + save on space
+    // struct StructDecl {
+    //     std::vector<VariableDecl> fields;
+    // };
+
+    // struct FuncDecl {
+    //     std::vector<VariableDecl> params;
+    //     std::vector<util::StringConstRef> generic_params;
+    //     util::StringConstRef return_type = nullptr;
+    //     Block* body = nullptr;
+    // };
+
+    // struct AliasDecl {
+    //     util::StringConstRef underlying_type = nullptr;
+    // };
+
+    // struct TupleOrUnion {
+    //     std::vector<util::StringConstRef> types;
+    //     bool is_union = false;
+    // };
+
+    // struct Decl {
+    //     util::StringConstRef name = nullptr;
+    //     size_t pos = 0;
+    //     util::Variant<StructDecl, FuncDecl, AliasDecl, TupleOrUnion> decl;
+    // };
 
     inline util::StringConstRef make_name(const Declaration& decl, util::StringAllocator& alloc) {
         if(decl.name) {

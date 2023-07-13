@@ -26,7 +26,6 @@ namespace parser {
     }
 
     File parse(std::vector<types::Token> tokens, util::StringAllocator& allocator, util::ErrorHandler& err) {
-        //TODO: report errors
         Parser p{std::move(tokens), allocator, err};
         return p.parse();
     }
