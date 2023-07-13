@@ -29,7 +29,7 @@ namespace util {
         template<typename ErrType, typename... MsgArgs>
         [[noreturn]] void error(size_t pos, MsgArgs&&... args) {
             std::string msg = sprint(std::forward<MsgArgs>(args)...);
-            errors_.emplace(pos, msg);
+            errors_.emplace(Error{.pos = pos, .msg = msg});
 
             //TODO: replace this with debug logging and throw empty error
             std::string full_msg = "pos: " + std::to_string(pos) + " " + msg;
@@ -51,6 +51,11 @@ namespace util {
             error<CheckerError>(pos, std::forward<MsgArgs>(args)...);
         }
 
+        [[noreturn]] void redeclaration_error(size_t pos, size_t prev_pos) {
+            errors_.emplace(pos, prev_pos, "redeclaration, previously declared at: ");
+            throw ParserError("redeclaration");
+        }
+
         bool error_occured() const {
             return !errors_.empty();
         }
@@ -59,6 +64,8 @@ namespace util {
     private:
         struct Error {
             size_t pos = 0;
+            //for redeclaration_err
+            std::optional<size_t> prev_pos;
             std::string msg;
 
             bool operator<(const Error& other) const {

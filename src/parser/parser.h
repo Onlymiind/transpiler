@@ -26,9 +26,20 @@ namespace parser {
     };
 
     struct File {
-        std::vector<TypeInfo> types;
+        std::unordered_map<util::StringConstRef, TypeInfo> types;
         std::vector<VariableDecl> variables;
         util::ArenaPool<Declaration, Expression, IfStatement, Block> arena;
+
+        void add_type(TypeInfo info, util::ErrorHandler& err) {
+            if(auto prev = types.try_emplace(info.declaration->name, info); !prev.second) {
+                //TODO: report place of first declaration
+                err.redeclaration_error(info.declaration->pos, prev.first->second.declaration->pos);
+            }
+        }
+
+        void add_unnamed_type(TypeInfo info) {
+            types.try_emplace(info.declaration->name, info);
+        }
     };
 
     std::optional<size_t> first_not_comment(types::Tokens tokens);
@@ -52,9 +63,9 @@ namespace parser {
 
         TypeInfo parse_type_declaration();
 
-        Declaration* parse_type();
+        util::StringConstRef parse_type();
 
-        std::vector<std::pair<util::StringConstRef, Declaration*>> parse_struct_def();
+        std::vector<VariableDecl> parse_struct_def();
 
         Declaration* parse_function_decl(bool unnamed = false);
 

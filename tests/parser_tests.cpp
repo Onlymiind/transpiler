@@ -11,13 +11,14 @@
 #include <fstream>
 #include <filesystem>
 
-std::string base_dir = "../tests/test_data/";
+std::string success_dir = "../tests/test_data/";
+std::string fail_dir = "../tests/test_data_fail/";
 
 util::StringAllocator alloc;
 
 TEST_CASE("parser test") {
     INFO(std::filesystem::current_path());
-    for(const auto& entry : std::filesystem::directory_iterator(base_dir)) {
+    for(const auto& entry : std::filesystem::directory_iterator(success_dir)) {
         if(!entry.is_regular_file()) {
             continue;
         }
@@ -27,6 +28,22 @@ TEST_CASE("parser test") {
         REQUIRE(in.is_open());
 
         REQUIRE_NOTHROW(parser::parse(lexer::Lexer{in, alloc, err}.split(), alloc, err));
+        in.close();
         REQUIRE(!err.error_occured());
+    }
+
+    for(const auto& entry : std::filesystem::directory_iterator(fail_dir)) {
+        if(!entry.is_regular_file()) {
+            continue;
+        }
+        util::ErrorHandler err{};
+        INFO("testing file " + entry.path().filename().string());
+        std::ifstream in{entry.path()};
+        REQUIRE(in.is_open());
+
+        REQUIRE_NOTHROW(parser::parse(lexer::Lexer{in, alloc, err}.split(), alloc, err));
+        in.close();
+        err.report_errors(Catch::cout(), entry.path());
+        REQUIRE(err.error_occured());
     }
 }

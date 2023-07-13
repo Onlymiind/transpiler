@@ -50,13 +50,15 @@ namespace parser {
                     break;
                 }
                 case types::Category::TYPE:
-                    file_.types.emplace_back(parse_type_declaration());
+                    file_.add_type(parse_type_declaration(), *err_);
                     break;
                 case types::Category::VAR:
+                    consume(1);
                     file_.variables.emplace_back(parse_variable());
+                    consume_expected(types::Category::SEMICOLON);
                     break;
                 case types::Category::FUNC:
-                    file_.types.emplace_back(parse_function());
+                    file_.add_type(parse_function(), *err_);
                     break;
                 default:
                     consume(1);
@@ -125,17 +127,13 @@ namespace parser {
         }
     }
 
-    std::vector<std::pair<util::StringConstRef, Declaration*>> Parser::parse_struct_def() {
+    std::vector<VariableDecl> Parser::parse_struct_def() {
         consume_expected(types::Category::LBRACE, "struct definition");
-        std::vector<std::pair<util::StringConstRef, Declaration*>> result;
-        std::pair<util::StringConstRef, Declaration*> field;
+        std::vector<VariableDecl> result;
+        VariableDecl field;
         while(next().category != types::Category::RBRACE) {
             do_with_recovery(types::Category::SEMICOLON, [&result, &field, this]() {
-                auto name = consume_expected(types::Category::IDENTIFIER, "struct definition");
-                field.first = name.value.get<util::StringConstRef>();
-                consume_expected(types::Category::COLON, "struct definition");
-                field.second = parse_type();
-                result.emplace_back(std::move(field));
+                result.emplace_back(parse_variable());
                 consume_expected(types::Category::SEMICOLON, "struct definition");
             });
         }
@@ -156,7 +154,7 @@ namespace parser {
 
         consume_expected(types::Category::LPAREN, "function declaration");
         size_t unnamed_param_cnt{0};
-        std::pair<util::StringConstRef, Declaration*> param;
+        VariableDecl param;
         while(next().category != types::Category::RPAREN) {
             util::StringConstRef param_name;
             if(remainder_[1].category == types::Category::COLON) {
@@ -167,8 +165,8 @@ namespace parser {
                 param_name = allocator_.allocate(std::to_string(unnamed_param_cnt));
                 unnamed_param_cnt++;
             }
-            param.first = param_name;
-            param.second = parse_type();
+            param.name = param_name;
+            param.type = parse_type();
             result.fields.emplace_back(std::move(param));
             if(next().category != types::Category::RPAREN) {
                 consume_expected(types::Category::COMMA, "function declaration");
@@ -188,7 +186,6 @@ namespace parser {
     }
 
     VariableDecl Parser::parse_variable() {
-        consume_expected(types::Category::VAR, "variable declaration");
         VariableDecl result;
         auto name = consume_expected(types::Category::IDENTIFIER, "variable declaration");
         result.name = name.value.get<util::StringConstRef>();
@@ -199,7 +196,6 @@ namespace parser {
             result.value = parse_expression();
         }
 
-        consume_expected(types::Category::SEMICOLON, "variable declaration");
         return result;
     }
 
@@ -215,7 +211,7 @@ namespace parser {
         return result;
     }
 
-    Declaration* Parser::parse_type() {
+    util::StringConstRef Parser::parse_type() {
         Declaration result;
         for(;next().is_type_modifier(); consume(1)) {
             switch(next().category) {
@@ -232,29 +228,38 @@ namespace parser {
 
         switch(next().category) {
         case types::Category::IDENTIFIER:
-            result.name = next().value.get<util::StringConstRef>();
-            break;
+            return consume_expected(types::Category::IDENTIFIER).value.get<util::StringConstRef>();
         case types::Category::TUPLE:
-            result.type = DeclarationType::TUPLE;
-            break;
-        case types::Category::UNION:
-            result.type = DeclarationType::UNION;
-            break;
-        case types::Category::FUNC:
-            return parse_function_decl(true);
-        case types::Category::STRUCT:
             consume(1);
-            return file_.arena.allocate<Declaration>(Declaration{
-                .fields = parse_struct_def(),
-                .type = DeclarationType::STRUCT,
-            });
-            break;
+            result.type = DeclarationType::TUPLE;
+            result.generic_params = parse_generic_params();
+            result.name = make_name_p(result, allocator_);
+            file_.add_unnamed_type(TypeInfo{file_.arena.allocate<Declaration>(result)});
+            return result.name;
+        case types::Category::UNION:
+            consume(1);
+            result.type = DeclarationType::UNION;
+            result.generic_params = parse_generic_params();
+            result.name = make_name_p(result, allocator_);
+            file_.add_unnamed_type(TypeInfo{file_.arena.allocate<Declaration>(result)});
+            return result.name;
+        case types::Category::FUNC: {
+            auto decl =  parse_function_decl(true);
+            decl->name = make_name_p(*decl, allocator_);
+            file_.add_unnamed_type(TypeInfo{decl});
+            return decl->name;
+        }
+        case types::Category::STRUCT: {
+            consume(1);
+            result.type = DeclarationType::STRUCT;
+            result.fields = parse_struct_def();
+            result.name = make_name_p(result, allocator_);
+            file_.add_unnamed_type(TypeInfo{file_.arena.allocate<Declaration>(result)});
+            return result.name;
+        }
         default:
             err_->parser_error(next().pos, "type: expected one of the type_name, union, tuple, got: ", next().category);
         }
-        consume(1);
-        result.generic_params = parse_generic_params();
-        return file_.arena.allocate<Declaration>(std::move(result));
     }
 
     bool Parser::is_assigmnent_next() {
@@ -359,7 +364,9 @@ namespace parser {
             consume_expected(types::Category::SEMICOLON);
             break;
         case types::Category::VAR:
+            consume(1);
             result = parse_variable();
+            consume_expected(types::Category::SEMICOLON);
             break;
         case types::Category::IF:
             result = parse_if();

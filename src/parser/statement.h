@@ -14,12 +14,6 @@ namespace parser {
         Expression* value;
     };
 
-    struct VariableDecl {
-        util::StringConstRef name;
-        Declaration* type;
-        Expression* value;
-    };
-
     struct Block;
 
     struct IfStatement {

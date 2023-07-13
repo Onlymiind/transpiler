@@ -24,7 +24,7 @@ int main() {
         std::cout << e.what() << std::endl;
     }
 
-    auto m = type_resolver::resolve_types(std::move(file), {"u8"}, alloc, err);
+    //auto m = type_resolver::resolve_types(std::move(file), {"u8"}, alloc, err);
     err.report_errors(std::cout, in_fname);
 
     return 0;
