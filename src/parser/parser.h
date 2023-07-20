@@ -20,11 +20,6 @@
 
 namespace parser {
 
-    // struct TypeInfo {
-    //     Declaration* declaration = nullptr;
-    //     Block* function_definition = nullptr;
-    // };
-
     struct File {
         std::unordered_map<util::StringConstRef, Decl> types;
         std::vector<VariableDecl> variables;
