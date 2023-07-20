@@ -202,7 +202,7 @@ namespace lexer {
         {'&', types::Category::BIWISE_AND},
         {'|', types::Category::BITWISE_OR},
         {'/', types::Category::DIVIDE},
-        {'*', types::Category::MULTIPLY},
+        {'*', types::Category::STAR},
         {'(', types::Category::LPAREN},
         {')', types::Category::RPAREN},
         {'{', types::Category::LBRACE},

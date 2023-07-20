@@ -91,7 +91,7 @@ namespace parser {
         {types::Category::PLUS, Action{ActionType::NONE}},
         {types::Category::NOT, Action{ActionType::NOT}},
         {types::Category::INVERT, Action{ActionType::INV}},
-        {types::Category::MULTIPLY, Action{ActionType::DEREF}}
+        {types::Category::STAR, Action{ActionType::DEREF}}
     };
 
     inline const std::unordered_map<ActionType, Action> binary_actions{
@@ -104,7 +104,7 @@ namespace parser {
     inline const std::unordered_map<types::Category, Action> binary_ops{
         {types::Category::MINUS, binary_actions.at(ActionType::SUB)},
         {types::Category::PLUS, binary_actions.at(ActionType::ADD)},
-        {types::Category::MULTIPLY, binary_actions.at(ActionType::MUL)},
+        {types::Category::STAR, binary_actions.at(ActionType::MUL)},
         {types::Category::NOT_EQUALS, binary_actions.at(ActionType::NOT_EQUALS)},
     };
 }

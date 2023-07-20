@@ -11,6 +11,8 @@
 #include "util/variant.h"
 
 namespace parser {
+    using TypeID = util::StringConstRef;
+
     enum class DeclarationType : uint8_t {
         UNKNOWN,
         ALIAS,
@@ -44,87 +46,85 @@ namespace parser {
 
     struct VariableDecl {
         util::StringConstRef name = nullptr;
-        util::StringConstRef type = nullptr;
+        TypeID type = nullptr;
         Expression* value;
     };
 
-    struct Declaration {
-        std::vector<VariableDecl> fields;
-        std::vector<GenericParam> generic_params;
-        std::vector<TypeModifiers> modifiers;
+    struct Block;
 
-        util::StringConstRef name = nullptr;
-        util::StringConstRef return_type = nullptr;
-        util::StringConstRef underlying_type = nullptr;
-        size_t pos = 0;
-        DeclarationType type = DeclarationType::UNKNOWN;
+    struct Struct {
+        std::vector<VariableDecl> fields;
     };
 
-    //TODO: replace Declaration with this. This should simplify code (no explicit tags) + save on space
-    // struct StructDecl {
-    //     std::vector<VariableDecl> fields;
-    // };
+    struct Function {
+        std::vector<VariableDecl> params;
+        TypeID return_type = nullptr;
+        Block* body = nullptr;
+    };
 
-    // struct FuncDecl {
-    //     std::vector<VariableDecl> params;
-    //     std::vector<util::StringConstRef> generic_params;
-    //     util::StringConstRef return_type = nullptr;
-    //     Block* body = nullptr;
-    // };
+    struct Alias {
+        TypeID underlying_type = nullptr;
+    };
 
-    // struct AliasDecl {
-    //     util::StringConstRef underlying_type = nullptr;
-    // };
+    struct TupleOrUnion {
+        std::vector<TypeID> types;
+        bool is_union = false;
+    };
 
-    // struct TupleOrUnion {
-    //     std::vector<util::StringConstRef> types;
-    //     bool is_union = false;
-    // };
+    struct ModifiedType {
+        std::vector<TypeModifiers> modifiers;
+        TypeID underlying_type = nullptr;
+    };
 
-    // struct Decl {
-    //     util::StringConstRef name = nullptr;
-    //     size_t pos = 0;
-    //     util::Variant<StructDecl, FuncDecl, AliasDecl, TupleOrUnion> decl;
-    // };
+    struct Decl {
+        util::StringConstRef name = nullptr;
+        size_t pos = 0;
+        util::Variant<Struct, Function, Alias, TupleOrUnion, ModifiedType> decl;
+    };
 
-    inline util::StringConstRef make_name(const Declaration& decl, util::StringAllocator& alloc) {
+    inline util::StringConstRef make_name(const Decl& decl, util::StringAllocator& alloc) {
         if(decl.name) {
             return decl.name;
         }
 
         std::string buf;
-        switch(decl.type) {
-        case DeclarationType::FUNCTION: buf.push_back('0'); break;
-        case DeclarationType::STRUCT: buf.push_back('1'); break;
-        case DeclarationType::TUPLE: buf.push_back('2'); break;
-        case DeclarationType::UNION: buf.push_back('3'); break;
-        default: buf.push_back('9'); break;
-        }
-
         size_t current = 1;
-        if(decl.type == DeclarationType::TUPLE || decl.type == DeclarationType::UNION) {
-            buf.resize(decl.generic_params.size() * sizeof(util::StringConstRef) + 1);
-            for(auto p : decl.generic_params) {
-                util::StringConstRef* ptr = (util::StringConstRef*)&buf[current];
-                *ptr = p.name;
-                current += sizeof(util::StringConstRef);
+        //FIXME: unaligned memory access
+        if(decl.decl.is<Function>()) {
+            buf.push_back('0');
+            auto& info = decl.decl.get<Function>();
+            buf.resize(info.params.size() * sizeof(TypeID) + 1);
+            for(const auto& f : info.params) {
+                *((TypeID*)&buf[current]) = f.type;
+                current += sizeof(TypeID);
             }
-        } else if (decl.type == DeclarationType::STRUCT){
-            buf.resize(decl.fields.size() * sizeof(util::StringConstRef) * 2 + 1);
-            for(const auto& f : decl.fields) {
-                util::StringConstRef* ptr = (util::StringConstRef*)&buf[current];
+        } else if(decl.decl.is<Struct>()) {
+            buf.push_back('1');
+            auto& info = decl.decl.get<Struct>();
+            buf.resize(info.fields.size() * sizeof(TypeID) * 2 + 1);
+            for(const auto& f : info.fields) {
+                TypeID* ptr = (TypeID*)&buf[current];
                 *ptr = f.type;
                 ++ptr;
                 *ptr = f.name;
-                current += sizeof(util::StringConstRef) * 2;
+                current += sizeof(TypeID) * 2;
             }
-        } else {
-            buf.resize(decl.fields.size() * sizeof(util::StringConstRef) + 1);
-            for(const auto& f : decl.fields) {
-                util::StringConstRef* ptr = (util::StringConstRef*)&buf[current];
-                *ptr = f.type;
-                current += sizeof(util::StringConstRef);
+        } else if(decl.decl.is<TupleOrUnion>()) {
+            buf.push_back(decl.decl.get<TupleOrUnion>().is_union ? '3' : '2');
+            auto& info = decl.decl.get<TupleOrUnion>();
+            buf.resize(info.types.size() * sizeof(TypeID) + 1);
+            for(auto p : info.types) {
+                *((TypeID*)&buf[current]) = p;
+                current += sizeof(TypeID);
             }
+        } else if(decl.decl.is<ModifiedType>()) {
+            buf.push_back('4');
+            auto& info = decl.decl.get<ModifiedType>();
+            buf.resize(info.modifiers.size() + sizeof(TypeID) + 1);
+            for(;current < info.modifiers.size() + 1; ++current) {
+                buf[current] = char(info.modifiers[current - 1]);
+            }
+            *((TypeID*)&buf[current]) = info.underlying_type;
         }
 
         return alloc.allocate(std::move(buf));

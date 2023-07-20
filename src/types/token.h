@@ -24,7 +24,7 @@ namespace types {
         BIWISE_AND,
         BITWISE_OR,
         DIVIDE,
-        MULTIPLY,
+        STAR,
         PLUS,
         MINUS,
         ASSIGN,
@@ -105,7 +105,7 @@ namespace types {
         CASE(BIWISE_AND);
         CASE(BITWISE_OR);
         CASE(DIVIDE);
-        CASE(MULTIPLY);
+        CASE(STAR);
         CASE(PLUS);
         CASE(MINUS);
         CASE(ASSIGN);
@@ -174,7 +174,7 @@ namespace types {
         Category category {Category::NONE};
 
         inline bool is_type_modifier() const {
-             return category == Category::OPTIONAL || category == Category::MULTIPLY;
+             return category == Category::OPTIONAL || category == Category::STAR;
         }
     };
 

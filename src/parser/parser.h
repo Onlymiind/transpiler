@@ -20,24 +20,24 @@
 
 namespace parser {
 
-    struct TypeInfo {
-        Declaration* declaration = nullptr;
-        Block* function_definition = nullptr;
-    };
+    // struct TypeInfo {
+    //     Declaration* declaration = nullptr;
+    //     Block* function_definition = nullptr;
+    // };
 
     struct File {
-        std::unordered_map<util::StringConstRef, TypeInfo> types;
+        std::unordered_map<util::StringConstRef, Decl> types;
         std::vector<VariableDecl> variables;
-        util::ArenaPool<Declaration, Expression, IfStatement, Block> arena;
+        util::ArenaPool<Expression, IfStatement, Block> arena;
 
-        void add_type(TypeInfo info, util::ErrorHandler& err) {
-            if(auto prev = types.try_emplace(info.declaration->name, info); !prev.second) {
-                err.redeclaration_error(info.declaration->pos, prev.first->second.declaration->pos);
+        void add_type(Decl info, util::ErrorHandler& err) {
+            if(auto prev = types.try_emplace(info.name, info); !prev.second) {
+                err.redeclaration_error(info.pos, prev.first->second.pos);
             }
         }
 
-        void add_unnamed_type(TypeInfo info) {
-            types.try_emplace(info.declaration->name, info);
+        void add_unnamed_type(Decl info) {
+            types.try_emplace(info.name, info);
         }
     };
 
@@ -58,15 +58,19 @@ namespace parser {
 
         VariableDecl parse_variable();
 
-        TypeInfo parse_function();
+        Decl parse_function();
 
-        TypeInfo parse_type_declaration();
+        Decl parse_type_declaration();
 
         util::StringConstRef parse_type();
 
-        std::vector<VariableDecl> parse_struct_def();
+        Struct parse_struct_def();
 
-        Declaration* parse_function_decl(bool unnamed = false);
+        Function parse_function_decl();
+
+        ModifiedType parse_modified_type();
+
+        TupleOrUnion parse_tuple_or_union();
 
         Assignment parse_assignment();
 

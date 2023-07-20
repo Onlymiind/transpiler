@@ -1,6 +1,7 @@
 #include "parser/parser.h"
 
 #include <algorithm>
+#include <filesystem>
 #include <iostream>
 #include <string>
 
@@ -89,19 +90,17 @@ namespace parser {
         return result;
     }
 
-    TypeInfo Parser::parse_type_declaration() {
+    Decl Parser::parse_type_declaration() {
         consume_expected(types::Category::TYPE, "type declaration");
-        TypeInfo info;
-        info.declaration = file_.arena.allocate<Declaration>();
-        info.declaration->pos = next().pos;
+        Decl info;
+        info.pos = next().pos;
         auto name = consume_expected(types::Category::IDENTIFIER, "type declaration");
-        info.declaration->name = name.value.get<util::StringConstRef>();
+        info.name = name.value.get<util::StringConstRef>();
 
-        info.declaration->generic_params = parse_generic_params();
+        //info.declaration->generic_params = parse_generic_params();
 
         if(next().is_type_modifier()) {
-            info.declaration->type = DeclarationType::ALIAS;
-            info.declaration->underlying_type = parse_type();
+            info.decl = Alias{parse_type()};
             return info;
         }
 
@@ -110,14 +109,11 @@ namespace parser {
         case types::Category::TUPLE:
         case types::Category::UNION:
         case types::Category::FUNC:
-            info.declaration->type = DeclarationType::ALIAS;
-            info.declaration->underlying_type = parse_type();
+            info.decl = Alias{parse_type()};
             consume_expected(types::Category::SEMICOLON, "alias declaration");
             return info;
         case types::Category::STRUCT:
-            info.declaration->type = DeclarationType::STRUCT;
-            consume(1);
-            info.declaration->fields = parse_struct_def();
+            info.decl = parse_struct_def();
             return info;
         case types::Category::ENUM:
         case types::Category::INTERFACE:
@@ -127,7 +123,8 @@ namespace parser {
         }
     }
 
-    std::vector<VariableDecl> Parser::parse_struct_def() {
+    Struct Parser::parse_struct_def() {
+        consume_expected(types::Category::STRUCT);
         consume_expected(types::Category::LBRACE, "struct definition");
         std::vector<VariableDecl> result;
         VariableDecl field;
@@ -139,18 +136,13 @@ namespace parser {
         }
         consume_expected(types::Category::RBRACE, "struct definition");
 
-        return result;
+        return Struct{std::move(result)};
     }
 
-    Declaration* Parser::parse_function_decl(bool unnamed) {
-        consume_expected(types::Category::FUNC, "function declaration");
-        Declaration result{.pos = next().pos, .type = DeclarationType::FUNCTION,};
-        if(!unnamed) {
-            auto name = consume_expected(types::Category::IDENTIFIER, "function declaration");
-            result.name = name.value.get<util::StringConstRef>();
-        }
+    Function Parser::parse_function_decl() {
+        Function result;
 
-        result.generic_params = parse_generic_params();
+        //result.generic_params = parse_generic_params();
 
         consume_expected(types::Category::LPAREN, "function declaration");
         size_t unnamed_param_cnt{0};
@@ -167,22 +159,56 @@ namespace parser {
             }
             param.name = param_name;
             param.type = parse_type();
-            result.fields.emplace_back(std::move(param));
+            result.params.emplace_back(std::move(param));
             if(next().category != types::Category::RPAREN) {
                 consume_expected(types::Category::COMMA, "function declaration");
             }
         }
         consume(1);
 
-        static const std::unordered_set<types::Category> decl_end{
-            types::Category::COMMA, types::Category::SEMICOLON, types::Category::LBRACE
-        };
-
-        if(!decl_end.contains(next().category)) {
+        if(next().category != types::Category::SEMICOLON && next().category != types::Category::LBRACE) {
             result.return_type = parse_type();
         }
 
-        return file_.arena.allocate<Declaration>(std::move(result));
+        return result;
+    }
+
+    ModifiedType Parser::parse_modified_type() {
+        if(!next().is_type_modifier())
+            err_->parser_error(next().pos, "expected one of the: ", types::Category::OPTIONAL, ", ", types::Category::STAR);
+
+        ModifiedType result;
+        for(;next().is_type_modifier(); consume(1)) {
+            switch(next().category) {
+            case types::Category::OPTIONAL:
+                result.modifiers.push_back(TypeModifiers::OPTIONAL);
+                break;
+            case types::Category::STAR:
+                result.modifiers.push_back(TypeModifiers::POINTER);
+                break;
+            default:
+                err_->parser_error(next().pos, "not implemented");
+            }
+        }
+        result.underlying_type = parse_type();
+        return result;
+    }
+
+    TupleOrUnion Parser::parse_tuple_or_union() {
+        if(next().category != types::Category::UNION && next().category != types::Category::TUPLE)
+            err_->parser_error(next().pos, "expected one of the: ", types::Category::TUPLE, ", ", types::Category::UNION);
+
+        TupleOrUnion result{.is_union = next().category == types::Category::UNION};
+        consume(1);
+        consume_expected(types::Category::LESS);
+        bool first = true;
+        while(next().category != types::Category::GREATER) {
+            if(!first)
+                consume_expected(types::Category::COMMA);
+            result.types.push_back(parse_type());
+            first = false;
+        }
+        return result;
     }
 
     VariableDecl Parser::parse_variable() {
@@ -199,31 +225,30 @@ namespace parser {
         return result;
     }
 
-    TypeInfo Parser::parse_function() {
-        TypeInfo result;
-        result.declaration = parse_function_decl();
-        if(next().category == types::Category::SEMICOLON) {
+    Decl Parser::parse_function() {
+        Decl result;
+        result.pos = next().pos;
+        consume_expected(types::Category::FUNC);
+        result.name = consume_expected(types::Category::IDENTIFIER).value.get<util::StringConstRef>();
+        auto decl = parse_function_decl();
+        if(next().category != types::Category::SEMICOLON)
+            decl.body = parse_block();
+        else
             consume(1);
-            return result;
-        }
 
-        result.function_definition = parse_block();
+        result.decl = std::move(decl);
         return result;
     }
 
     util::StringConstRef Parser::parse_type() {
-        Declaration result;
-        for(;next().is_type_modifier(); consume(1)) {
-            switch(next().category) {
-            case types::Category::OPTIONAL:
-                result.modifiers.push_back(TypeModifiers::OPTIONAL);
-                break;
-            case types::Category::MULTIPLY:
-                result.modifiers.push_back(TypeModifiers::POINTER);
-                break;
-            default:
-                err_->parser_error(next().pos, "not implemented");
-            }
+        Decl result;
+        if(next().is_type_modifier()) {
+            result.pos = next().pos;
+            result.decl = parse_modified_type();
+            auto name = make_name(result, allocator_);
+            result.name = name;
+            file_.add_unnamed_type(result);
+            return name;
         }
 
         switch(next().category) {
@@ -231,31 +256,27 @@ namespace parser {
             return consume_expected(types::Category::IDENTIFIER).value.get<util::StringConstRef>();
         case types::Category::TUPLE:
         case types::Category::UNION:
-            result.type = next().category == types::Category::TUPLE ? DeclarationType::TUPLE : DeclarationType::UNION;
             result.pos = next().pos;
+            result.decl = parse_tuple_or_union();
+            break;
+        case types::Category::FUNC:
             consume(1);
-            result.generic_params = parse_generic_params();
-            result.name = make_name(result, allocator_);
-            file_.add_unnamed_type(TypeInfo{file_.arena.allocate<Declaration>(result)});
-            return result.name;
-        case types::Category::FUNC: {
-            auto decl =  parse_function_decl(true);
-            decl->name = make_name(*decl, allocator_);
-            file_.add_unnamed_type(TypeInfo{decl});
-            return decl->name;
-        }
+            result.decl =  parse_function_decl();
+            break;
         case types::Category::STRUCT: {
             result.pos = next().pos;
-            consume(1);
-            result.type = DeclarationType::STRUCT;
-            result.fields = parse_struct_def();
-            result.name = make_name(result, allocator_);
-            file_.add_unnamed_type(TypeInfo{file_.arena.allocate<Declaration>(result)});
-            return result.name;
+            result.decl = parse_struct_def();
+            break;
         }
         default:
             err_->parser_error(next().pos, "type: expected one of the type_name, union, tuple, got: ", next().category);
+            break;
         }
+
+        auto name = make_name(result, allocator_);
+        result.name = name;
+        file_.add_unnamed_type(std::move(result));
+        return name;
     }
 
     bool Parser::is_assigmnent_next() {
