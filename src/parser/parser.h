@@ -38,12 +38,12 @@ namespace parser {
 
     std::optional<size_t> first_not_comment(types::Tokens tokens);
 
-    File parse(std::vector<types::Token> tokens, util::StringAllocator& allocator, util::ErrorHandler& err);
+    void parse(std::vector<types::Token> tokens, File& file, util::StringAllocator& allocator, util::ErrorHandler& err);
 
     class Parser {
     public:
-        Parser(std::vector<types::Token> tokens, util::StringAllocator& allocator, util::ErrorHandler& err) 
-            : tokens_{std::move(tokens)}, allocator_{allocator}, err_{&err}
+        Parser(std::vector<types::Token> tokens, File& file, util::StringAllocator& allocator, util::ErrorHandler& err) 
+            : tokens_{std::move(tokens)}, file_{file}, allocator_{allocator}, err_{err}
         {}
 
 
@@ -101,7 +101,7 @@ namespace parser {
 
         inline types::Token consume_expected(types::Category expected, const std::string& err_prefix = "") {
             if(next().category != expected) {
-                err_->parser_error(next().pos, err_prefix, ": expected ", expected, ", got ", remainder_[0].category);
+                err_.parser_error(next().pos, err_prefix, ": expected ", expected, ", got ", remainder_[0].category);
             }
 
             auto tok = remainder_[0];
@@ -131,9 +131,9 @@ namespace parser {
     private:
         std::vector<types::Token> tokens_;
 
-        File file_;
+        File& file_;
 
-        util::ErrorHandler* err_ = nullptr;
+        util::ErrorHandler& err_;
         util::StringAllocator& allocator_;
 
         types::Tokens remainder_ = tokens_;

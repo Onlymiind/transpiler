@@ -19,7 +19,7 @@ int main() {
     util::ErrorHandler err;
     util::StringAllocator alloc;
     try {
-        file = parser::parse(lexer::Lexer{in, alloc, err}.split(), alloc, err);
+        parser::parse(lexer::Lexer{in, alloc, err}.split(), file, alloc, err);
     } catch (const std::exception& e) {
         std::cout << e.what() << std::endl;
     }

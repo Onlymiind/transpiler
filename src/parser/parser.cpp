@@ -26,9 +26,9 @@ namespace parser {
         return it - tokens.begin();
     }
 
-    File parse(std::vector<types::Token> tokens, util::StringAllocator& allocator, util::ErrorHandler& err) {
-        Parser p{std::move(tokens), allocator, err};
-        return p.parse();
+    void parse(std::vector<types::Token> tokens, File& file, util::StringAllocator& allocator, util::ErrorHandler& err) {
+        Parser p{std::move(tokens), file, allocator, err};
+        p.parse();
     }
 
 
@@ -46,11 +46,11 @@ namespace parser {
                     // TODO: parse import
                     size_t pos = next().pos;
                     consume(1);
-                    err_->parser_error(pos, "imports are not implemented");
+                    err_.parser_error(pos, "imports are not implemented");
                     break;
                 }
                 case types::Category::TYPE:
-                    file_.add_type(parse_type_declaration(), *err_);
+                    file_.add_type(parse_type_declaration(), err_);
                     break;
                 case types::Category::VAR:
                     consume(1);
@@ -58,7 +58,7 @@ namespace parser {
                     consume_expected(types::Category::SEMICOLON);
                     break;
                 case types::Category::FUNC:
-                    file_.add_type(parse_function(), *err_);
+                    file_.add_type(parse_function(), err_);
                     break;
                 default:
                     consume(1);
@@ -117,9 +117,9 @@ namespace parser {
             return info;
         case types::Category::ENUM:
         case types::Category::INTERFACE:
-            err_->parser_error(next().pos, "not implemented");
+            err_.parser_error(next().pos, "not implemented");
         default:
-            err_->parser_error(next().pos, "type declaration: expected one of the: type_name, tuple, union, enum, struct, got ", next().category);
+            err_.parser_error(next().pos, "type declaration: expected one of the: type_name, tuple, union, enum, struct, got ", next().category);
         }
     }
 
@@ -175,7 +175,7 @@ namespace parser {
 
     ModifiedType Parser::parse_modified_type() {
         if(!next().is_type_modifier())
-            err_->parser_error(next().pos, "expected one of the: ", types::Category::OPTIONAL, ", ", types::Category::STAR);
+            err_.parser_error(next().pos, "expected one of the: ", types::Category::OPTIONAL, ", ", types::Category::STAR);
 
         ModifiedType result;
         for(;next().is_type_modifier(); consume(1)) {
@@ -187,7 +187,7 @@ namespace parser {
                 result.modifiers.push_back(TypeModifiers::POINTER);
                 break;
             default:
-                err_->parser_error(next().pos, "not implemented");
+                err_.parser_error(next().pos, "not implemented");
             }
         }
         result.underlying_type = parse_type();
@@ -196,7 +196,7 @@ namespace parser {
 
     TupleOrUnion Parser::parse_tuple_or_union() {
         if(next().category != types::Category::UNION && next().category != types::Category::TUPLE)
-            err_->parser_error(next().pos, "expected one of the: ", types::Category::TUPLE, ", ", types::Category::UNION);
+            err_.parser_error(next().pos, "expected one of the: ", types::Category::TUPLE, ", ", types::Category::UNION);
 
         TupleOrUnion result{.is_union = next().category == types::Category::UNION};
         consume(1);
@@ -269,7 +269,7 @@ namespace parser {
             break;
         }
         default:
-            err_->parser_error(next().pos, "type: expected one of the type_name, union, tuple, got: ", next().category);
+            err_.parser_error(next().pos, "type: expected one of the type_name, union, tuple, got: ", next().category);
             break;
         }
 
@@ -356,7 +356,7 @@ namespace parser {
             consume(1);
             break;
         default:
-            err_->parser_error(next().pos, "primary expression: unexpected token: ", next().category);
+            err_.parser_error(next().pos, "primary expression: unexpected token: ", next().category);
         }
 
         return result;
