@@ -210,9 +210,8 @@ namespace parser {
     }
 
     VariableDecl Parser::parse_variable() {
-        VariableDecl result;
-        auto name = consume_expected(types::Category::IDENTIFIER, "variable declaration");
-        result.name = name.value.get<util::StringConstRef>();
+        VariableDecl result{.pos = next().pos};
+        result.name = consume_expected(types::Category::IDENTIFIER, "variable declaration").value.get<util::StringConstRef>();
         consume_expected(types::Category::COLON, "variable declaration");
         result.type = parse_type();
         if(next().category == types::Category::ASSIGN) {

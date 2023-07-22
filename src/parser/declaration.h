@@ -48,6 +48,7 @@ namespace parser {
         util::StringConstRef name = nullptr;
         TypeID type = nullptr;
         Expression* value;
+        size_t pos = 0;
     };
 
     struct Block;
