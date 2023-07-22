@@ -4,6 +4,12 @@ type b;
 
 type a b;
 
+type c func(u8, u8, u8) u8;
+
+type d *******a;
+
+type e ****d;
+
 func foo() {
     var a: u8;
 

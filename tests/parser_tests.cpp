@@ -27,7 +27,8 @@ TEST_CASE("parser test") {
         std::ifstream in{entry.path()};
         REQUIRE(in.is_open());
 
-        REQUIRE_NOTHROW(parser::parse(lexer::Lexer{in, alloc, err}.split(), alloc, err));
+        parser::File file;
+        REQUIRE_NOTHROW(parser::parse(lexer::Lexer{in, alloc, err}.split(), file, alloc, err));
         in.close();
         REQUIRE(!err.error_occured());
     }
@@ -41,7 +42,8 @@ TEST_CASE("parser test") {
         std::ifstream in{entry.path()};
         REQUIRE(in.is_open());
 
-        REQUIRE_NOTHROW(parser::parse(lexer::Lexer{in, alloc, err}.split(), alloc, err));
+        parser::File file;
+        REQUIRE_NOTHROW(parser::parse(lexer::Lexer{in, alloc, err}.split(), file, alloc, err));
         in.close();
         err.report_errors(Catch::cout(), entry.path());
         REQUIRE(err.error_occured());

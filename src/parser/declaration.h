@@ -89,11 +89,25 @@ namespace parser {
 
         std::string buf;
         size_t current = 1;
+
+        auto align_current = [&current, &buf]() {
+            constexpr size_t align = alignof(TypeID);
+            size_t ptr = size_t(buf.data() + current);
+            size_t align_amount = align - ptr % align;
+            if(align_amount == align) {
+                return;
+            }
+            size_t end = current + align_amount;
+            for(;current < end; ++current) {
+                buf[current] = '0';
+            }
+        };
         //FIXME: unaligned memory access
         if(decl.decl.is<Function>()) {
             buf.push_back('0');
             auto& info = decl.decl.get<Function>();
-            buf.resize(info.params.size() * sizeof(TypeID) + 1);
+            buf.resize((info.params.size() + 1) * sizeof(TypeID));
+            align_current();
             for(const auto& f : info.params) {
                 *((TypeID*)&buf[current]) = f.type;
                 current += sizeof(TypeID);
@@ -101,7 +115,8 @@ namespace parser {
         } else if(decl.decl.is<Struct>()) {
             buf.push_back('1');
             auto& info = decl.decl.get<Struct>();
-            buf.resize(info.fields.size() * sizeof(TypeID) * 2 + 1);
+            buf.resize(info.fields.size() * sizeof(TypeID) * 2 + sizeof(TypeID));
+            align_current();
             for(const auto& f : info.fields) {
                 TypeID* ptr = (TypeID*)&buf[current];
                 *ptr = f.type;
@@ -112,7 +127,8 @@ namespace parser {
         } else if(decl.decl.is<TupleOrUnion>()) {
             buf.push_back(decl.decl.get<TupleOrUnion>().is_union ? '3' : '2');
             auto& info = decl.decl.get<TupleOrUnion>();
-            buf.resize(info.types.size() * sizeof(TypeID) + 1);
+            buf.resize((info.types.size() + 1) * sizeof(TypeID));
+            align_current();
             for(auto p : info.types) {
                 *((TypeID*)&buf[current]) = p;
                 current += sizeof(TypeID);
@@ -120,10 +136,15 @@ namespace parser {
         } else if(decl.decl.is<ModifiedType>()) {
             buf.push_back('4');
             auto& info = decl.decl.get<ModifiedType>();
-            buf.resize(info.modifiers.size() + sizeof(TypeID) + 1);
+            size_t last_index = info.modifiers.size() + current;
+            if(last_index % alignof(TypeID) != 0)
+                buf.resize(last_index + (alignof(TypeID) - last_index % alignof(TypeID)) + sizeof(TypeID));
+            else
+                buf.resize(last_index + sizeof(TypeID));
             for(;current < info.modifiers.size() + 1; ++current) {
                 buf[current] = char(info.modifiers[current - 1]);
             }
+            align_current();
             *((TypeID*)&buf[current]) = info.underlying_type;
         }
 

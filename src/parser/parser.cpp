@@ -32,7 +32,7 @@ namespace parser {
     }
 
 
-    File Parser::parse() {
+    void Parser::parse() {
         while(!remainder_.empty()) {
             //TODO: improve error recovery
             try {
@@ -65,8 +65,6 @@ namespace parser {
                 }
             } catch(const util::ParserError&) {}
         }
-
-        return std::exchange(file_, File{});
     }
 
     std::vector<GenericParam> Parser::parse_generic_params() {

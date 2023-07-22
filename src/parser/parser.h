@@ -47,7 +47,7 @@ namespace parser {
         {}
 
 
-        File parse();
+        void parse();
 
         std::vector<GenericParam> parse_generic_params();
 
