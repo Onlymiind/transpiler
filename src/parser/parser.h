@@ -22,17 +22,22 @@ namespace parser {
 
     struct File {
         std::unordered_map<util::StringConstRef, Decl> types;
+        std::unordered_map<util::StringConstRef, Function> functions;
         std::vector<VariableDecl> variables;
         util::ArenaPool<Expression, IfStatement, Block> arena;
 
         void add_type(Decl info, util::ErrorHandler& err) {
-            if(auto prev = types.try_emplace(info.name, info); !prev.second) {
+            if(auto prev = types.try_emplace(info.name, info); !prev.second)
                 err.redeclaration_error(info.pos, prev.first->second.pos);
-            }
         }
 
         void add_unnamed_type(Decl info) {
             types.try_emplace(info.name, info);
+        }
+
+        void add_function(Function func, util::ErrorHandler& err) {
+            if(auto prev = functions.try_emplace(func.name, func); !prev.second)
+                err.redeclaration_error(func.pos, prev.first->second.pos);
         }
     };
 
@@ -53,7 +58,7 @@ namespace parser {
 
         VariableDecl parse_variable();
 
-        Decl parse_function();
+        Function parse_function();
 
         Decl parse_type_declaration();
 
@@ -61,7 +66,7 @@ namespace parser {
 
         Struct parse_struct_def();
 
-        Function parse_function_decl();
+        FunctionType parse_function_type();
 
         ModifiedType parse_modified_type();
 

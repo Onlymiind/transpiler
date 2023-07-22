@@ -56,9 +56,15 @@ namespace parser {
         std::vector<VariableDecl> fields;
     };
 
-    struct Function {
+    struct FunctionType {
         std::vector<VariableDecl> params;
         TypeID return_type = nullptr;
+    };
+
+    struct Function {
+        FunctionType type;
+        size_t pos = 0;
+        util::StringConstRef name = nullptr;
         Block* body = nullptr;
     };
 
@@ -79,7 +85,7 @@ namespace parser {
     struct Decl {
         util::StringConstRef name = nullptr;
         size_t pos = 0;
-        util::Variant<Struct, Function, Alias, TupleOrUnion, ModifiedType> decl;
+        util::Variant<Struct, FunctionType, Alias, TupleOrUnion, ModifiedType> decl;
     };
 
     inline util::StringConstRef make_name(const Decl& decl, util::StringAllocator& alloc) {
@@ -103,9 +109,9 @@ namespace parser {
             }
         };
         //FIXME: unaligned memory access
-        if(decl.decl.is<Function>()) {
+        if(decl.decl.is<FunctionType>()) {
             buf.push_back('0');
-            auto& info = decl.decl.get<Function>();
+            auto& info = decl.decl.get<FunctionType>();
             buf.resize((info.params.size() + 1) * sizeof(TypeID));
             align_current();
             for(const auto& f : info.params) {

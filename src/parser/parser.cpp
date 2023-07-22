@@ -58,7 +58,7 @@ namespace parser {
                     consume_expected(types::Category::SEMICOLON);
                     break;
                 case types::Category::FUNC:
-                    file_.add_type(parse_function(), err_);
+                    file_.add_function(parse_function(), err_);
                     break;
                 default:
                     consume(1);
@@ -137,8 +137,8 @@ namespace parser {
         return Struct{std::move(result)};
     }
 
-    Function Parser::parse_function_decl() {
-        Function result;
+    FunctionType Parser::parse_function_type() {
+        FunctionType result;
 
         //result.generic_params = parse_generic_params();
 
@@ -223,18 +223,17 @@ namespace parser {
         return result;
     }
 
-    Decl Parser::parse_function() {
-        Decl result;
+    Function Parser::parse_function() {
+        Function result;
         result.pos = next().pos;
         consume_expected(types::Category::FUNC);
         result.name = consume_expected(types::Category::IDENTIFIER).value.get<util::StringConstRef>();
-        auto decl = parse_function_decl();
+        result.type = parse_function_type();
         if(next().category != types::Category::SEMICOLON)
-            decl.body = parse_block();
+            result.body = parse_block();
         else
             consume(1);
 
-        result.decl = std::move(decl);
         return result;
     }
 
@@ -259,7 +258,7 @@ namespace parser {
             break;
         case types::Category::FUNC:
             consume(1);
-            result.decl =  parse_function_decl();
+            result.decl =  parse_function_type();
             break;
         case types::Category::STRUCT: {
             result.pos = next().pos;
