@@ -50,6 +50,12 @@ namespace checker {
         }
     }
 
+    void define_tuple_or_union(Module_& mod, TupleOrUnion& info, const parser::TupleOrUnion& parsed) {
+        for(auto typname : parsed.types) {
+            info.types.push_back(mod.get_type_id_by_name(typname));
+        }
+    }
+
     Module_ check_types(parser::File file, util::ErrorHandler& err) {
         Module_ result;
         
@@ -63,6 +69,10 @@ namespace checker {
                 DEFINE_OR_POISON(sym, define_struct(result, def.get<Struct>(), parsed->decl.get<parser::Struct>()));
             } else if(parsed->decl.is<parser::FunctionType>()) {
                 DEFINE_OR_POISON(sym, define_function_type(result, def.get<FunctionType>(), parsed->decl.get<parser::FunctionType>()));
+            } else if(parsed->decl.is<parser::Alias>()) {
+                DEFINE_OR_POISON(sym, def.get<Alias>().underlying_type = result.get_type_id_by_name(parsed->decl.get<parser::Alias>().underlying_type));
+            } else if(parsed->decl.is<parser::TupleOrUnion>()) {
+                DEFINE_OR_POISON(sym, def.get<TupleOrUnion>(), parsed->decl.get<parser::TupleOrUnion>());
             }
         }
 #undef DEFINE_OR_POISON
@@ -71,6 +81,7 @@ namespace checker {
 
         }
 
+        return result;
     }
 
 }
