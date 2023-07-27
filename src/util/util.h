@@ -64,7 +64,7 @@ namespace util {
         return (!lhs && !rhs) || *lhs == *rhs;
     }
 
-    template<typename T>
+    template<typename T, typename Tag>
     class Distinct {
     public:
         constexpr Distinct() = default;
@@ -72,11 +72,11 @@ namespace util {
             : val_(val)
         {}
 
-        explicit operator T() {
+        explicit constexpr operator T() {
             return val_;
         }
 
-        bool operator==(Distinct<T> other) { return val_ == other.val_; }
+        bool operator==(Distinct<T, Tag> other) { return val_ == other.val_; }
 
     private:
         T val_{};

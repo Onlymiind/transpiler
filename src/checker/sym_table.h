@@ -11,9 +11,13 @@
 
 
 namespace checker {
-    using TypeID = util::Distinct<uint64_t>;
-    using SymbolID = util::Distinct<uint64_t>;
-    using ScopeID = util::Distinct<uint64_t>;
+    struct Scope;
+    struct Symbol;
+
+
+    using TypeID = util::Distinct<uint64_t, void>;
+    using SymbolID = util::Distinct<uint64_t, Scope>;
+    using ScopeID = util::Distinct<uint64_t, Symbol>;
 
     constexpr TypeID k_undefined_id = TypeID(0);
     constexpr TypeID k_invalid_id = TypeID(1);
