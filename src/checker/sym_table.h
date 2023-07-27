@@ -3,29 +3,29 @@
 #include <cstdint>
 #include <unordered_map>
 #include <vector>
+#include <list>
 
 #include "util/arena.h"
+#include "util/util.h"
 #include "util/variant.h"
 
 
 namespace checker {
-    using TypeID = uint64_t;
-    using SymbolID = uint64_t;
+    using TypeID = util::Distinct<uint64_t>;
+    using SymbolID = util::Distinct<uint64_t>;
+    using ScopeID = util::Distinct<uint64_t>;
 
-    constexpr TypeID k_undefined_id = 0;
-    constexpr TypeID k_invalid_id = 1;
-    constexpr TypeID k_none_id = 2;
+    constexpr TypeID k_undefined_id = TypeID(0);
+    constexpr TypeID k_invalid_id = TypeID(1);
+    constexpr TypeID k_none_id = TypeID(2);
+
+    constexpr SymbolID k_invalid_symbol = SymbolID(-1);
+    constexpr ScopeID k_global_scope = ScopeID(0);
 
     struct TypeInfo {
         util::StringConstRef name = nullptr;
         size_t size = 0;
         size_t pos = 0;
-    };
-
-    struct SymbolInfo {
-        util::StringConstRef name = nullptr;
-        size_t pos = 0;
-        TypeID id = k_undefined_id;
     };
 
     struct Expression;
@@ -77,8 +77,40 @@ namespace checker {
         bool poisoned = false;
     };
 
-    struct Scope {
-        std::unordered_map<util::StringConstRef, TypeID> name_to_type;
-        std::unordered_map<util::StringConstRef, SymbolID> name_to_symbol;
+    struct ScopedSymbol {
+        ScopeID scope = k_global_scope;
+        SymbolID symbol = k_invalid_symbol;
     };
+
+    struct Scope {
+        std::unordered_map<util::StringConstRef, SymbolID> name_to_symbol;
+        std::vector<Symbol> symbols;
+        size_t start_pos = 0;
+        size_t end_pos = 0;
+        Scope* parent = nullptr;
+    };
+
+    class Module_ {
+    public:
+
+        Symbol* get_symbol_by_name(util::StringConstRef name, ScopeID scope = k_global_scope);
+
+        bool is_type(util::StringConstRef name, ScopeID scope = k_global_scope);
+        bool is_function(util::StringConstRef name, ScopeID scope = k_global_scope);
+        bool is_variable(util::StringConstRef name, ScopeID scope = k_global_scope);
+
+        TypeID get_type_symbol_id(SymbolID symbol);
+
+        ScopeID push_scope();
+        void pop_scope();
+
+        SymbolID add_symbol_to_current_scope(Symbol symbol);
+
+    private:
+        //TODO: imports
+        ScopeID current_scope = k_global_scope;
+        std::vector<Scope> scopes;
+        std::unordered_map<util::StringConstRef, std::list<ScopedSymbol>> sym_table;
+    };
+
 }

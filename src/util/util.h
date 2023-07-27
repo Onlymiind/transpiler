@@ -63,4 +63,22 @@ namespace util {
     constexpr bool deep_eq(T* lhs, T* rhs) {
         return (!lhs && !rhs) || *lhs == *rhs;
     }
+
+    template<typename T>
+    class Distinct {
+    public:
+        constexpr Distinct() = default;
+        explicit constexpr Distinct(T val)
+            : val_(val)
+        {}
+
+        explicit operator T() {
+            return val_;
+        }
+
+        bool operator==(Distinct<T> other) { return val_ == other.val_; }
+
+    private:
+        T val_{};
+    };
 }
