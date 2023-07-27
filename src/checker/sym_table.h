@@ -93,13 +93,15 @@ namespace checker {
     class Module_ {
     public:
 
-        Symbol* get_symbol_by_name(util::StringConstRef name, ScopeID scope = k_global_scope);
+        Symbol& get_symbol_by_name(util::StringConstRef name, ScopeID scope = k_global_scope);
+        TypeID get_type_id_by_name(util::StringConstRef name, ScopeID scope = k_global_scope);
+
+        Symbol& get_symbol(SymbolID id);
+        //Type& get_type(SymbolID id);
 
         bool is_type(util::StringConstRef name, ScopeID scope = k_global_scope);
         bool is_function(util::StringConstRef name, ScopeID scope = k_global_scope);
         bool is_variable(util::StringConstRef name, ScopeID scope = k_global_scope);
-
-        TypeID get_type_symbol_id(SymbolID symbol);
 
         ScopeID push_scope();
         void pop_scope();
