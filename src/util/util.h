@@ -72,11 +72,11 @@ namespace util {
             : val_(val)
         {}
 
-        explicit constexpr operator T() {
+        explicit constexpr operator T() const {
             return val_;
         }
 
-        bool operator==(Distinct<T, Tag> other) { return val_ == other.val_; }
+        bool operator==(Distinct<T, Tag> other) const { return val_ == other.val_; }
 
     private:
         T val_{};

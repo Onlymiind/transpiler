@@ -1,6 +1,7 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <unordered_map>
 #include <vector>
 #include <list>
@@ -15,16 +16,24 @@ namespace checker {
     struct Symbol;
 
 
-    using TypeID = util::Distinct<uint64_t, void>;
-    using SymbolID = util::Distinct<uint64_t, Scope>;
-    using ScopeID = util::Distinct<uint64_t, Symbol>;
+    using ScopeID = util::Distinct<int32_t, Symbol>;
 
-    constexpr TypeID k_undefined_id = TypeID(0);
-    constexpr TypeID k_invalid_id = TypeID(1);
-    constexpr TypeID k_none_id = TypeID(2);
 
-    constexpr SymbolID k_invalid_symbol = SymbolID(-1);
+
+    constexpr ScopeID k_invalid_scope = ScopeID(-1);
     constexpr ScopeID k_global_scope = ScopeID(0);
+
+    struct SymbolID {
+        ScopeID scope = k_global_scope;
+        int32_t id = -1;
+    };
+
+    constexpr SymbolID k_invalid_symbol = SymbolID{};
+
+    using TypeID = util::Distinct<SymbolID, void>;
+    constexpr TypeID k_invalid_id = TypeID(k_invalid_symbol);
+    constexpr TypeID k_undefined_id = TypeID(SymbolID{.id = -2});
+    constexpr TypeID k_none_id = TypeID(SymbolID{.id = -3});
 
     struct TypeInfo {
         util::StringConstRef name = nullptr;
@@ -86,12 +95,20 @@ namespace checker {
         SymbolID symbol = k_invalid_symbol;
     };
 
-    struct Scope {
+    class Scope {
+    public:
+        SymbolID add_symbol(Symbol sym);
+        Symbol& get_symbol(SymbolID id);
+        Symbol* get_symbol(util::StringConstRef name);
+
+        ScopeID get_parent() const;
+        bool is_global() const { return parent == k_global_scope; }
+    private:
         std::unordered_map<util::StringConstRef, SymbolID> name_to_symbol;
         std::vector<Symbol> symbols;
         size_t start_pos = 0;
         size_t end_pos = 0;
-        Scope* parent = nullptr;
+        ScopeID parent = k_invalid_scope;
     };
 
     class Module_ {
