@@ -40,6 +40,8 @@ add_library(transpiler_lib
     ${CHECKER_MODULE}
     ${UTIL_MODULE}
     src/types/token.h
+    src/types/ids.h
+    src/types/statement.h
     src/types/token.cpp
 )
 

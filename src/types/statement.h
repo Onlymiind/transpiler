@@ -1,9 +1,12 @@
 #pragma once 
 #include <cstdint>
+#include <variant>
 #include <vector>
 #include <unordered_map>
 
+#include "util/arena.h"
 #include "util/util.h"
+#include "types/ids.h"
 
 namespace types {
     enum class Operation: uint8_t {
@@ -62,7 +65,7 @@ namespace types {
     bool operator==(const FunctionCall& lhs, const FunctionCall& rhs);
 
     struct Expression {
-        util::Variant<types::Token, Expr, FunctionCall> expr;
+        util::Variant<types::Token, Expr, FunctionCall, SymbolID> expr;
         size_t pos;
     };
 
@@ -90,5 +93,35 @@ namespace types {
         {types::Category::PLUS, binary_OperationInfos.at(Operation::ADD)},
         {types::Category::STAR, binary_OperationInfos.at(Operation::MUL)},
         {types::Category::NOT_EQUALS, binary_OperationInfos.at(Operation::NOT_EQUALS)},
+    };
+
+    struct Return {
+        Expression* value;
+    };
+
+    struct IfStatement {
+        Expression* condition = nullptr;
+        Block* then = nullptr;
+        IfStatement* otherwise = nullptr;
+    };
+
+    struct Assignment {
+        util::StringConstRef name;
+        util::Variant<std::monostate, util::StringConstRef, TypeID> type;
+        Expression* value;
+        bool is_decl;
+    };
+
+    struct Loop {
+        util::Variant<std::monostate, Assignment> init;
+        Expression* condition = nullptr;
+        util::Variant<std::monostate, Assignment, Expression*> step;
+        Block* body = nullptr;
+    };
+
+    using Statement = util::Variant<Expression*, Return, IfStatement*, Assignment, Loop>;
+
+    struct Block {
+        std::vector<Statement> statements;
     };
 }
