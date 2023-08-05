@@ -49,3 +49,4 @@ TEST_CASE("parser test") {
         REQUIRE(err.error_occured());
     }
 }
+

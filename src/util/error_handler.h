@@ -52,7 +52,7 @@ namespace util {
         }
 
         [[noreturn]] void redeclaration_error(size_t pos, size_t prev_pos) {
-            errors_.emplace(pos, prev_pos, "redeclaration, previously declared at: ");
+            errors_.emplace(Error{pos, prev_pos, "redeclaration, previously declared at: "});
             throw ParserError("redeclaration");
         }
 
@@ -79,3 +79,4 @@ namespace util {
         std::set<Error> errors_;
     };
 }
+

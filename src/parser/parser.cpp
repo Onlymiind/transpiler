@@ -311,7 +311,7 @@ namespace parser {
                 rhs = parse_binary_expression_recursive(rhs, op_it->second.precedence);
             }
 
-            lhs = file_.arena.allocate<Expression>(Expr{ .lhs = lhs, .rhs = rhs, .action = op_it->second }, pos);
+            lhs = file_.arena.allocate<Expression>(Expression{Expr{ .lhs = lhs, .rhs = rhs, .action = op_it->second }, pos});
         }
         return lhs;
     }
@@ -331,7 +331,7 @@ namespace parser {
             return primary;
         }
         result.lhs = primary;
-        return file_.arena.allocate<Expression>(std::move(result), pos);
+        return file_.arena.allocate<Expression>(Expression{std::move(result), pos});
     }
 
     Expression* Parser::parse_primary_expression() {

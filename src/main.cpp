@@ -9,7 +9,7 @@
 #include "util/arena.h"
 #include "util/error_handler.h"
 
-inline constexpr std::string_view in_fname{"/home/onlymind/mine/cpp/projects/transpiler/lang/simple.st"};
+inline constexpr std::string_view in_fname{"/home/onlymind/transpiler/lang/simple.st"};
 inline constexpr std::string_view out_fname{"/home/onlymind/mine/cpp/projects/transpiler/out.txt"};
 
 int main() {
@@ -18,6 +18,7 @@ int main() {
     parser::File file;
     util::ErrorHandler err;
     util::StringAllocator alloc;
+
     try {
         parser::parse(lexer::Lexer{in, alloc, err}.split(), file, alloc, err);
     } catch (const std::exception& e) {
@@ -29,3 +30,4 @@ int main() {
 
     return 0;
 }
+
