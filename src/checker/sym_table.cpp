@@ -2,6 +2,7 @@
 #include "parser/declaration.h"
 #include "parser/parser.h"
 #include "types/ids.h"
+#include "types/statement.h"
 #include "util/arena.h"
 #include "util/error_handler.h"
 #include <stdexcept>
@@ -110,6 +111,41 @@ namespace checker {
         return result;
     }
 
-    
+    void check_expression(Module& mod, const types::Expression* expr);
+    void check_block(Module& mod, const types::Block* block);
+
+    types::SymbolID check_and_add_function(Module& mod, const parser::Function& func) {
+        Function info;
+        if(func.type.return_type)
+            info.return_type = mod.get_type_id_by_name(func.type.return_type);
+
+        info.params.reserve(func.type.params.size());
+        auto scope_id = mod.push_scope();
+
+        for(const auto& param : func.type.params) {
+            check_expression(mod, param.value);
+            info.params.emplace_back(mod.add_symbol_to_current_scope(Symbol{
+                .name = param.name,
+                .pos = param.pos,
+                .info = Variable{
+                    .type = mod.get_type_id_by_name(param.type.get<util::StringConstRef>()),
+                    .default_value = param.value,
+                },
+            }));
+        }
+
+        if(func.body) {
+            info.body = func.body;
+            info.body->scope = scope_id;
+            check_block(mod, func.body);
+        }
+
+        mod.pop_scope();
+        return mod.add_symbol_to_current_scope(Symbol{
+            .name = func.name,
+            .pos = func.pos,
+            .info = std::move(info),
+        });
+    }
 
 }

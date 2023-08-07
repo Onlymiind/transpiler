@@ -117,5 +117,6 @@ namespace types {
 
     struct Block {
         std::vector<Statement> statements;
+        ScopeID scope = k_invalid_scope;
     };
 }

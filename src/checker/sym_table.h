@@ -30,9 +30,8 @@ namespace checker {
     };
 
     struct Function {
-        std::vector<Field> params;
-        types::TypeID return_type = types::k_undefined_type;
-        types::ScopeID id = types::k_invalid_scope;
+        std::vector<types::SymbolID> params;
+        types::TypeID return_type = types::k_none_type;
         types::Block* body = nullptr;
     };
 
