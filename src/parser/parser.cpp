@@ -310,18 +310,18 @@ namespace parser {
                 rhs = parse_binary_expression_recursive(rhs, op_it->second.precedence);
             }
 
-            lhs = file_.arena.allocate<types::Expression>(types::Expression{types::Expr{ .lhs = lhs, .rhs = rhs, .op = op_it->second.op }, pos});
+            lhs = file_.arena.allocate<types::Expression>(types::Expression{types::BinaryExpression{ .lhs = lhs, .rhs = rhs, .op = op_it->second.op }, pos});
         }
         return lhs;
     }
 
     types::Expression* Parser::parse_unary_expression() {
         // TODO: needs slight refactoring
-        types::Expr result;
-        auto action_it = types::g_unary_ops.find(next().category);
+        types::UnaryExpression result;
+        auto op_it = types::g_unary_ops.find(next().category);
         size_t pos = next().pos;
-        if(action_it != types::g_unary_ops.end()) {
-            result.op = action_it->second.op;
+        if(op_it != types::g_unary_ops.end()) {
+            result.op = op_it->second.op;
             consume(1);
         }
 
@@ -329,7 +329,8 @@ namespace parser {
         if(result.op == types::Operation::NONE) {
             return primary;
         }
-        result.lhs = primary;
+        
+        result.expr = primary;
         return file_.arena.allocate<types::Expression>(types::Expression{result, pos});
     }
 
@@ -401,7 +402,7 @@ namespace parser {
     types::FunctionCall Parser::parse_function_call() {
         types::FunctionCall result;
         auto name = consume_expected(types::Category::IDENTIFIER, "function call");
-        result.func_name = name.value.get<util::StringConstRef>();
+        result.func = name.value.get<util::StringConstRef>();
         consume_expected(types::Category::LPAREN, "function call");
         while(next().category != types::Category::RPAREN) {
             result.args.push_back(parse_expression());

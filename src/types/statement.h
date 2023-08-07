@@ -7,6 +7,7 @@
 #include "util/arena.h"
 #include "util/util.h"
 #include "types/ids.h"
+#include "util/variant.h"
 
 namespace types {
     enum class Operation: uint8_t {
@@ -39,41 +40,6 @@ namespace types {
         return lhs.op == rhs.op && lhs.precedence == rhs.precedence;
     }
 
-    struct Expression;
-    inline bool operator==(const Expression& lhs, const Expression& rhs);
-
-    struct Block;
-    struct IfStatement;
-
-    struct Expr {
-        Expression* lhs = nullptr;
-        Expression* rhs = nullptr;
-        Operation op;
-    };
-
-    inline bool operator==(const Expr& lhs, const Expr& rhs) {
-        return lhs.op == rhs.op && 
-            util::deep_eq(lhs.lhs, rhs.lhs) &&
-            util::deep_eq(lhs.rhs, rhs.rhs);
-    }
-
-    struct FunctionCall {
-        util::StringConstRef func_name;
-        std::vector<Expression*> args;
-    };
-
-    bool operator==(const FunctionCall& lhs, const FunctionCall& rhs);
-
-    struct Expression {
-        util::Variant<types::Token, Expr, FunctionCall, SymbolID> expr;
-        size_t pos;
-        TypeID type = k_invalid_type;
-    };
-
-    inline bool operator==(const Expression& lhs, const Expression& rhs) {
-        return lhs.expr == rhs.expr;
-    }
-
     inline const std::unordered_map<types::Category, OperationInfo> g_unary_ops{
         {types::Category::MINUS, OperationInfo{Operation::NEGATE}},
         {types::Category::PLUS, OperationInfo{Operation::NONE}},
@@ -96,6 +62,32 @@ namespace types {
         {types::Category::NOT_EQUALS, g_binary_operation_infos.at(Operation::NOT_EQUALS)},
     };
 
+    struct Expression;
+    struct Block;
+    struct IfStatement;
+
+    struct UnaryExpression {
+        Expression* expr = nullptr;
+        Operation op = Operation::NONE;
+    };
+
+    struct BinaryExpression {
+        Expression* lhs = nullptr;
+        Expression* rhs = nullptr;
+        Operation op = Operation::NONE;
+    };
+
+    struct FunctionCall {
+        util::Variant<util::StringConstRef, SymbolID> func;
+        std::vector<Expression*> args;
+    };
+
+    struct Expression {
+        util::Variant<types::Token, BinaryExpression, UnaryExpression, FunctionCall, SymbolID> expr;
+        size_t pos;
+        TypeID type = k_invalid_type;
+    };
+
     struct Return {
         Expression* value;
     };
@@ -108,14 +100,14 @@ namespace types {
 
     struct Assignment {
         util::StringConstRef name = nullptr;
-        util::Variant<std::monostate, util::StringConstRef, TypeID> type;
+        util::Variant<util::StringConstRef, TypeID> type;
         Expression* value = nullptr;
         bool can_declare = false;
         size_t pos = 0;
     };
 
     struct Loop {
-        util::Variant<std::monostate, Assignment> init;
+        std::optional<Assignment> init;
         Expression* condition = nullptr;
         util::Variant<std::monostate, Assignment, Expression*> step;
         Block* body = nullptr;
