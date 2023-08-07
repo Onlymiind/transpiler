@@ -279,7 +279,7 @@ namespace parser {
     }
 
     types::Assignment Parser::parse_assignment() {
-        types::Assignment result;
+        types::Assignment result{.pos = next().pos};
         result.name = consume_expected(types::Category::IDENTIFIER).value.get<util::StringConstRef>();
         consume_expected(types::Category::ASSIGN);
         result.value = parse_expression();
@@ -295,17 +295,17 @@ namespace parser {
     }
 
     types::Expression* Parser::parse_binary_expression_recursive(types::Expression* lhs, uint8_t precedence) {
-        for(auto op_it = types::binary_ops.find(next().category);
-            (op_it != types::binary_ops.end()) && op_it->second.precedence >= precedence;
-            op_it = types::binary_ops.find(next().category)) {
+        for(auto op_it = types::g_binary_ops.find(next().category);
+            (op_it != types::g_binary_ops.end()) && op_it->second.precedence >= precedence;
+            op_it = types::g_binary_ops.find(next().category)) {
 
             size_t pos = next().pos;
 
             consume(1);
             auto rhs = parse_unary_expression();
-            for(auto next_op_it = types::binary_ops.find(next().category);
-                (next_op_it != types::binary_ops.end()) && next_op_it->second.precedence > op_it->second.precedence; 
-                next_op_it = types::binary_ops.find(next().category)) {
+            for(auto next_op_it = types::g_binary_ops.find(next().category);
+                (next_op_it != types::g_binary_ops.end()) && next_op_it->second.precedence > op_it->second.precedence; 
+                next_op_it = types::g_binary_ops.find(next().category)) {
 
                 rhs = parse_binary_expression_recursive(rhs, op_it->second.precedence);
             }
@@ -318,9 +318,9 @@ namespace parser {
     types::Expression* Parser::parse_unary_expression() {
         // TODO: needs slight refactoring
         types::Expr result;
-        auto action_it = types::unary_ops.find(next().category);
+        auto action_it = types::g_unary_ops.find(next().category);
         size_t pos = next().pos;
-        if(action_it != types::unary_ops.end()) {
+        if(action_it != types::g_unary_ops.end()) {
             result.op = action_it->second.op;
             consume(1);
         }

@@ -1,9 +1,10 @@
 #pragma once 
-#include "util/arena.h"
 #include <ostream>
 #include <type_traits>
 #include <utility>
 #include <variant>
+
+#include "util/arena.h"
 
 namespace util {
 

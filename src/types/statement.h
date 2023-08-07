@@ -67,14 +67,14 @@ namespace types {
     struct Expression {
         util::Variant<types::Token, Expr, FunctionCall, SymbolID> expr;
         size_t pos;
-        TypeID type = k_invalid_id;
+        TypeID type = k_invalid_type;
     };
 
     inline bool operator==(const Expression& lhs, const Expression& rhs) {
         return lhs.expr == rhs.expr;
     }
 
-    inline const std::unordered_map<types::Category, OperationInfo> unary_ops{
+    inline const std::unordered_map<types::Category, OperationInfo> g_unary_ops{
         {types::Category::MINUS, OperationInfo{Operation::NEGATE}},
         {types::Category::PLUS, OperationInfo{Operation::NONE}},
         {types::Category::NOT, OperationInfo{Operation::NOT}},
@@ -82,18 +82,18 @@ namespace types {
         {types::Category::STAR, OperationInfo{Operation::DEREF}}
     };
 
-    inline const std::unordered_map<Operation, OperationInfo> binary_OperationInfos{
+    inline const std::unordered_map<Operation, OperationInfo> g_binary_operation_infos{
         {Operation::SUB, OperationInfo{Operation::SUB, 1}},
         {Operation::ADD, OperationInfo{Operation::ADD, 1}},
         {Operation::MUL, OperationInfo{Operation::MUL, 2}},
         {Operation::NOT_EQUALS, OperationInfo{Operation::NOT_EQUALS, 0}},
     };
 
-    inline const std::unordered_map<types::Category, OperationInfo> binary_ops{
-        {types::Category::MINUS, binary_OperationInfos.at(Operation::SUB)},
-        {types::Category::PLUS, binary_OperationInfos.at(Operation::ADD)},
-        {types::Category::STAR, binary_OperationInfos.at(Operation::MUL)},
-        {types::Category::NOT_EQUALS, binary_OperationInfos.at(Operation::NOT_EQUALS)},
+    inline const std::unordered_map<types::Category, OperationInfo> g_binary_ops{
+        {types::Category::MINUS, g_binary_operation_infos.at(Operation::SUB)},
+        {types::Category::PLUS, g_binary_operation_infos.at(Operation::ADD)},
+        {types::Category::STAR, g_binary_operation_infos.at(Operation::MUL)},
+        {types::Category::NOT_EQUALS, g_binary_operation_infos.at(Operation::NOT_EQUALS)},
     };
 
     struct Return {

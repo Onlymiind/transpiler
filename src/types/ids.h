@@ -17,7 +17,7 @@ namespace types {
     inline bool operator==(SymbolID lhs, SymbolID rhs) { return lhs.scope == rhs.scope && lhs.id == rhs.id; }
 
     using TypeID = util::Distinct<SymbolID, void>;
-    constexpr TypeID k_invalid_id = TypeID(k_invalid_symbol);
-    constexpr TypeID k_undefined_id = TypeID(SymbolID{.id = -2});
-    constexpr TypeID k_none_id = TypeID(SymbolID{.id = -3});
+    constexpr TypeID k_invalid_type = TypeID(k_invalid_symbol);
+    constexpr TypeID k_undefined_type = TypeID(SymbolID{.id = -2});
+    constexpr TypeID k_none_type = TypeID(SymbolID{.id = -3});
 }

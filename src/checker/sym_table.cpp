@@ -7,8 +7,8 @@
 
 namespace checker {
 
-    std::vector<std::pair<SymbolID, const parser::Decl*>> first_pass(Module_& mod, const parser::File& file) {
-        std::vector<std::pair<SymbolID, const parser::Decl*>> result;
+    std::vector<std::pair<types::SymbolID, const parser::Decl*>> first_pass(Module& mod, const parser::File& file) {
+        std::vector<std::pair<types::SymbolID, const parser::Decl*>> result;
         result.reserve(file.types.size());
 
         for(const auto& [name, decl] : file.types) {
@@ -34,7 +34,7 @@ namespace checker {
         return result;
     }
 
-    void define_struct(Module_& mod, Struct& info, const parser::Struct& parsed) {
+    void define_struct(Module& mod, Struct& info, const parser::Struct& parsed) {
         for(const auto& field : parsed.fields) {
             info.fields.push_back(Field{
                 .name = field.name,
@@ -44,21 +44,21 @@ namespace checker {
         }
     }
 
-    void define_function_type(Module_& mod, FunctionType& info, const parser::FunctionType& parsed) {
+    void define_function_type(Module& mod, FunctionType& info, const parser::FunctionType& parsed) {
         info.return_type = mod.get_type_id_by_name(parsed.return_type);
         for(const auto& param : parsed.params) {
             info.params.push_back(mod.get_type_id_by_name(param.type.get<util::StringConstRef>()));
         }
     }
 
-    void define_tuple_or_union(Module_& mod, TupleOrUnion& info, const parser::TupleOrUnion& parsed) {
+    void define_tuple_or_union(Module& mod, TupleOrUnion& info, const parser::TupleOrUnion& parsed) {
         for(auto typname : parsed.types) {
             info.types.push_back(mod.get_type_id_by_name(typname));
         }
     }
 
-    Module_ check_types(parser::File file, util::ErrorHandler& err) {
-        Module_ result;
+    Module check_types(parser::File file, util::ErrorHandler& err) {
+        Module result;
         
         auto preprocessed = first_pass(result, file);
 

@@ -17,6 +17,8 @@
 #include "parser/declaration.h"
 #include "types/token.h"
 
+//TODO: handle assignments
+
 namespace parser {
 
     struct File {
