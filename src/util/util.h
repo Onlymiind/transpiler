@@ -56,3 +56,12 @@ namespace util {
         T val_{};
     };
 }
+
+namespace std {
+    template<typename T, typename Tag>
+    struct hash<util::Distinct<T, Tag>> {
+        size_t operator()(util::Distinct<T, Tag> val) const {
+            return hash<T>{}(T(val));
+        }
+    };
+}

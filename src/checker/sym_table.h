@@ -9,6 +9,7 @@
 #include "types/ids.h"
 #include "types/statement.h"
 #include "util/arena.h"
+#include "util/error_handler.h"
 #include "util/util.h"
 #include "util/variant.h"
 
@@ -68,29 +69,29 @@ namespace checker {
         bool poisoned = false;
     };
 
-    struct ScopedSymbol {
-        types::ScopeID scope = types::k_global_scope;
-        types::SymbolID symbol = types::k_invalid_symbol;
-    };
-
     class Scope {
     public:
+        Scope(types::ScopeID parent, types::ScopeID this_id, util::ErrorHandler& err)
+            : parent_(parent), err_(err)
+        {}
+
         types::SymbolID add_symbol(Symbol sym);
         Symbol& get_symbol(types::SymbolID id);
         Symbol* get_symbol(util::StringConstRef name);
 
-        types::ScopeID get_parent() const;
-        bool is_global() const { return parent == types::k_global_scope; }
+        types::ScopeID get_parent() const { return parent_; }
     private:
-        std::unordered_map<util::StringConstRef, types::SymbolID> name_to_symbol;
-        std::vector<Symbol> symbols;
-        size_t start_pos = 0;
-        size_t end_pos = 0;
-        types::ScopeID parent = types::k_invalid_scope;
+        std::unordered_map<util::StringConstRef, types::SymbolID> name_to_symbol_;
+        std::vector<Symbol> symbols_;
+        types::ScopeID parent_ = types::k_invalid_scope;
+        util::ErrorHandler& err_;
     };
 
     class Module {
     public:
+        Module(util::ErrorHandler& err)
+            : err_(err)
+        {}
 
         Symbol& get_symbol_by_name(util::StringConstRef name, types::ScopeID scope = types::k_global_scope);
         types::TypeID get_type_id_by_name(util::StringConstRef name, types::ScopeID scope = types::k_global_scope);
@@ -109,9 +110,11 @@ namespace checker {
 
     private:
         //TODO: imports
-        types::ScopeID current_scope = types::k_global_scope;
-        std::vector<Scope> scopes;
-        std::unordered_map<util::StringConstRef, std::list<ScopedSymbol>> sym_table;
+        types::ScopeID current_scope_ = types::k_global_scope;
+        std::vector<Scope> scopes_;
+        std::unordered_map<util::StringConstRef, std::list<types::SymbolID>> sym_table_;
+        std::unordered_map<types::ScopeID, std::unordered_set<types::ScopeID>> scope_to_parents_;
+        util::ErrorHandler& err_;
     };
 
 }
