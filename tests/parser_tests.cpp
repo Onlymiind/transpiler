@@ -30,6 +30,7 @@ TEST_CASE("parser test") {
         parser::File file;
         REQUIRE_NOTHROW(parser::parse(lexer::Lexer{in, alloc, err}.split(), file, alloc, err));
         in.close();
+        err.report_errors(Catch::cout(), entry.path());
         REQUIRE(!err.error_occured());
     }
 

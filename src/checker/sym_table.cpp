@@ -1,6 +1,7 @@
 #include "sym_table.h"
 #include "parser/declaration.h"
 #include "parser/parser.h"
+#include "util/arena.h"
 #include "util/error_handler.h"
 #include <vector>
 
@@ -38,7 +39,7 @@ namespace checker {
             info.fields.push_back(Field{
                 .name = field.name,
                 .pos = field.pos,
-                .type = mod.get_type_id_by_name(field.type),
+                .type = mod.get_type_id_by_name(field.type.get<util::StringConstRef>()),
             });
         }
     }
@@ -46,7 +47,7 @@ namespace checker {
     void define_function_type(Module_& mod, FunctionType& info, const parser::FunctionType& parsed) {
         info.return_type = mod.get_type_id_by_name(parsed.return_type);
         for(const auto& param : parsed.params) {
-            info.params.push_back(mod.get_type_id_by_name(param.type));
+            info.params.push_back(mod.get_type_id_by_name(param.type.get<util::StringConstRef>()));
         }
     }
 
@@ -77,7 +78,7 @@ namespace checker {
         }
 #undef DEFINE_OR_POISON
 
-        for(auto& var : file.variables) {
+        for(auto& var : file.global_variables) {
 
         }
 

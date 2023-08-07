@@ -13,8 +13,7 @@
 #include "util/util.h"
 #include "util/arena.h"
 #include "util/error_handler.h"
-#include "parser/expression.h"
-#include "parser/statement.h"
+#include "types/statement.h"
 #include "parser/declaration.h"
 #include "types/token.h"
 
@@ -23,8 +22,8 @@ namespace parser {
     struct File {
         std::unordered_map<util::StringConstRef, Decl> types;
         std::unordered_map<util::StringConstRef, Function> functions;
-        std::vector<VariableDecl> variables;
-        util::ArenaPool<Expression, IfStatement, Block> arena;
+        std::vector<types::Assignment> global_variables;
+        util::ArenaPool<types::Expression, types::IfStatement, types::Block> arena;
 
         void add_type(Decl info, util::ErrorHandler& err) {
             if(auto prev = types.try_emplace(info.name, info); !prev.second)
@@ -56,7 +55,7 @@ namespace parser {
 
         std::vector<GenericParam> parse_generic_params();
 
-        VariableDecl parse_variable();
+        types::Assignment parse_variable();
 
         Function parse_function();
 
@@ -72,27 +71,27 @@ namespace parser {
 
         TupleOrUnion parse_tuple_or_union();
 
-        Assignment parse_assignment();
+        types::Assignment parse_assignment();
 
-        Expression* parse_expression();
+        types::Expression* parse_expression();
 
-        Expression* parse_binary_expression();
+        types::Expression* parse_binary_expression();
 
-        Expression* parse_binary_expression_recursive(Expression* lhs, uint8_t precedence);
+        types::Expression* parse_binary_expression_recursive(types::Expression* lhs, uint8_t precedence);
 
-        Expression* parse_unary_expression();
+        types::Expression* parse_unary_expression();
 
-        Expression* parse_primary_expression();
+        types::Expression* parse_primary_expression();
 
-        FunctionCall parse_function_call();
+        types::FunctionCall parse_function_call();
 
-        IfStatement* parse_if();
+        types::IfStatement* parse_if();
 
-        Statement parse_statement();
+        types::Statement parse_statement();
 
-        Block* parse_block();
+        types::Block* parse_block();
 
-        Loop parse_loop();
+        types::Loop parse_loop();
 
         bool is_assigmnent_next();
 

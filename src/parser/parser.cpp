@@ -6,8 +6,7 @@
 #include <string>
 
 #include "parser/declaration.h"
-#include "parser/expression.h"
-#include "parser/statement.h"
+#include "types/statement.h"
 #include "types/token.h"
 #include "util/arena.h"
 #include "util/error_handler.h"
@@ -54,7 +53,7 @@ namespace parser {
                     break;
                 case types::Category::VAR:
                     consume(1);
-                    file_.variables.emplace_back(parse_variable());
+                    file_.global_variables.emplace_back(parse_variable());
                     consume_expected(types::Category::SEMICOLON);
                     break;
                 case types::Category::FUNC:
@@ -124,10 +123,9 @@ namespace parser {
     Struct Parser::parse_struct_def() {
         consume_expected(types::Category::STRUCT);
         consume_expected(types::Category::LBRACE, "struct definition");
-        std::vector<VariableDecl> result;
-        VariableDecl field;
+        std::vector<types::Assignment> result;
         while(next().category != types::Category::RBRACE) {
-            do_with_recovery(types::Category::SEMICOLON, [&result, &field, this]() {
+            do_with_recovery(types::Category::SEMICOLON, [&result, this]() {
                 result.emplace_back(parse_variable());
                 consume_expected(types::Category::SEMICOLON, "struct definition");
             });
@@ -144,8 +142,9 @@ namespace parser {
 
         consume_expected(types::Category::LPAREN, "function declaration");
         size_t unnamed_param_cnt{0};
-        VariableDecl param;
+        types::Assignment param{.can_declare = true};
         while(next().category != types::Category::RPAREN) {
+            param.pos = next().pos;
             util::StringConstRef param_name;
             if(remainder_[1].category == types::Category::COLON) {
                 auto name = consume_expected(types::Category::IDENTIFIER, "function declaration");
@@ -157,7 +156,7 @@ namespace parser {
             }
             param.name = param_name;
             param.type = parse_type();
-            result.params.emplace_back(std::move(param));
+            result.params.emplace_back(param);
             if(next().category != types::Category::RPAREN) {
                 consume_expected(types::Category::COMMA, "function declaration");
             }
@@ -209,8 +208,8 @@ namespace parser {
         return result;
     }
 
-    VariableDecl Parser::parse_variable() {
-        VariableDecl result{.pos = next().pos};
+    types::Assignment Parser::parse_variable() {
+        types::Assignment result{.can_declare = true, .pos = next().pos};
         result.name = consume_expected(types::Category::IDENTIFIER, "variable declaration").value.get<util::StringConstRef>();
         consume_expected(types::Category::COLON, "variable declaration");
         result.type = parse_type();
@@ -279,63 +278,63 @@ namespace parser {
         return next().category == types::Category::IDENTIFIER && remainder_[1].category == types::Category::ASSIGN;
     }
 
-    Assignment Parser::parse_assignment() {
-        Assignment result;
+    types::Assignment Parser::parse_assignment() {
+        types::Assignment result;
         result.name = consume_expected(types::Category::IDENTIFIER).value.get<util::StringConstRef>();
         consume_expected(types::Category::ASSIGN);
         result.value = parse_expression();
         return result;
     }
 
-    Expression* Parser::parse_expression() {
+    types::Expression* Parser::parse_expression() {
         return parse_binary_expression();
     }
 
-    Expression* Parser::parse_binary_expression() {
+    types::Expression* Parser::parse_binary_expression() {
         return parse_binary_expression_recursive(parse_unary_expression(), 0);
     }
 
-    Expression* Parser::parse_binary_expression_recursive(Expression* lhs, uint8_t precedence) {
-        for(auto op_it = binary_ops.find(next().category);
-            (op_it != binary_ops.end()) && op_it->second.precedence >= precedence;
-            op_it = binary_ops.find(next().category)) {
+    types::Expression* Parser::parse_binary_expression_recursive(types::Expression* lhs, uint8_t precedence) {
+        for(auto op_it = types::binary_ops.find(next().category);
+            (op_it != types::binary_ops.end()) && op_it->second.precedence >= precedence;
+            op_it = types::binary_ops.find(next().category)) {
 
             size_t pos = next().pos;
 
             consume(1);
             auto rhs = parse_unary_expression();
-            for(auto next_op_it = binary_ops.find(next().category);
-                (next_op_it != binary_ops.end()) && next_op_it->second.precedence > op_it->second.precedence; 
-                next_op_it = binary_ops.find(next().category)) {
+            for(auto next_op_it = types::binary_ops.find(next().category);
+                (next_op_it != types::binary_ops.end()) && next_op_it->second.precedence > op_it->second.precedence; 
+                next_op_it = types::binary_ops.find(next().category)) {
 
                 rhs = parse_binary_expression_recursive(rhs, op_it->second.precedence);
             }
 
-            lhs = file_.arena.allocate<Expression>(Expression{Expr{ .lhs = lhs, .rhs = rhs, .action = op_it->second }, pos});
+            lhs = file_.arena.allocate<types::Expression>(types::Expression{types::Expr{ .lhs = lhs, .rhs = rhs, .op = op_it->second.op }, pos});
         }
         return lhs;
     }
 
-    Expression* Parser::parse_unary_expression() {
+    types::Expression* Parser::parse_unary_expression() {
         // TODO: needs slight refactoring
-        Expr result;
-        auto action_it = unary_ops.find(next().category);
+        types::Expr result;
+        auto action_it = types::unary_ops.find(next().category);
         size_t pos = next().pos;
-        if(action_it != unary_ops.end()) {
-            result.action = action_it->second;
+        if(action_it != types::unary_ops.end()) {
+            result.op = action_it->second.op;
             consume(1);
         }
 
         auto primary = parse_primary_expression();
-        if(result.action.type == ActionType::NONE) {
+        if(result.op == types::Operation::NONE) {
             return primary;
         }
         result.lhs = primary;
-        return file_.arena.allocate<Expression>(Expression{std::move(result), pos});
+        return file_.arena.allocate<types::Expression>(types::Expression{result, pos});
     }
 
-    Expression* Parser::parse_primary_expression() {
-        Expression* result = file_.arena.allocate<Expression>();
+    types::Expression* Parser::parse_primary_expression() {
+        types::Expression* result = file_.arena.allocate<types::Expression>();
         result->pos = next().pos;
         switch(next().category) {
         case types::Category::IDENTIFIER:
@@ -358,9 +357,9 @@ namespace parser {
         return result;
     }
 
-    Block* Parser::parse_block() {
+    types::Block* Parser::parse_block() {
         consume_expected(types::Category::LBRACE);
-        auto result = file_.arena.allocate<Block>();
+        auto result = file_.arena.allocate<types::Block>();
         while(next().category != types::Category::RBRACE) {
             do_with_recovery(types::Category::SEMICOLON, [this, &result](){result->statements.emplace_back(parse_statement());});
         }
@@ -368,12 +367,12 @@ namespace parser {
         return result;
     }
 
-    Statement Parser::parse_statement() {
-        Statement result;
+    types::Statement Parser::parse_statement() {
+        types::Statement result;
         switch(next().category) {
         case types::Category::RETURN:
             consume(1);
-            result = Return{parse_expression()};
+            result = types::Return{parse_expression()};
             consume_expected(types::Category::SEMICOLON);
             break;
         case types::Category::VAR:
@@ -399,8 +398,8 @@ namespace parser {
         return result;
     }
 
-    FunctionCall Parser::parse_function_call() {
-        FunctionCall result;
+    types::FunctionCall Parser::parse_function_call() {
+        types::FunctionCall result;
         auto name = consume_expected(types::Category::IDENTIFIER, "function call");
         result.func_name = name.value.get<util::StringConstRef>();
         consume_expected(types::Category::LPAREN, "function call");
@@ -414,16 +413,14 @@ namespace parser {
         return std::move(result);
     }
 
-    IfStatement* Parser::parse_if() {
-        auto parse_cond = [this](types::Category start_token, bool has_condition = true) -> IfStatement* {
-            auto result = file_.arena.allocate<IfStatement>();
+    types::IfStatement* Parser::parse_if() {
+        auto parse_cond = [this](types::Category start_token, bool has_condition = true) -> types::IfStatement* {
+            auto result = file_.arena.allocate<types::IfStatement>();
             consume_expected(start_token);
             if(has_condition) {
                 result->condition = parse_expression();
             }
-            consume_expected(types::Category::LBRACE);
             result->then = parse_block();
-            consume_expected(types::Category::RBRACE);
             return result;
         };
 
@@ -442,9 +439,9 @@ namespace parser {
         return result;
     }
 
-    Loop Parser::parse_loop() {
+    types::Loop Parser::parse_loop() {
         consume_expected(types::Category::LOOP);
-        Loop result;
+        types::Loop result;
         if(is_assigmnent_next()) {
             result.init = parse_assignment();
             consume_expected(types::Category::SEMICOLON);

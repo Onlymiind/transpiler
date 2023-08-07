@@ -117,6 +117,7 @@ namespace lexer {
         {"elif"sv, types::Category::ELSE_IF},
         {"for"sv, types::Category::LOOP},
         {"if"sv, types::Category::IF},
+        {"else"sv, types::Category::ELSE},
     };
     std::optional<types::Token> Lexer::get_identifier() {
         types::Token result{.pos = current_pos_, .category = types::Category::IDENTIFIER};

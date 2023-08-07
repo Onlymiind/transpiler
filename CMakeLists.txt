@@ -11,18 +11,12 @@ set(LEXER_MODULE
 set(PARSER_MODULE
     src/parser/parser.h
     src/parser/parser.cpp
-    src/parser/expression.h
-    src/parser/expression.cpp
-
     src/parser/declaration.h
-    src/parser/statement.h
 )
 
 set(CHECKER_MODULE
-    src/checker/module.h
-    src/checker/module.cpp
-    src/checker/type_resolver.h
-    src/checker/type_resolver.cpp
+    src/checker/sym_table.h
+    src/checker/sym_table.cpp
 )
 
 set(UTIL_MODULE
@@ -34,15 +28,19 @@ set(UTIL_MODULE
     src/util/error_handler.cpp
 )
 
+set(TYPES_MODULE
+    src/types/token.h
+    src/types/ids.h
+    src/types/statement.h
+    src/types/token.cpp
+)
+
 add_library(transpiler_lib
     ${LEXER_MODULE}
     ${PARSER_MODULE}
     ${CHECKER_MODULE}
     ${UTIL_MODULE}
-    src/types/token.h
-    src/types/ids.h
-    src/types/statement.h
-    src/types/token.cpp
+    ${TYPES_MODULE}
 )
 
 add_executable(transpiler
@@ -52,7 +50,6 @@ add_executable(transpiler
 add_executable(tests
     tests/expression_test.cpp
     tests/parser_tests.cpp
-    tests/module_test.cpp
 )
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/Catch2)

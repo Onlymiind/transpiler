@@ -7,7 +7,7 @@
 
 #include "util/arena.h"
 #include "util/util.h"
-#include "parser/expression.h"
+#include "types/statement.h"
 #include "util/variant.h"
 
 namespace parser {
@@ -44,21 +44,14 @@ namespace parser {
         util::StringConstRef name = nullptr;
     };
 
-    struct VariableDecl {
-        util::StringConstRef name = nullptr;
-        TypeID type = nullptr;
-        Expression* value;
-        size_t pos = 0;
-    };
-
     struct Block;
 
     struct Struct {
-        std::vector<VariableDecl> fields;
+        std::vector<types::Assignment> fields;
     };
 
     struct FunctionType {
-        std::vector<VariableDecl> params;
+        std::vector<types::Assignment> params;
         TypeID return_type = nullptr;
     };
 
@@ -66,7 +59,7 @@ namespace parser {
         FunctionType type;
         size_t pos = 0;
         util::StringConstRef name = nullptr;
-        Block* body = nullptr;
+        types::Block* body = nullptr;
     };
 
     struct Alias {
@@ -116,7 +109,7 @@ namespace parser {
             buf.resize((info.params.size() + 1) * sizeof(TypeID));
             align_current();
             for(const auto& f : info.params) {
-                *((TypeID*)&buf[current]) = f.type;
+                *((TypeID*)&buf[current]) = f.type.get<util::StringConstRef>();
                 current += sizeof(TypeID);
             }
         } else if(decl.decl.is<Struct>()) {
@@ -126,7 +119,7 @@ namespace parser {
             align_current();
             for(const auto& f : info.fields) {
                 TypeID* ptr = (TypeID*)&buf[current];
-                *ptr = f.type;
+                *ptr = f.type.get<util::StringConstRef>();
                 ++ptr;
                 *ptr = f.name;
                 current += sizeof(TypeID) * 2;

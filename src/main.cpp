@@ -2,14 +2,12 @@
 #include <fstream>
 #include <filesystem>
 
-#include "checker/module.h"
 #include "lexer/lexer.h"
 #include "parser/parser.h"
-#include "checker/type_resolver.h"
 #include "util/arena.h"
 #include "util/error_handler.h"
 
-inline constexpr std::string_view in_fname{"/home/onlymind/transpiler/lang/simple.st"};
+inline constexpr std::string_view in_fname{"/home/onlymind/mine/cpp/projects/transpiler/lang/simple.st"};
 inline constexpr std::string_view out_fname{"/home/onlymind/mine/cpp/projects/transpiler/out.txt"};
 
 int main() {

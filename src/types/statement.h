@@ -67,6 +67,7 @@ namespace types {
     struct Expression {
         util::Variant<types::Token, Expr, FunctionCall, SymbolID> expr;
         size_t pos;
+        TypeID type = k_invalid_id;
     };
 
     inline bool operator==(const Expression& lhs, const Expression& rhs) {
@@ -106,10 +107,11 @@ namespace types {
     };
 
     struct Assignment {
-        util::StringConstRef name;
+        util::StringConstRef name = nullptr;
         util::Variant<std::monostate, util::StringConstRef, TypeID> type;
-        Expression* value;
-        bool is_decl;
+        Expression* value = nullptr;
+        bool can_declare = false;
+        size_t pos = 0;
     };
 
     struct Loop {
