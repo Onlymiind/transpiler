@@ -62,6 +62,18 @@ namespace types {
         {types::Category::NOT_EQUALS, g_binary_operation_infos.at(Operation::NOT_EQUALS)},
     };
 
+    /*TODO: consider rewriting expression structs with templates, for example:
+      template<typename FuncRef>
+      struct FunctionCall {
+        FuncRef func;
+        std::vector<Expression<FuncRef>*> args;
+      };
+
+      This would allow each pass to store needed values and not care about how
+      other passes handle things like symbol references, but some transformation
+      code will be needed in that case.
+    */
+
     struct Expression;
     struct Block;
     struct IfStatement;

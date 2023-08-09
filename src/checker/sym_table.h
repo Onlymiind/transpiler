@@ -104,6 +104,11 @@ namespace checker {
 
         types::ScopeID push_scope();
         void pop_scope();
+        types::ScopeID get_current_scope_id() const { return current_scope_; }
+
+        Symbol& push_symbol();
+        void pop_symbol();
+        types::SymbolID get_current_symbol_id() const;
 
         types::SymbolID add_symbol_to_current_scope(Symbol symbol);
 

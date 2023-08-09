@@ -111,19 +111,42 @@ namespace checker {
         return result;
     }
 
-    void check_expression(Module& mod, const types::Expression* expr);
     void check_block(Module& mod, const types::Block* block);
 
+    void check_expression(Module& mod, const types::Expression* expr, types::ScopeID scope = types::k_invalid_scope);
+
+    void check_statement(Module& mod, const types::Statement& smt) {
+        if(smt.is<types::Expression*>())
+            check_expression(mod, smt.get<types::Expression*>());
+        else if(smt.is<types::Return>());
+        else if(smt.is<types::IfStatement*>());
+        else if(smt.is<types::Assignment>());
+        else if(smt.is<types::Loop>());
+    }
+
+    void check_block(Module& mod, const types::Block* block) {
+        if(!block)
+            return;
+        
+        for(const auto& smt : block->statements)
+            check_statement(mod, smt);
+    }
+
     types::SymbolID check_and_add_function(Module& mod, const parser::Function& func) {
-        Function info;
+        auto& func_sym = mod.push_symbol();
+        func_sym.name = func.name;
+        func_sym.pos = func.pos;
+        func_sym.info = Function{};
+        Function& info = func_sym.info.get<Function>();
         if(func.type.return_type)
             info.return_type = mod.get_type_id_by_name(func.type.return_type);
 
         info.params.reserve(func.type.params.size());
-        auto scope_id = mod.push_scope();
+        types::ScopeID parent_scope = mod.get_current_scope_id();
+        types::ScopeID scope_id = mod.push_scope();
 
         for(const auto& param : func.type.params) {
-            check_expression(mod, param.value);
+            check_expression(mod, param.value, parent_scope);
             info.params.emplace_back(mod.add_symbol_to_current_scope(Symbol{
                 .name = param.name,
                 .pos = param.pos,
@@ -141,11 +164,9 @@ namespace checker {
         }
 
         mod.pop_scope();
-        return mod.add_symbol_to_current_scope(Symbol{
-            .name = func.name,
-            .pos = func.pos,
-            .info = std::move(info),
-        });
+        types::SymbolID func_id = mod.get_current_symbol_id();
+        mod.pop_symbol();
+        return func_id;
     }
 
 }
