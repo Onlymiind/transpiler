@@ -28,8 +28,9 @@ namespace parser {
         util::ArenaPool<Expression, IfStatement, Block> arena;
 
         void add_type(Decl info, util::ErrorHandler& err) {
-            if(auto prev = types.try_emplace(info.name, info); !prev.second)
+            if(auto prev = types.try_emplace(info.name, info); !prev.second) {
                 err.redeclaration_error(info.pos, prev.first->second.pos);
+            }
         }
 
         void add_unnamed_type(Decl info) {
@@ -37,8 +38,9 @@ namespace parser {
         }
 
         void add_function(Function func, util::ErrorHandler& err) {
-            if(auto prev = functions.try_emplace(func.name, func); !prev.second)
+            if(auto prev = functions.try_emplace(func.name, func); !prev.second) {
                 err.redeclaration_error(func.pos, prev.first->second.pos);
+            }
         }
     };
 

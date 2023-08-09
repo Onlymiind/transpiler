@@ -15,7 +15,7 @@ namespace checker {
             : mod_(err), file_(std::move(file)), err_(err)
         {}
 
-        Block* check_block(const parser::Block* block);
+        Block* check_block(const parser::Block* block, types::ScopeID scope);
         Expression* check_expression(const parser::Expression* expr, types::ScopeID scope = types::k_invalid_scope);
         Statement check_statement(const parser::Statement& smt);
         types::SymbolID check_and_add_function(const parser::Function& func);

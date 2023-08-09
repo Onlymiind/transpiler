@@ -1,7 +1,7 @@
 #include "checker/type_checker.h"
 
 namespace checker {
-    Block* TypeChecker::check_block(const parser::Block* block) {
+    Block* TypeChecker::check_block(const parser::Block* block, types::ScopeID scope) {
         if(!block) {
             return nullptr;
         }
@@ -55,10 +55,7 @@ namespace checker {
             }));
         }
 
-        if(func.body) {
-            info.body = check_block(func.body);
-            info.body->scope = scope_id;
-        }
+        info.body = check_block(func.body, scope_id);
 
         mod_.pop_scope();
         types::SymbolID func_id = mod_.get_current_symbol_id();
@@ -85,6 +82,10 @@ namespace checker {
             }
         }
 #undef DEFINE_OR_POISON
+
+        for (const auto& [name, func] : file_.functions) {
+            check_and_add_function(func);
+        }
 
         for(auto& var : file_.global_variables) {
             //TODO: global variables

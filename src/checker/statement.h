@@ -33,7 +33,7 @@ namespace checker {
 
     struct Expression {
         util::Variant<types::Token, BinaryExpression, UnaryExpression, FunctionCall, types::SymbolID> expr;
-        size_t pos;
+        size_t pos = 0;
         types::TypeID type;
     };
 
@@ -63,6 +63,6 @@ namespace checker {
 
     struct Block {
         std::vector<Statement> statements;
-        types::ScopeID scope = types::k_invalid_scope;
+        types::ScopeID scope;
     };
 }

@@ -170,8 +170,9 @@ namespace parser {
     }
 
     ModifiedType Parser::parse_modified_type() {
-        if(!next().is_type_modifier())
+        if(!next().is_type_modifier()) {
             err_.parser_error(next().pos, "expected one of the: ", types::Category::OPTIONAL, ", ", types::Category::STAR);
+        }
 
         ModifiedType result;
         for(;next().is_type_modifier(); consume(1)) {
@@ -191,16 +192,18 @@ namespace parser {
     }
 
     TupleOrUnion Parser::parse_tuple_or_union() {
-        if(next().category != types::Category::UNION && next().category != types::Category::TUPLE)
+        if(next().category != types::Category::UNION && next().category != types::Category::TUPLE) {
             err_.parser_error(next().pos, "expected one of the: ", types::Category::TUPLE, ", ", types::Category::UNION);
+        }
 
         TupleOrUnion result{.is_union = next().category == types::Category::UNION};
         consume(1);
         consume_expected(types::Category::LESS);
         bool first = true;
         while(next().category != types::Category::GREATER) {
-            if(!first)
+            if(!first) {
                 consume_expected(types::Category::COMMA);
+            }
             result.types.push_back(parse_type());
             first = false;
         }
@@ -226,10 +229,12 @@ namespace parser {
         consume_expected(types::Category::FUNC);
         result.name = consume_expected(types::Category::IDENTIFIER).value.get<util::StringConstRef>();
         result.type = parse_function_type();
-        if(next().category != types::Category::SEMICOLON)
+        if(next().category != types::Category::SEMICOLON) {
             result.body = parse_block();
-        else
+        }
+        else {
             consume(1);
+        }
 
         return result;
     }
