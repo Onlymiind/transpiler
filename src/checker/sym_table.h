@@ -7,11 +7,12 @@
 #include <list>
 
 #include "types/ids.h"
-#include "types/statement.h"
+#include "types/operators.h"
 #include "util/arena.h"
 #include "util/error_handler.h"
 #include "util/util.h"
 #include "util/variant.h"
+#include "checker/statement.h"
 
 
 namespace checker {
@@ -26,13 +27,13 @@ namespace checker {
         util::StringConstRef name;
         size_t pos = 0;
         types::TypeID type = types::k_undefined_type;
-        types::Expression* default_value = nullptr;
+        checker::Expression* default_value = nullptr;
     };
 
     struct Function {
         std::vector<types::SymbolID> params;
         types::TypeID return_type = types::k_none_type;
-        types::Block* body = nullptr;
+        checker::Block* body = nullptr;
     };
 
     struct FunctionType {
@@ -57,7 +58,7 @@ namespace checker {
     
     struct Variable {
         types::TypeID type = types::k_undefined_type;
-        types::Expression* default_value = nullptr;
+        checker::Expression* default_value = nullptr;
     };
 
     struct Symbol {

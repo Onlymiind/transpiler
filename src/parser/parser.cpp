@@ -6,7 +6,6 @@
 #include <string>
 
 #include "parser/declaration.h"
-#include "types/statement.h"
 #include "types/token.h"
 #include "util/arena.h"
 #include "util/error_handler.h"
@@ -123,7 +122,7 @@ namespace parser {
     Struct Parser::parse_struct_def() {
         consume_expected(types::Category::STRUCT);
         consume_expected(types::Category::LBRACE, "struct definition");
-        std::vector<types::Assignment> result;
+        std::vector<Assignment> result;
         while(next().category != types::Category::RBRACE) {
             do_with_recovery(types::Category::SEMICOLON, [&result, this]() {
                 result.emplace_back(parse_variable());
@@ -142,7 +141,7 @@ namespace parser {
 
         consume_expected(types::Category::LPAREN, "function declaration");
         size_t unnamed_param_cnt{0};
-        types::Assignment param{.can_declare = true};
+        Assignment param{.can_declare = true};
         while(next().category != types::Category::RPAREN) {
             param.pos = next().pos;
             util::StringConstRef param_name;
@@ -208,8 +207,8 @@ namespace parser {
         return result;
     }
 
-    types::Assignment Parser::parse_variable() {
-        types::Assignment result{.can_declare = true, .pos = next().pos};
+    Assignment Parser::parse_variable() {
+        Assignment result{.can_declare = true, .pos = next().pos};
         result.name = consume_expected(types::Category::IDENTIFIER, "variable declaration").value.get<util::StringConstRef>();
         consume_expected(types::Category::COLON, "variable declaration");
         result.type = parse_type();
@@ -278,23 +277,23 @@ namespace parser {
         return next().category == types::Category::IDENTIFIER && remainder_[1].category == types::Category::ASSIGN;
     }
 
-    types::Assignment Parser::parse_assignment() {
-        types::Assignment result{.pos = next().pos};
+    Assignment Parser::parse_assignment() {
+        Assignment result{.pos = next().pos};
         result.name = consume_expected(types::Category::IDENTIFIER).value.get<util::StringConstRef>();
         consume_expected(types::Category::ASSIGN);
         result.value = parse_expression();
         return result;
     }
 
-    types::Expression* Parser::parse_expression() {
+    Expression* Parser::parse_expression() {
         return parse_binary_expression();
     }
 
-    types::Expression* Parser::parse_binary_expression() {
+    Expression* Parser::parse_binary_expression() {
         return parse_binary_expression_recursive(parse_unary_expression(), 0);
     }
 
-    types::Expression* Parser::parse_binary_expression_recursive(types::Expression* lhs, uint8_t precedence) {
+    Expression* Parser::parse_binary_expression_recursive(Expression* lhs, uint8_t precedence) {
         for(auto op_it = types::g_binary_ops.find(next().category);
             (op_it != types::g_binary_ops.end()) && op_it->second.precedence >= precedence;
             op_it = types::g_binary_ops.find(next().category)) {
@@ -310,14 +309,14 @@ namespace parser {
                 rhs = parse_binary_expression_recursive(rhs, op_it->second.precedence);
             }
 
-            lhs = file_.arena.allocate<types::Expression>(types::Expression{types::BinaryExpression{ .lhs = lhs, .rhs = rhs, .op = op_it->second.op }, pos});
+            lhs = file_.arena.allocate<Expression>(Expression{BinaryExpression{ .lhs = lhs, .rhs = rhs, .op = op_it->second.op }, pos});
         }
         return lhs;
     }
 
-    types::Expression* Parser::parse_unary_expression() {
+    Expression* Parser::parse_unary_expression() {
         // TODO: needs slight refactoring
-        types::UnaryExpression result;
+        UnaryExpression result;
         auto op_it = types::g_unary_ops.find(next().category);
         size_t pos = next().pos;
         if(op_it != types::g_unary_ops.end()) {
@@ -331,11 +330,11 @@ namespace parser {
         }
         
         result.expr = primary;
-        return file_.arena.allocate<types::Expression>(types::Expression{result, pos});
+        return file_.arena.allocate<Expression>(Expression{result, pos});
     }
 
-    types::Expression* Parser::parse_primary_expression() {
-        types::Expression* result = file_.arena.allocate<types::Expression>();
+    Expression* Parser::parse_primary_expression() {
+        Expression* result = file_.arena.allocate<Expression>();
         result->pos = next().pos;
         switch(next().category) {
         case types::Category::IDENTIFIER:
@@ -358,9 +357,9 @@ namespace parser {
         return result;
     }
 
-    types::Block* Parser::parse_block() {
+    Block* Parser::parse_block() {
         consume_expected(types::Category::LBRACE);
-        auto result = file_.arena.allocate<types::Block>();
+        auto result = file_.arena.allocate<Block>();
         while(next().category != types::Category::RBRACE) {
             do_with_recovery(types::Category::SEMICOLON, [this, &result](){result->statements.emplace_back(parse_statement());});
         }
@@ -368,12 +367,12 @@ namespace parser {
         return result;
     }
 
-    types::Statement Parser::parse_statement() {
-        types::Statement result;
+    Statement Parser::parse_statement() {
+        Statement result;
         switch(next().category) {
         case types::Category::RETURN:
             consume(1);
-            result = types::Return{parse_expression()};
+            result = Return{parse_expression()};
             consume_expected(types::Category::SEMICOLON);
             break;
         case types::Category::VAR:
@@ -399,8 +398,8 @@ namespace parser {
         return result;
     }
 
-    types::FunctionCall Parser::parse_function_call() {
-        types::FunctionCall result;
+    FunctionCall Parser::parse_function_call() {
+        FunctionCall result;
         auto name = consume_expected(types::Category::IDENTIFIER, "function call");
         result.func = name.value.get<util::StringConstRef>();
         consume_expected(types::Category::LPAREN, "function call");
@@ -414,9 +413,9 @@ namespace parser {
         return std::move(result);
     }
 
-    types::IfStatement* Parser::parse_if() {
-        auto parse_cond = [this](types::Category start_token, bool has_condition = true) -> types::IfStatement* {
-            auto result = file_.arena.allocate<types::IfStatement>();
+    IfStatement* Parser::parse_if() {
+        auto parse_cond = [this](types::Category start_token, bool has_condition = true) -> IfStatement* {
+            auto result = file_.arena.allocate<IfStatement>();
             consume_expected(start_token);
             if(has_condition) {
                 result->condition = parse_expression();
@@ -440,9 +439,9 @@ namespace parser {
         return result;
     }
 
-    types::Loop Parser::parse_loop() {
+    Loop Parser::parse_loop() {
         consume_expected(types::Category::LOOP);
-        types::Loop result;
+        Loop result;
         if(is_assigmnent_next()) {
             result.init = parse_assignment();
             consume_expected(types::Category::SEMICOLON);
