@@ -3,7 +3,7 @@
 
 #include "util/util.h"
 
-namespace types {
+namespace checker {
     using ScopeID = util::Distinct<int32_t, void>;
     constexpr ScopeID k_invalid_scope = ScopeID(-1);
     constexpr ScopeID k_global_scope = ScopeID(0);
@@ -20,4 +20,11 @@ namespace types {
     constexpr TypeID k_invalid_type = TypeID(k_invalid_symbol);
     constexpr TypeID k_undefined_type = TypeID(SymbolID{.id = -2});
     constexpr TypeID k_none_type = TypeID(SymbolID{.id = -3});
+
+    enum class TypeTraits {
+        NONE,
+        INDEXABLE,
+        CALLABLE,
+
+    };
 }

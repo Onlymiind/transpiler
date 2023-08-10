@@ -6,7 +6,7 @@
 
 #include "util/arena.h"
 #include "util/util.h"
-#include "types/ids.h"
+#include "checker/traits.h"
 #include "util/variant.h"
 #include "types/operators.h"
 
@@ -14,6 +14,11 @@ namespace checker {
     struct Expression;
     struct Block;
     struct IfStatement;
+
+    struct TypeCast {
+        TypeID dst_type;
+        Expression* expr;
+    };
 
     struct UnaryExpression {
         Expression* expr = nullptr;
@@ -27,14 +32,14 @@ namespace checker {
     };
 
     struct FunctionCall {
-        types::SymbolID func;
+        SymbolID func;
         std::vector<Expression*> args;
     };
 
     struct Expression {
-        util::Variant<types::Token, BinaryExpression, UnaryExpression, FunctionCall, types::SymbolID> expr;
+        util::Variant<types::Token, BinaryExpression, UnaryExpression, FunctionCall, TypeCast, SymbolID> expr;
         size_t pos = 0;
-        types::TypeID type;
+        TypeID type;
     };
 
     struct Return {
@@ -48,7 +53,7 @@ namespace checker {
     };
 
     struct Assignment {
-        types::SymbolID var;
+        SymbolID var;
         Expression* value = nullptr;
     };
 
@@ -63,6 +68,6 @@ namespace checker {
 
     struct Block {
         std::vector<Statement> statements;
-        types::ScopeID scope;
+        ScopeID scope;
     };
 }

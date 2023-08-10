@@ -6,7 +6,6 @@
 
 #include "util/arena.h"
 #include "util/util.h"
-#include "types/ids.h"
 #include "util/variant.h"
 
 namespace types {

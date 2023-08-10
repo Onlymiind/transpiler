@@ -1,7 +1,9 @@
 #include "checker/type_checker.h"
+#include "checker/statement.h"
+#include "parser/statement.h"
 
 namespace checker {
-    Block* TypeChecker::check_block(const parser::Block* block, types::ScopeID scope) {
+    Block* TypeChecker::check_block(const parser::Block* block, ScopeID scope) {
         if(!block) {
             return nullptr;
         }
@@ -13,8 +15,25 @@ namespace checker {
         return result;
     }
 
-    Expression* TypeChecker::check_expression(const parser::Expression* expr, types::ScopeID scope) {
+    Expression* TypeChecker::check_expression(const parser::Expression* expr, ScopeID scope) {
 
+    }
+
+    IfStatement* TypeChecker::check_if(const parser::IfStatement* smt) {
+        if(!smt) {
+            return nullptr;
+        }
+
+        IfStatement* result = arena_.allocate<IfStatement>();
+        result->condition = check_expression(smt->condition);
+        if(!result->condition || result->condition->type != k_bool) {
+            err_.checker_error(result->condition->pos, "type mismatch, expected bool");
+        }
+        auto scope = mod_.push_scope();
+        result->then = check_block(smt->then, scope);
+        mod_.pop_scope();
+        result->otherwise = check_if(smt->otherwise);
+        return result;
     }
 
     Statement TypeChecker::check_statement(const parser::Statement& smt) {
@@ -26,12 +45,14 @@ namespace checker {
             auto& sym = mod_.get_symbol(mod_.get_current_symbol_id());
 
         }
-        else if(smt.is<parser::IfStatement*>());
+        else if(smt.is<parser::IfStatement*>()) {
+            return check_if(smt.get<parser::IfStatement*>());
+        }
         else if(smt.is<parser::Assignment>());
         else if(smt.is<parser::Loop>());
     }
 
-    types::SymbolID TypeChecker::check_and_add_function(const parser::Function& func) {
+    SymbolID TypeChecker::check_and_add_function(const parser::Function& func) {
         auto& func_sym = mod_.push_symbol();
         func_sym.name = func.name;
         func_sym.pos = func.pos;
@@ -41,8 +62,8 @@ namespace checker {
             info.return_type = mod_.get_type_id_by_name(func.type.return_type);
 
         info.params.reserve(func.type.params.size());
-        types::ScopeID parent_scope = mod_.get_current_scope_id();
-        types::ScopeID scope_id = mod_.push_scope();
+        ScopeID parent_scope = mod_.get_current_scope_id();
+        ScopeID scope_id = mod_.push_scope();
 
         for(const auto& param : func.type.params) {
             info.params.emplace_back(mod_.add_symbol_to_current_scope(Symbol{
@@ -58,7 +79,7 @@ namespace checker {
         info.body = check_block(func.body, scope_id);
 
         mod_.pop_scope();
-        types::SymbolID func_id = mod_.get_current_symbol_id();
+        SymbolID func_id = mod_.get_current_symbol_id();
         mod_.pop_symbol();
         return func_id;
     }
@@ -92,8 +113,8 @@ namespace checker {
         }
     }
 
-    std::vector<std::pair<types::SymbolID, const parser::Decl*>> TypeChecker::define_globals_first_pass() {
-        std::vector<std::pair<types::SymbolID, const parser::Decl*>> result;
+    std::vector<std::pair<SymbolID, const parser::Decl*>> TypeChecker::define_globals_first_pass() {
+        std::vector<std::pair<SymbolID, const parser::Decl*>> result;
         result.reserve(file_.types.size());
 
         for(const auto& [name, decl] : file_.types) {

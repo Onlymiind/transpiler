@@ -15,8 +15,12 @@ set(PARSER_MODULE
 )
 
 set(CHECKER_MODULE
+    src/checker/statement.h
+    src/checker/traits.h
     src/checker/sym_table.h
     src/checker/sym_table.cpp
+    src/checker/type_checker.h
+    src/checker/type_checker.cpp
 )
 
 set(UTIL_MODULE
@@ -30,8 +34,6 @@ set(UTIL_MODULE
 
 set(TYPES_MODULE
     src/types/token.h
-    src/types/ids.h
-    src/types/statement.h
     src/types/token.cpp
 )
 
