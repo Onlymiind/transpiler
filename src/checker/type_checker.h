@@ -9,7 +9,6 @@
 #include "parser/parser.h"
 
 namespace checker {
-    inline TypeID k_bool = TypeID(SymbolID{k_global_scope, 1});
 
     class TypeChecker {
     public:

@@ -1,5 +1,6 @@
 #include "checker/type_checker.h"
 #include "checker/statement.h"
+#include "checker/traits.h"
 #include "parser/statement.h"
 
 namespace checker {
@@ -26,8 +27,8 @@ namespace checker {
 
         IfStatement* result = arena_.allocate<IfStatement>();
         result->condition = check_expression(smt->condition);
-        if(!result->condition || result->condition->type != k_bool) {
-            err_.checker_error(result->condition->pos, "type mismatch, expected bool");
+        if(!result->condition || mod_.get_traits(result->condition->type) != TypeTraits::BOOLEAN) {
+            err_.checker_error(result->condition->pos, "type mismatch, expected boolean type");
         }
         auto scope = mod_.push_scope();
         result->then = check_block(smt->then, scope);

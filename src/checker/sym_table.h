@@ -66,6 +66,7 @@ namespace checker {
         size_t pos = 0;
         size_t size = 0;
         util::Variant<Function, Type, Variable> info;
+        TypeTraits traits = TypeTraits::NONE;
         bool poisoned = false;
     };
 
@@ -97,6 +98,7 @@ namespace checker {
         TypeID get_type_id_by_name(util::StringConstRef name, ScopeID scope = k_global_scope);
 
         Symbol& get_symbol(SymbolID id);
+        TypeTraits get_traits(TypeID id);
         //Type& get_type(SymbolID id);
 
         bool is_type(util::StringConstRef name, ScopeID scope = k_global_scope);

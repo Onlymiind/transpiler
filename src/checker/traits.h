@@ -25,6 +25,7 @@ namespace checker {
         NONE,
         INDEXABLE,
         CALLABLE,
-
+        BOOLEAN,
+        DEREFERENCABLE,
     };
 }
