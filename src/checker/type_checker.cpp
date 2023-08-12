@@ -4,8 +4,11 @@
 #include "checker/traits.h"
 #include "parser/statement.h"
 #include "util/error_handler.h"
+#include <stdexcept>
 
 namespace checker {
+
+#define TRY_OR_POISON(poisoned, ...) try { __VA_ARGS__; } catch(const util::CheckerError) { poisoned = true; }
 
     SymbolID TypeChecker::check_and_add_variable(const parser::Assignment& parsed_var, ScopeID scope) {
         if(scope == k_invalid_scope) {
@@ -14,12 +17,11 @@ namespace checker {
 
         Variable var;
         bool poisoned = false;
-#define TRY_OR_POISON(...) try { __VA_ARGS__; } catch(const util::CheckerError) { poisoned = true; }
 
-        TRY_OR_POISON(var.default_value = check_expression(parsed_var.value, scope));
+        TRY_OR_POISON(poisoned, var.default_value = check_expression(parsed_var.value, scope));
 
         if(parsed_var.type) {
-            TRY_OR_POISON(
+            TRY_OR_POISON(poisoned, 
                 var.type = mod_.get_type_id_by_name(parsed_var.type, scope);
                 if(var.default_value && !are_types_compatible(var.type, var.default_value->type)) {
                     //TODO: also specify types
@@ -31,7 +33,6 @@ namespace checker {
         } else {
             err_.checker_error(parsed_var.pos, "declaration of variable of unknown type");
         }
-#undef TRY_OR_POISON
 
         return mod_.add_symbol_to_current_scope(Symbol{
             .name = parsed_var.name,
@@ -45,6 +46,9 @@ namespace checker {
     Assignment TypeChecker::check_assignment(const parser::Assignment& assignment, ScopeID scope) {
         if(!assignment.value) {
             err_.checker_error(assignment.pos, "empty assignment");
+        }
+        if(scope == k_invalid_scope) {
+            scope = mod_.get_current_scope_id();
         }
         Assignment result;
 
@@ -60,6 +64,9 @@ namespace checker {
 
         result.var = id;
         result.value = check_expression(assignment.value);
+        if(sym.poisoned) {
+            return result;
+        }
         if(!are_types_compatible(result.value->type, sym.info.get<Variable>().type)) {
             err_.checker_error(result.value->pos, "cannot convert between two types");
         }
@@ -73,6 +80,7 @@ namespace checker {
         }
         
         Block* result = arena_.allocate<Block>();
+        result->scope = scope;
         for(const auto& smt : block->statements) {
             result->statements.push_back(check_statement(smt));
         }
@@ -100,20 +108,74 @@ namespace checker {
         return result;
     }
 
+    Loop TypeChecker::check_loop(const parser::Loop& loop, ScopeID scope) {
+        if(scope == k_invalid_scope) {
+            scope = mod_.get_current_scope_id();
+        }
+
+        Loop result;
+        if(loop.init) {
+            result.init = check_assignment(*loop.init, scope);
+        }
+
+        result.condition = check_expression(loop.condition, scope);
+        if(result.condition && mod_.get_traits(result.condition->type) != TypeTraits::BOOLEAN) {
+            err_.checker_error(result.condition->pos, "loop condition is not a boolean expression");
+        }
+        if(loop.step.is<parser::Assignment>()) {
+            result.step = check_assignment(loop.step.get<parser::Assignment>(), scope);
+        } else if(loop.step.is<parser::Expression*>()) {
+            result.step = check_expression(loop.step.get<parser::Expression*>(), scope);
+        }
+
+        ScopeID new_scope = mod_.push_scope();
+        try {
+            result.body = check_block(loop.body, new_scope);
+        } catch(const util::CheckerError&) {}
+        mod_.pop_scope();
+
+        return result;
+    }
+
+    Return TypeChecker::check_return(const parser::Return& ret) {
+        Return result;
+        result.value = check_expression(ret.value);
+        SymbolID id = mod_.get_current_symbol_id();
+        if(id == k_invalid_symbol) {
+            err_.checker_error(ret.value ? ret.value->pos : 0, "return statement not in function");
+        }
+
+        const Symbol& func = mod_.get_symbol(id);
+        if(!func.info.is<Function>()) {
+            err_.checker_error(ret.value ? ret.value->pos : 0, "return statement not in function");
+        }
+
+        TypeID return_type = func.info.get<Function>().return_type;
+        if(!result.value) {
+            if(return_type != k_invalid_type) {
+                err_.checker_error(0, "cannot return void in funvtion with return type specified");
+            }
+        } else if(!are_types_compatible(return_type, result.value->type)) {
+            err_.checker_error(result.value->pos, "cannot convert between types");
+        }
+
+        return result;
+    }
+
     Statement TypeChecker::check_statement(const parser::Statement& smt) {
         if(smt.is<parser::Expression*>()) {
             return check_expression(smt.get<parser::Expression*>());
-        }
-        else if(smt.is<parser::Return>()) {
-            check_expression(smt.get<parser::Return>().value);
-            auto& sym = mod_.get_symbol(mod_.get_current_symbol_id());
-
-        }
-        else if(smt.is<parser::IfStatement*>()) {
+        } else if(smt.is<parser::Return>()) {
+            return check_return(smt.get<parser::Return>());
+        } else if(smt.is<parser::IfStatement*>()) {
             return check_if(smt.get<parser::IfStatement*>());
+        } else if(smt.is<parser::Assignment>()) {
+            return check_assignment(smt.get<parser::Assignment>());
+        } else if(smt.is<parser::Loop>()) {
+            return check_loop(smt.get<parser::Loop>());
+        } else {
+            throw std::invalid_argument("statement type not supprted");
         }
-        else if(smt.is<parser::Assignment>());
-        else if(smt.is<parser::Loop>());
     }
 
     SymbolID TypeChecker::check_and_add_function(const parser::Function& func) {
@@ -128,19 +190,13 @@ namespace checker {
         info.params.reserve(func.type.params.size());
         ScopeID parent_scope = mod_.get_current_scope_id();
         ScopeID scope_id = mod_.push_scope();
+        TRY_OR_POISON(func_sym.poisoned,
+            for(const auto& param : func.type.params) {
+                info.params.emplace_back(check_and_add_variable(param, parent_scope));
+            }
 
-        for(const auto& param : func.type.params) {
-            info.params.emplace_back(mod_.add_symbol_to_current_scope(Symbol{
-                .name = param.name,
-                .pos = param.pos,
-                .info = Variable{
-                    .type = mod_.get_type_id_by_name(param.type),
-                    .default_value = check_expression(param.value, parent_scope),
-                },
-            }));
-        }
-
-        info.body = check_block(func.body, scope_id);
+            info.body = check_block(func.body, scope_id);
+        );
 
         mod_.pop_scope();
         SymbolID func_id = mod_.get_current_symbol_id();
@@ -152,28 +208,25 @@ namespace checker {
     void TypeChecker::define_globals() {
         auto preprocessed = define_globals_first_pass();
 
-#define DEFINE_OR_POISON(symbol, ...) try { __VA_ARGS__; } catch(const util::CheckerError&) { symbol.poisoned = true; }
         for(auto [id, parsed] : preprocessed) {
             auto& sym = mod_.get_symbol(id);
             auto& def = sym.info.get<Type>();
             if(parsed->decl.is<parser::Struct>()) {
-                DEFINE_OR_POISON(sym, define_struct(def.get<Struct>(), parsed->decl.get<parser::Struct>()));
+                TRY_OR_POISON(sym.poisoned, define_struct(def.get<Struct>(), parsed->decl.get<parser::Struct>()));
             } else if(parsed->decl.is<parser::FunctionType>()) {
-                DEFINE_OR_POISON(sym, define_function_type(def.get<FunctionType>(), parsed->decl.get<parser::FunctionType>()));
+                TRY_OR_POISON(sym.poisoned, define_function_type(def.get<FunctionType>(), parsed->decl.get<parser::FunctionType>()));
             } else if(parsed->decl.is<parser::Alias>()) {
-                DEFINE_OR_POISON(sym, def.get<Alias>().underlying_type = mod_.get_type_id_by_name(parsed->decl.get<parser::Alias>().underlying_type));
+                TRY_OR_POISON(sym.poisoned, def.get<Alias>().underlying_type = mod_.get_type_id_by_name(parsed->decl.get<parser::Alias>().underlying_type));
             } else if(parsed->decl.is<parser::TupleOrUnion>()) {
-                DEFINE_OR_POISON(sym, def.get<TupleOrUnion>(), parsed->decl.get<parser::TupleOrUnion>());
+                TRY_OR_POISON(sym.poisoned, def.get<TupleOrUnion>(), parsed->decl.get<parser::TupleOrUnion>());
             }
         }
-#undef DEFINE_OR_POISON
 
         for (const auto& [name, func] : file_.functions) {
             check_and_add_function(func);
         }
 
         for(const auto& var : file_.global_variables) {
-            //not interested in return type here
             check_and_add_variable(var);
         }
     }

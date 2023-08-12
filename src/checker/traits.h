@@ -27,5 +27,6 @@ namespace checker {
         CALLABLE,
         BOOLEAN,
         DEREFERENCABLE,
+        CONSTANT
     };
 }
