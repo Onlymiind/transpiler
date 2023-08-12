@@ -1,9 +1,59 @@
 #include "checker/type_checker.h"
 #include "checker/statement.h"
+#include "checker/sym_table.h"
 #include "checker/traits.h"
 #include "parser/statement.h"
+#include "util/error_handler.h"
 
 namespace checker {
+
+    SymbolID TypeChecker::check_and_add_variable(const parser::Assignment& parsed_var, ScopeID scope) {
+        if(scope == k_invalid_scope) {
+            scope = mod_.get_current_scope_id();
+        }
+
+        Variable var;
+        bool poisoned = false;
+#define TRY_OR_POISON(...) try { __VA_ARGS__; } catch(const util::CheckerError) { poisoned = true; }
+
+        TRY_OR_POISON(var.default_value = check_expression(parsed_var.value, scope));
+
+        if(parsed_var.type) {
+            TRY_OR_POISON(
+                var.type = mod_.get_type_id_by_name(parsed_var.type, scope);
+                if(var.default_value && !are_types_compatible(var.type, var.default_value->type)) {
+                    //TODO: also specify types
+                    err_.checker_error(var.default_value->pos, "cannot convert bewteen two types");
+                }
+            );
+        } else if(var.default_value) {
+            var.type = var.default_value->type;
+        } else {
+            err_.checker_error(parsed_var.pos, "declaration of variable of unknown type");
+        }
+#undef TRY_OR_POISON
+
+        return mod_.add_symbol_to_current_scope(Symbol{
+            .name = parsed_var.name,
+            .pos = parsed_var.pos,
+            .info = var,
+            .traits = mod_.get_traits(var.type),
+            .poisoned = poisoned
+        });
+    }
+
+    Assignment TypeChecker::check_assignment(const parser::Assignment& assignment, ScopeID scope) {
+        Assignment result;
+        try {
+            result.value = check_expression(assignment.value);
+        } catch(const util::CheckerError&) {/*TODO: poisining*/}
+
+        
+        
+
+        return result;
+    }
+
     Block* TypeChecker::check_block(const parser::Block* block, ScopeID scope) {
         if(!block) {
             return nullptr;
@@ -109,8 +159,9 @@ namespace checker {
             check_and_add_function(func);
         }
 
-        for(auto& var : file_.global_variables) {
-            //TODO: global variables
+        for(const auto& var : file_.global_variables) {
+            //not interested in return type here
+            check_and_add_variable(var);
         }
     }
 

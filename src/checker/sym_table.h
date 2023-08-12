@@ -95,6 +95,7 @@ namespace checker {
         {}
 
         Symbol& get_symbol_by_name(util::StringConstRef name, ScopeID scope = k_global_scope);
+        SymbolID get_symbol_id_by_name(util::StringConstRef name, ScopeID scope = k_global_scope);
         TypeID get_type_id_by_name(util::StringConstRef name, ScopeID scope = k_global_scope);
 
         Symbol& get_symbol(SymbolID id);
