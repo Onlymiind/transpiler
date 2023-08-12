@@ -43,14 +43,27 @@ namespace checker {
     }
 
     Assignment TypeChecker::check_assignment(const parser::Assignment& assignment, ScopeID scope) {
+        if(!assignment.value) {
+            err_.checker_error(assignment.pos, "empty assignment");
+        }
         Assignment result;
-        try {
-            result.value = check_expression(assignment.value);
-        } catch(const util::CheckerError&) {/*TODO: poisining*/}
 
-        
-        
+        SymbolID id = mod_.get_symbol_id_by_name(assignment.name);
+        if(id == k_invalid_symbol) {
+            err_.checker_error(assignment.pos, "variable not declared: ", assignment.name);
+        }
 
+        Symbol& sym = mod_.get_symbol(id);
+        if(!sym.info.is<Variable>()) {
+            err_.checker_error(assignment.pos, "cannot assign to symbol that is not a variable");
+        }
+
+        result.var = id;
+        result.value = check_expression(assignment.value);
+        if(!are_types_compatible(result.value->type, sym.info.get<Variable>().type)) {
+            err_.checker_error(result.value->pos, "cannot convert between two types");
+        }
+        
         return result;
     }
 
