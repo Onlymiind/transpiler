@@ -31,15 +31,14 @@ namespace checker {
         Expression* default_value = nullptr;
     };
 
-    struct Function {
-        std::vector<SymbolID> params;
-        TypeID return_type = k_none_type;
-        Block* body = nullptr;
-    };
-
     struct FunctionType {
         std::vector<TypeID> params;
         TypeID return_type = k_undefined_type;
+    };
+
+    struct Function {
+        FunctionType type;
+        Block* body = nullptr;
     };
 
     struct Struct {

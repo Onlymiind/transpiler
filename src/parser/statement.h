@@ -30,6 +30,7 @@ namespace parser {
 
     struct Return {
         Expression* value;
+        size_t pos = 0;
     };
 
     struct IfStatement {

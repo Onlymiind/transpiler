@@ -375,11 +375,13 @@ namespace parser {
     Statement Parser::parse_statement() {
         Statement result;
         switch(next().category) {
-        case types::Category::RETURN:
+        case types::Category::RETURN: {
+            size_t pos = next().pos;
             consume(1);
-            result = Return{parse_expression()};
+            result = Return{.value = parse_expression(), .pos = pos};
             consume_expected(types::Category::SEMICOLON);
             break;
+        }
         case types::Category::VAR:
             consume(1);
             result = parse_variable();

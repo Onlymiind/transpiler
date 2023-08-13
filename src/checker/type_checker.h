@@ -25,7 +25,7 @@ namespace checker {
         Assignment check_assignment(const parser::Assignment& assignment, ScopeID scope = k_invalid_scope);
         Loop check_loop(const parser::Loop& loop, ScopeID scope = k_invalid_scope);
         Return check_return(const parser::Return& ret);
-        std::pair<util::Variant<TypeCast, FunctionCall>, TypeID> check_function_call(const parser::FunctionCall& call, ScopeID scope = k_invalid_scope);
+        std::pair<util::Variant<TypeCast, FunctionCall>, TypeID> check_function_call(const parser::FunctionCall& call, size_t pos, ScopeID scope = k_invalid_scope);
 
         SymbolID check_and_add_function(const parser::Function& func);
         SymbolID check_and_add_variable(const parser::Assignment& var, ScopeID scope = k_invalid_scope);

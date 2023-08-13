@@ -101,7 +101,6 @@ namespace parser {
                 buf[current] = '0';
             }
         };
-        //FIXME: unaligned memory access
         if(decl.decl.is<FunctionType>()) {
             buf.push_back('0');
             auto& info = decl.decl.get<FunctionType>();

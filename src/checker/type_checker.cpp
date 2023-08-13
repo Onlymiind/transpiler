@@ -18,18 +18,14 @@ namespace checker {
         }
 
         Variable var;
-        bool poisoned = false;
 
-        TRY_OR_POISON(poisoned, var.default_value = check_expression(parsed_var.value, scope));
+        var.default_value = check_expression(parsed_var.value, scope);
 
         if(parsed_var.type) {
-            TRY_OR_POISON(poisoned, 
-                var.type = mod_.get_type_id_by_name(parsed_var.type, scope);
-                if(var.default_value && !are_types_compatible(var.type, var.default_value->type)) {
-                    //TODO: also specify types
-                    err_.checker_error(var.default_value->pos, "cannot convert bewteen two types");
-                }
-            );
+            var.type = mod_.get_type_id_by_name(parsed_var.type, scope);
+            if(var.default_value && !are_types_compatible(var.type, var.default_value->type)) {
+                err_.checker_error(var.default_value->pos, "cannot convert bewteen two types");
+            }
         } else if(var.default_value) {
             var.type = var.default_value->type;
         } else {
@@ -41,7 +37,6 @@ namespace checker {
             .pos = parsed_var.pos,
             .info = var,
             .traits = mod_.get_traits(var.type),
-            .poisoned = poisoned
         });
     }
 
@@ -57,15 +52,18 @@ namespace checker {
         SymbolID id = mod_.get_symbol_id_by_name(assignment.name);
         if(id == k_invalid_symbol) {
             err_.checker_error(assignment.pos, "variable not declared: ", assignment.name);
+            return Assignment{};
         }
 
         Symbol& sym = mod_.get_symbol(id);
         if(!sym.info.is<Variable>()) {
             err_.checker_error(assignment.pos, "cannot assign to symbol that is not a variable");
+            return Assignment{};
         }
 
         result.var = id;
         result.value = check_expression(assignment.value);
+        //TODO
         if(sym.poisoned) {
             return result;
         }
@@ -89,7 +87,7 @@ namespace checker {
         return result;
     }
 
-    std::pair<util::Variant<TypeCast, FunctionCall>, TypeID> TypeChecker::check_function_call(const parser::FunctionCall& call, ScopeID scope) {
+    std::pair<util::Variant<TypeCast, FunctionCall>, TypeID> TypeChecker::check_function_call(const parser::FunctionCall& call, size_t pos, ScopeID scope) {
         if(scope == k_invalid_scope) {
             scope = mod_.get_current_scope_id();
         }
@@ -111,7 +109,7 @@ namespace checker {
         Symbol& sym = mod_.get_symbol(sym_id);
         if(sym.info.is<Type>()) {
             if(call.args.size() != 1) {
-                err_.checker_error(0, "expected exactly one argument for a type cast");
+                err_.checker_error(pos, "expected exactly one argument for a type cast");
                 return err_return(k_invalid_symbol);
             }
             TypeCast result{.dst_type = TypeID(sym_id), .expr = check_expression(call.args[0])};
@@ -121,8 +119,22 @@ namespace checker {
 
             return std::pair{result, result.dst_type};
         } else if(sym.info.is<Function>()) {
-            //TODO
-            return err_return(sym_id);
+            auto& func = sym.info.get<Function>();
+            FunctionCall result{.func = sym_id};
+            if(call.args.size() != func.type.params.size()) {
+                err_.checker_error(pos, "wrong number of arguments for fucntion call");
+                return std::pair{result, func.type.return_type};
+            }
+            result.args.reserve(call.args.size());
+            for(size_t i = 0; i < call.args.size(); ++i) {
+                auto& arg = call.args[i];
+                result.args.push_back(check_expression(arg, scope));
+                //TODO: can expression in call.args even be a nullptr?
+                if(!are_types_compatible(result.args.back()->type, func.type.params[i])) {
+                    err_.checker_error(result.args.back()->pos, "function argument type mismatch");
+                }
+            }
+            return std::pair{std::move(result), func.type.return_type};
         } else {
             return err_return(k_invalid_symbol);
         }
@@ -166,7 +178,7 @@ namespace checker {
             result->type = mod_.get_symbol_type(sym);
             result->expr = sym;
         } else if(expr->expr.is<parser::FunctionCall>()) {
-            auto [call, type] = check_function_call(expr->expr.get<parser::FunctionCall>(), scope);
+            auto [call, type] = check_function_call(expr->expr.get<parser::FunctionCall>(), expr->pos, scope);
             result->type = type;
             call.visit([&result](auto val) { result->expr = std::move(val); });
         } else if(expr->expr.is<types::Token>()) {
@@ -225,9 +237,7 @@ namespace checker {
         }
 
         ScopeID new_scope = mod_.push_scope();
-        try {
-            result.body = check_block(loop.body, new_scope);
-        } catch(const util::CheckerError&) {}
+        result.body = check_block(loop.body, new_scope);
         mod_.pop_scope();
 
         return result;
@@ -238,18 +248,18 @@ namespace checker {
         result.value = check_expression(ret.value);
         SymbolID id = mod_.get_current_symbol_id();
         if(id == k_invalid_symbol) {
-            err_.checker_error(ret.value ? ret.value->pos : 0, "return statement not in function");
+            err_.checker_error(ret.pos, "return statement not in function");
         }
 
         const Symbol& func = mod_.get_symbol(id);
         if(!func.info.is<Function>()) {
-            err_.checker_error(ret.value ? ret.value->pos : 0, "return statement not in function");
+            err_.checker_error(ret.pos, "return statement not in function");
         }
 
-        TypeID return_type = func.info.get<Function>().return_type;
+        TypeID return_type = func.info.get<Function>().type.return_type;
         if(!result.value) {
-            if(return_type != k_invalid_type) {
-                err_.checker_error(0, "cannot return void in funvtion with return type specified");
+            if(return_type != k_none_type) {
+                err_.checker_error(ret.pos, "cannot return void in function with return type specified");
             }
         } else if(!are_types_compatible(return_type, result.value->type)) {
             err_.checker_error(result.value->pos, "cannot convert between types");
@@ -281,18 +291,16 @@ namespace checker {
         func_sym.info = Function{};
         Function& info = func_sym.info.get<Function>();
         if(func.type.return_type)
-            info.return_type = mod_.get_type_id_by_name(func.type.return_type);
+            info.type.return_type = mod_.get_type_id_by_name(func.type.return_type);
 
-        info.params.reserve(func.type.params.size());
+        info.type.params.reserve(func.type.params.size());
         ScopeID parent_scope = mod_.get_current_scope_id();
         ScopeID scope_id = mod_.push_scope();
-        TRY_OR_POISON(func_sym.poisoned,
-            for(const auto& param : func.type.params) {
-                info.params.emplace_back(check_and_add_variable(param, parent_scope));
-            }
+        for(const auto& param : func.type.params) {
+            info.type.params.emplace_back(mod_.get_symbol_type(check_and_add_variable(param, parent_scope)));
+        }
 
-            info.body = check_block(func.body, scope_id);
-        );
+        info.body = check_block(func.body, scope_id);
 
         mod_.pop_scope();
         SymbolID func_id = mod_.get_current_symbol_id();
@@ -308,13 +316,13 @@ namespace checker {
             auto& sym = mod_.get_symbol(id);
             auto& def = sym.info.get<Type>();
             if(parsed->decl.is<parser::Struct>()) {
-                TRY_OR_POISON(sym.poisoned, define_struct(def.get<Struct>(), parsed->decl.get<parser::Struct>()));
+                define_struct(def.get<Struct>(), parsed->decl.get<parser::Struct>());
             } else if(parsed->decl.is<parser::FunctionType>()) {
-                TRY_OR_POISON(sym.poisoned, define_function_type(def.get<FunctionType>(), parsed->decl.get<parser::FunctionType>()));
+                define_function_type(def.get<FunctionType>(), parsed->decl.get<parser::FunctionType>());
             } else if(parsed->decl.is<parser::Alias>()) {
-                TRY_OR_POISON(sym.poisoned, def.get<Alias>().underlying_type = mod_.get_type_id_by_name(parsed->decl.get<parser::Alias>().underlying_type));
+                def.get<Alias>().underlying_type = mod_.get_type_id_by_name(parsed->decl.get<parser::Alias>().underlying_type);
             } else if(parsed->decl.is<parser::TupleOrUnion>()) {
-                TRY_OR_POISON(sym.poisoned, def.get<TupleOrUnion>(), parsed->decl.get<parser::TupleOrUnion>());
+                define_tuple_or_union(def.get<TupleOrUnion>(), parsed->decl.get<parser::TupleOrUnion>());
             }
         }
 
