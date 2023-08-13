@@ -8,6 +8,7 @@
 
 #include "checker/traits.h"
 #include "types/operators.h"
+#include "types/token.h"
 #include "util/arena.h"
 #include "util/error_handler.h"
 #include "util/util.h"
@@ -27,13 +28,13 @@ namespace checker {
         util::StringConstRef name;
         size_t pos = 0;
         TypeID type = k_undefined_type;
-        checker::Expression* default_value = nullptr;
+        Expression* default_value = nullptr;
     };
 
     struct Function {
         std::vector<SymbolID> params;
         TypeID return_type = k_none_type;
-        checker::Block* body = nullptr;
+        Block* body = nullptr;
     };
 
     struct FunctionType {
@@ -58,7 +59,7 @@ namespace checker {
     
     struct Variable {
         TypeID type = k_undefined_type;
-        checker::Expression* default_value = nullptr;
+        Expression* default_value = nullptr;
     };
 
     struct Symbol {
@@ -97,6 +98,9 @@ namespace checker {
         Symbol& get_symbol_by_name(util::StringConstRef name, ScopeID scope = k_global_scope);
         SymbolID get_symbol_id_by_name(util::StringConstRef name, ScopeID scope = k_global_scope);
         TypeID get_type_id_by_name(util::StringConstRef name, ScopeID scope = k_global_scope);
+
+        TypeID get_symbol_type(SymbolID sym);
+        TypeID get_type_for_constant(types::Token constant);
 
         Symbol& get_symbol(SymbolID id);
         TypeTraits get_traits(TypeID id);

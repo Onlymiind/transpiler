@@ -3,6 +3,8 @@
 #include "checker/sym_table.h"
 #include "checker/traits.h"
 #include "parser/statement.h"
+#include "types/token.h"
+#include "util/arena.h"
 #include "util/error_handler.h"
 #include <stdexcept>
 
@@ -88,7 +90,62 @@ namespace checker {
     }
 
     Expression* TypeChecker::check_expression(const parser::Expression* expr, ScopeID scope) {
+        if(!expr) {
+            return nullptr;
+        }
 
+        if(scope == k_invalid_scope) {
+            scope = mod_.get_current_scope_id();
+        }
+
+        Expression* result = arena_.allocate<Expression>(Expression{.pos = expr->pos});
+        if(expr->expr.is<parser::BinaryExpression>()) {
+            auto& parsed = expr->expr.get<parser::BinaryExpression>();
+            auto bin_expr = BinaryExpression{
+                .lhs = check_expression(parsed.lhs, scope),
+                .rhs = check_expression(parsed.rhs, scope),
+                .op = parsed.op
+            };
+
+            if(bin_expr.rhs && bin_expr.lhs) {
+                result->type = get_binop_result(bin_expr.lhs->type, bin_expr.rhs->type, bin_expr.op);
+            }
+            result->expr = bin_expr;
+        } else if(expr->expr.is<parser::UnaryExpression>()) {
+            auto& parsed = expr->expr.get<parser::UnaryExpression>();
+            auto un_expr = UnaryExpression{
+                .expr = check_expression(parsed.expr),
+                .op = parsed.op
+            };
+
+            if(un_expr.expr) {
+                result->type = get_unop_result(un_expr.expr->type, un_expr.op);
+            }
+            result->expr = un_expr;
+        } else if(expr->expr.is<util::StringConstRef>()) {
+            SymbolID sym = mod_.get_symbol_id_by_name(expr->expr.get<util::StringConstRef>(), scope);
+            result->type = mod_.get_symbol_type(sym);
+            result->expr = sym;
+        } else if(expr->expr.is<parser::FunctionCall>()) {
+            auto [call, type] = check_function_call(expr->expr.get<parser::FunctionCall>());
+            result->type = type;
+            call.visit([&result](auto val) { result->expr = std::move(val); });
+        } else if(expr->expr.is<types::Token>()) {
+            types::Token constant = expr->expr.get<types::Token>();
+            result->type = mod_.get_type_for_constant(constant);
+            constant.value.visit([&result](auto val){
+                if constexpr(std::is_same_v<util::StringConstRef, decltype(val)>) {
+                    result->expr = val;
+                } else if constexpr(std::is_same_v<uint64_t, decltype(val)>) {
+                    result->expr = val;
+                } else if constexpr(std::is_same_v<double, decltype(val)>) {
+                    result->expr = val;
+                }
+            });
+        }
+
+
+        return result;
     }
 
     IfStatement* TypeChecker::check_if(const parser::IfStatement* smt) {

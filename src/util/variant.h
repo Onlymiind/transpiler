@@ -46,6 +46,11 @@ namespace util {
             return std::get<T>(val_);
         }
 
+        template<typename Function>
+        constexpr void visit(Function func) {
+            std::visit(func, val_);
+        }
+
         constexpr bool operator==(const Variant<Args...> other) const {
             return val_ == other.val_;
         }

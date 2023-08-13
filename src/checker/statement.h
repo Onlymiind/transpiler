@@ -37,7 +37,9 @@ namespace checker {
     };
 
     struct Expression {
-        util::Variant<types::Token, BinaryExpression, UnaryExpression, FunctionCall, TypeCast, SymbolID> expr;
+        util::Variant<uint64_t, double, util::StringConstRef,
+            BinaryExpression, UnaryExpression, FunctionCall,
+            TypeCast, SymbolID> expr;
         size_t pos = 0;
         TypeID type;
     };

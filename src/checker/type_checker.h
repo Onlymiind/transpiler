@@ -8,6 +8,7 @@
 #include "checker/sym_table.h"
 #include "checker/statement.h"
 #include "parser/parser.h"
+#include "util/variant.h"
 
 namespace checker {
 
@@ -24,6 +25,7 @@ namespace checker {
         Assignment check_assignment(const parser::Assignment& assignment, ScopeID scope = k_invalid_scope);
         Loop check_loop(const parser::Loop& loop, ScopeID scope = k_invalid_scope);
         Return check_return(const parser::Return& ret);
+        std::pair<util::Variant<TypeCast, FunctionCall>, TypeID> check_function_call(const parser::FunctionCall& call);
 
         SymbolID check_and_add_function(const parser::Function& func);
         SymbolID check_and_add_variable(const parser::Assignment& var, ScopeID scope = k_invalid_scope);
@@ -36,7 +38,9 @@ namespace checker {
         void define_tuple_or_union(TupleOrUnion& info, const parser::TupleOrUnion& parsed);
 
         bool is_binop_legal(TypeID lhs, TypeID rhs, types::Operation op);
+        TypeID get_binop_result(TypeID lhs, TypeID rhs, types::Operation op);
         bool is_unop_legal(TypeID type, types::Operation op);
+        TypeID get_unop_result(TypeID type, types::Operation op);
         bool is_cast_legal(TypeID src, TypeID dst);
         bool are_types_compatible(TypeID lhs, TypeID rhs);
 
