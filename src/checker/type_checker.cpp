@@ -89,6 +89,45 @@ namespace checker {
         return result;
     }
 
+    std::pair<util::Variant<TypeCast, FunctionCall>, TypeID> TypeChecker::check_function_call(const parser::FunctionCall& call, ScopeID scope) {
+        if(scope == k_invalid_scope) {
+            scope = mod_.get_current_scope_id();
+        }
+        auto err_return = [this, &call, scope](SymbolID sym) {
+            FunctionCall result {.func = sym };
+            result.args.reserve(call.args.size());
+            for(auto expr : call.args) {
+                result.args.push_back(check_expression(expr, scope));
+            }
+            return std::pair{std::move(result), k_invalid_type};
+        };
+
+
+        SymbolID sym_id = mod_.get_symbol_id_by_name(call.func, scope);
+        if(sym_id == k_invalid_symbol) {
+            return err_return(sym_id);
+        }
+
+        Symbol& sym = mod_.get_symbol(sym_id);
+        if(sym.info.is<Type>()) {
+            if(call.args.size() != 1) {
+                err_.checker_error(0, "expected exactly one argument for a type cast");
+                return err_return(k_invalid_symbol);
+            }
+            TypeCast result{.dst_type = TypeID(sym_id), .expr = check_expression(call.args[0])};
+            if(!result.expr || !is_cast_legal(result.expr->type, result.dst_type)) {
+                result.dst_type = k_invalid_type;
+            }
+
+            return std::pair{result, result.dst_type};
+        } else if(sym.info.is<Function>()) {
+            //TODO
+            return err_return(sym_id);
+        } else {
+            return err_return(k_invalid_symbol);
+        }
+    }
+
     Expression* TypeChecker::check_expression(const parser::Expression* expr, ScopeID scope) {
         if(!expr) {
             return nullptr;
@@ -114,7 +153,7 @@ namespace checker {
         } else if(expr->expr.is<parser::UnaryExpression>()) {
             auto& parsed = expr->expr.get<parser::UnaryExpression>();
             auto un_expr = UnaryExpression{
-                .expr = check_expression(parsed.expr),
+                .expr = check_expression(parsed.expr, scope),
                 .op = parsed.op
             };
 
@@ -127,7 +166,7 @@ namespace checker {
             result->type = mod_.get_symbol_type(sym);
             result->expr = sym;
         } else if(expr->expr.is<parser::FunctionCall>()) {
-            auto [call, type] = check_function_call(expr->expr.get<parser::FunctionCall>());
+            auto [call, type] = check_function_call(expr->expr.get<parser::FunctionCall>(), scope);
             result->type = type;
             call.visit([&result](auto val) { result->expr = std::move(val); });
         } else if(expr->expr.is<types::Token>()) {
