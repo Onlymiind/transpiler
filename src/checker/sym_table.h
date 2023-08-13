@@ -72,8 +72,8 @@ namespace checker {
 
     class Scope {
     public:
-        Scope(ScopeID parent, ScopeID this_id, util::ErrorHandler& err)
-            : parent_(parent), err_(err)
+        Scope(ScopeID parent)
+            : parent_(parent)
         {}
 
         SymbolID add_symbol(Symbol sym);
@@ -85,7 +85,6 @@ namespace checker {
         std::unordered_map<util::StringConstRef, SymbolID> name_to_symbol_;
         std::vector<Symbol> symbols_;
         ScopeID parent_ = k_invalid_scope;
-        util::ErrorHandler& err_;
     };
 
     class Module {
@@ -94,7 +93,6 @@ namespace checker {
             : err_(err)
         {}
 
-        Symbol& get_symbol_by_name(util::StringConstRef name, ScopeID scope = k_global_scope);
         SymbolID get_symbol_id_by_name(util::StringConstRef name, ScopeID scope = k_global_scope);
         TypeID get_type_id_by_name(util::StringConstRef name, ScopeID scope = k_global_scope);
 
@@ -103,7 +101,6 @@ namespace checker {
 
         Symbol& get_symbol(SymbolID id);
         TypeTraits get_traits(TypeID id);
-        //Type& get_type(SymbolID id);
 
         bool is_type(util::StringConstRef name, ScopeID scope = k_global_scope);
         bool is_function(util::StringConstRef name, ScopeID scope = k_global_scope);
