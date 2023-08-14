@@ -41,12 +41,18 @@ namespace util {
     template<typename T, typename Tag>
     class Distinct {
     public:
+        using Underlying = T;
+
         constexpr Distinct() = default;
         explicit constexpr Distinct(T val)
             : val_(val)
         {}
 
         explicit constexpr operator T() const {
+            return val_;
+        }
+
+        T value() const {
             return val_;
         }
 

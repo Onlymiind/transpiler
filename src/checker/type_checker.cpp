@@ -313,6 +313,11 @@ namespace checker {
         auto preprocessed = define_globals_first_pass();
 
         for(auto [id, parsed] : preprocessed) {
+            if(id == k_invalid_symbol) {
+                //redeclaration
+                continue;
+            }
+
             auto& sym = mod_.get_symbol(id);
             auto& def = sym.info.get<Type>();
             if(parsed->decl.is<parser::Struct>()) {
@@ -402,6 +407,6 @@ namespace checker {
     }
 
     TypeID get_type_for_constant(types::Token constant) {
-        
+
     }
 }

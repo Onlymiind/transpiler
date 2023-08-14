@@ -73,19 +73,23 @@ namespace checker {
 
         SymbolID add_symbol(Symbol sym);
         Symbol& get_symbol(SymbolID id);
-        Symbol* get_symbol(util::StringConstRef name);
+        SymbolID get_symbol(util::StringConstRef name);
 
         ScopeID get_parent() const { return parent_; }
+
+        const std::unordered_map<util::StringConstRef, SymbolID>& get_all_symbols() const { return name_to_symbol_; }
     private:
         std::unordered_map<util::StringConstRef, SymbolID> name_to_symbol_;
         std::vector<Symbol> symbols_;
         ScopeID parent_ = k_invalid_scope;
     };
 
+    class ModuleManager;
+
     class Module {
     public:
-        Module(util::ErrorHandler& err)
-            : err_(err)
+        Module(ModuleManager& module_manager, util::ErrorHandler& err)
+            : module_manager_(module_manager), err_(err)
         {}
 
         SymbolID get_symbol_id_by_name(util::StringConstRef name, ScopeID scope = k_global_scope);
@@ -110,8 +114,16 @@ namespace checker {
 
         SymbolID add_symbol_to_current_scope(Symbol symbol);
 
+        void add_foreign_symbol(util::StringConstRef name, SymbolID symbol);
+        void add_module(util::StringConstRef name, ModuleID mod);
+        void add_globals_from_module(ModuleID mod);
+
+        const std::unordered_map<util::StringConstRef, SymbolID>& get_globals() const { return scopes_[k_global_scope.value()].get_all_symbols(); }
+
     private:
-        //TODO: imports
+        ModuleManager& module_manager_;
+        ModuleID id_ = k_invalid_module;
+        std::unordered_map<util::StringConstRef, ModuleID> name_to_module_;
         ScopeID current_scope_ = k_global_scope;
         std::stack<SymbolID> symbol_stack_;
         std::vector<Scope> scopes_;
@@ -120,15 +132,13 @@ namespace checker {
         util::ErrorHandler& err_;
     };
 
-    using ModuleID = int;
-
     class ModuleManager {
     public:
         Module& add_module(std::string path);
 
         ModuleID get_module_id(std::string path);
 
-        const Module& get_module(ModuleID id);
+        Module& get_module(ModuleID id);
     private:
     };
 

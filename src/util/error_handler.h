@@ -63,9 +63,8 @@ namespace util {
             add_error<CheckerError>(pos, std::forward<MsgArgs>(args)...);
         }
 
-        [[noreturn]] void redeclaration_error(size_t pos, size_t prev_pos) {
+        void redeclaration_error(size_t pos, size_t prev_pos) {
             errors_.emplace_back(Error{pos, prev_pos, "redeclaration, previously declared at: "});
-            throw ParserError("redeclaration");
         }
 
         bool error_occured() const {

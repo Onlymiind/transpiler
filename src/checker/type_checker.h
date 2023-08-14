@@ -14,8 +14,8 @@ namespace checker {
 
     class TypeChecker {
     public:
-        TypeChecker(util::ErrorHandler& err, parser::File&& file)
-            : mod_(err), file_(std::move(file)), err_(err)
+        TypeChecker(util::ErrorHandler& err, parser::File&& file, Module& module)
+            : mod_(module), file_(std::move(file)), err_(err)
         {}
 
         Block* check_block(const parser::Block* block, ScopeID scope);
@@ -45,7 +45,7 @@ namespace checker {
         TypeID get_type_for_constant(types::Token constant);
 
     private:
-        Module mod_;
+        Module& mod_;
         util::ArenaPool<Block, Expression, IfStatement> arena_;
         parser::File file_;
         util::ErrorHandler& err_;

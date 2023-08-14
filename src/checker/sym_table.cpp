@@ -11,6 +11,10 @@
 namespace checker {
 
     SymbolID Scope::add_symbol(Symbol sym) {
+        if(name_to_symbol_.contains(sym.name)) {
+            return k_invalid_symbol;
+        }
+
         SymbolID id = SymbolID{.id = int32_t(symbols_.size())};
         auto name = sym.name;
         symbols_.emplace_back(std::move(sym));
@@ -25,12 +29,12 @@ namespace checker {
         return symbols_[id.id];
     }
 
-    Symbol* Scope::get_symbol(util::StringConstRef name) {
+    SymbolID Scope::get_symbol(util::StringConstRef name) {
         auto it = name_to_symbol_.find(name);
-        if(it != name_to_symbol_.end()) {
-            return &symbols_[it->second.id];
+        if(it == name_to_symbol_.end()) {
+            return k_invalid_symbol;
         }
-        return nullptr;
+        return it->second;
     }
 
     SymbolID Module::get_symbol_id_by_name(util::StringConstRef name, ScopeID scope) {
@@ -62,6 +66,10 @@ namespace checker {
     }
 
     TypeID Module::get_symbol_type(SymbolID id) {
+        if(id == k_invalid_symbol) {
+            return k_invalid_type;
+        }
+
         Symbol& sym = get_symbol(id);
         if(sym.info.is<Variable>()) {
             return sym.info.get<Variable>().type;
@@ -75,7 +83,11 @@ namespace checker {
             throw std::invalid_argument("invalid symbol id");
         }
 
-        return scopes_[int(id.scope)].get_symbol(id);
+        if(id.module != id_) {
+            return module_manager_.get_module(id.module).get_symbol(id);
+        }
+
+        return scopes_[id.scope.value()].get_symbol(id);
     }
 
     TypeTraits Module::get_traits(TypeID id) {
@@ -108,11 +120,11 @@ namespace checker {
 
     ScopeID Module::push_scope() {
         size_t idx = scopes_.size();
-        if(idx > std::numeric_limits<int>::max()) {
+        if(idx > std::numeric_limits<ScopeID::Underlying>::max()) {
             throw std::runtime_error("too many scopes, shouldn't have used int for scope ids");
         }
 
-        ScopeID id = ScopeID(int(idx));
+        ScopeID id = ScopeID(ScopeID::Underlying(idx));
         scopes_.emplace_back(Scope{current_scope_});
         scope_to_parents_[id] = scope_to_parents_[current_scope_];
         scope_to_parents_[id].emplace(current_scope_);
@@ -121,7 +133,7 @@ namespace checker {
     }
 
     void Module::pop_scope() {
-        current_scope_ = scopes_[int(current_scope_)].get_parent();
+        current_scope_ = scopes_[current_scope_.value()].get_parent();
     }
 
     Symbol& Module::push_symbol() {
@@ -145,9 +157,35 @@ namespace checker {
     }
 
     SymbolID Module::add_symbol_to_current_scope(Symbol symbol) {
-        SymbolID id = scopes_[int(current_scope_)].add_symbol(std::move(symbol));
+        SymbolID id = scopes_[current_scope_.value()].add_symbol(std::move(symbol));
+        if(id == k_invalid_symbol) {
+            err_.redeclaration_error(symbol.pos, get_symbol(get_symbol_id_by_name(symbol.name)).pos);
+            return id;
+        }
+
         id.scope = current_scope_;
         sym_table_[symbol.name].push_back(id);
         return id;
+    }
+
+    void Module::add_foreign_symbol(util::StringConstRef name, SymbolID symbol) {
+        if(symbol.scope != k_global_scope) {
+            throw std::invalid_argument("can't add foreign symbols not from global scope");
+        } else if(scopes_[k_global_scope.value()].get_symbol(name) != k_invalid_symbol) {
+            throw std::runtime_error("always process foreign symbols before the rest of the module");
+        }
+
+        sym_table_[name].push_back(symbol);
+    }
+
+    void Module::add_module(util::StringConstRef name, ModuleID mod) {
+        name_to_module_[name] = mod;
+    }
+
+    void Module::add_globals_from_module(ModuleID mod) {
+        const auto& globals = module_manager_.get_module(mod).get_globals();
+        for(auto [name, id] : globals) {
+            add_foreign_symbol(name, id);
+        }
     }
 }
