@@ -1,60 +1,46 @@
-```
-program = {import}, {declaration}
-```
 
-```
-declaration = type_declaration | function_declaration | variable_declaration
-```
+Legend:
+  <name> - non-terminal
+  '' - used for escaping of special symbols
+  stuff? - optional
+  stuff+ - repetition
+  () - grouping
+  | - or
+  NON_EMPTY_LIST(stuff, sep = ,) - stuff | (stuff sep NON_EMPTY_LIST(stuff))
+  LIST(stuff, sep = ,) - NON_EMPTY_LIST(stuff, sep) | empty
+Type declaration:
 
-```
-type_declaration = "type", identifier, generic_params, type_name | type_definition
-```
+  Syntax: type <identifier> <type_definition> //note: semicolon must follow, unless type definition is a struct
+  <type_definition> = <tuple_definition> | <union_definition> | <struct_definition> | <function_type_definition> | <identifier> | <modified_type>
+  <type_definition> = (<type_definition>, <type_definition_list>) | empty //note: trailing comma not allowed
+  <tuple_definition> = tuple '<' LIST(<type_definition>) '>'
+  <union_definition> = union '<' LIST(<type_definition>) '>'
+  <struct_definition> = struct { LIST(<field_declaration>, ;) }
+  <function_type_definition> = func'('LIST(<func_param>)')' <type_definition>?
+  <modified_type> = (* | '?')+<type_definition>
+  <field_declaration> = <identifier> : <type_definition> (= <expression>)?;
+  <func_param> = (<identifier> : <type_definition>) | <type_definition>
 
-```
-type_definition = 
-              ("tuple", generic_params)  
-            | ("union", generic_params)  
-            | ("enum", "<", type_name, ">", enum_definition)  
-            | ("struct", struct_definition)  
-            | ("interface", interface_definition)
-```
+Variable declarations:
+  Syntax: var <identifier> : <type_definition> (= <expression>)?;
 
-```
-generic_params = "<", {type_name} ,">"
-```
+Function declarations:
+  Syntax: func <identifier>'('LIST(<func_param>)')' <type_definition>? ; | <block>
 
-```
-type_name = identifier
-```
+Statements:
+  <block> = {LIST(<statement>)}
+  <statement> = <expression> | <return_smt> | <if_smt> | <assignment> | <loop> | <variable_declaration> ; //';' does not follow blocks!
 
-```
-struct_definition = "{", {identifier, ":", type_name, ["=", expression], ";"}, "}"
-```
+  <return_smt> = return <expression>?
+  <assignment> = <identifier> '=' <expression>
+  <if_smt> = if <expression> <block> <otherwise>
+  <otherwise> = (elif <expression> <block> <otherwise>) | (else <block>) | empty
+  <loop> = for (<assignment>;<expression>;<assignment>) | <expression> | empty <block>
 
-```
-interface_definition = "{", {function_declaration} ,"}"
-```
-
-```
-function_declaration = "func", identifier, "(", {parameter}, ")", [return_type], ";" | function_definition
-```
-
-```
-parameter = [identifier, ":"], type_name 
-```
-
-```
-return_type = type_name | type_definition
-```
-
-```
-expression = unary_expr | (expression, binary_op, expression)
-```
-
-expr_list = {expression, ";"}
-
-```
-block = "{", expr_list, "}"
-```
-
-unary_expr = identifier | block | function_call | field_access | literal | subscript | (unary_op expr)
+Expressions:
+  <expression> = <unary_expression> | <binary_expression> | <primary_expression>
+  <unary_expression> = <unary_op> <expression>
+  <binary_expression> = <unary_expression> | <primary_expression> <binary_op> <expression>
+  <primary_expression> = <identifier> | <literal> | <type_cast> | <function_call>
+  <type_cast> = <identifier>'('<expression>')' //TODO: support casting to any type
+  <function_call> = <identifier>'('LIST(<expression>)')'

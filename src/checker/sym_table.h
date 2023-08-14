@@ -19,12 +19,6 @@
 
 namespace checker {
 
-    struct TypeInfo {
-        util::StringConstRef name = nullptr;
-        size_t size = 0;
-        size_t pos = 0;
-    };
-
     struct Field {
         util::StringConstRef name;
         size_t pos = 0;
@@ -124,6 +118,18 @@ namespace checker {
         std::unordered_map<util::StringConstRef, std::list<SymbolID>> sym_table_;
         std::unordered_map<ScopeID, std::unordered_set<ScopeID>> scope_to_parents_;
         util::ErrorHandler& err_;
+    };
+
+    using ModuleID = int;
+
+    class ModuleManager {
+    public:
+        Module& add_module(std::string path);
+
+        ModuleID get_module_id(std::string path);
+
+        const Module& get_module(ModuleID id);
+    private:
     };
 
 }
