@@ -37,15 +37,12 @@ namespace checker {
         void define_function_type(FunctionType& info, const parser::FunctionType& parsed);
         void define_tuple_or_union(TupleOrUnion& info, const parser::TupleOrUnion& parsed);
 
-        bool is_binop_legal(TypeID lhs, TypeID rhs, types::Operation op);
         TypeID get_binop_result(TypeID lhs, TypeID rhs, types::Operation op);
-        bool is_unop_legal(TypeID type, types::Operation op);
         TypeID get_unop_result(TypeID type, types::Operation op);
         bool is_cast_legal(TypeID src, TypeID dst);
         bool are_types_compatible(TypeID lhs, TypeID rhs);
 
         TypeID get_type_for_constant(types::Token constant);
-
 
     private:
         Module mod_;

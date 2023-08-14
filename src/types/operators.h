@@ -11,23 +11,32 @@
 namespace types {
     enum class Operation: uint8_t {
         NONE,
+        
         DEREF,
+
         NEGATE,
         ADD,
         SUB,
+
         MUL,
         DIV,
         REM,
-        AND,
+
         BAND,
-        OR,
         BOR,
         XOR,
-        NOT,
         INV,
         LSHIFT,
         RSHIFT,
-        NOT_EQUALS
+
+        NOT,
+        OR,
+        AND,
+        NOT_EQUALS,
+        LESS,
+        GREATER,
+        LESS_EQUALS,
+        GREATER_EQUALS
     };
 
     struct OperationInfo {

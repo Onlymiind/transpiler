@@ -384,4 +384,24 @@ namespace checker {
             info.types.push_back(mod_.get_type_id_by_name(typname));
         }
     }
+
+    TypeID get_binop_result(TypeID lhs, TypeID rhs, types::Operation op) {
+
+    }
+
+    TypeID get_unop_result(TypeID type, types::Operation op) {
+
+    }
+
+    bool is_cast_legal(TypeID src, TypeID dst) {
+
+    }
+
+    bool are_types_compatible(TypeID lhs, TypeID rhs) {
+
+    }
+
+    TypeID get_type_for_constant(types::Token constant) {
+        
+    }
 }
