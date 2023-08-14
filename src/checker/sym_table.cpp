@@ -61,12 +61,13 @@ namespace checker {
         return get_symbol(id).info.is<Type>() ? TypeID(id) : k_invalid_type;
     }
 
-    TypeID Module::get_symbol_type(SymbolID sym) {
-
-    }
-
-    TypeID Module::get_type_for_constant(types::Token constant) {
-
+    TypeID Module::get_symbol_type(SymbolID id) {
+        Symbol& sym = get_symbol(id);
+        if(sym.info.is<Variable>()) {
+            return sym.info.get<Variable>().type;
+        } else {
+            throw std::invalid_argument("get_symbol_type is implemented only for variables");
+        }
     }
 
     Symbol& Module::get_symbol(SymbolID id) {
@@ -78,7 +79,7 @@ namespace checker {
     }
 
     TypeTraits Module::get_traits(TypeID id) {
-
+        return get_symbol(SymbolID(id)).traits;
     }
 
     bool Module::is_type(util::StringConstRef name, ScopeID scope) {
@@ -124,15 +125,23 @@ namespace checker {
     }
 
     Symbol& Module::push_symbol() {
-
+        SymbolID id = add_symbol_to_current_scope(Symbol{});
+        symbol_stack_.push(id);
+        return get_symbol(id);
     }
 
     void Module::pop_symbol() {
-
+        if(!symbol_stack_.empty()) {
+            symbol_stack_.pop();
+        }
     }
 
     SymbolID Module::get_current_symbol_id() const {
+        if(symbol_stack_.empty()) {
+            return k_invalid_symbol;
+        }
 
+        return symbol_stack_.top();
     }
 
     SymbolID Module::add_symbol_to_current_scope(Symbol symbol) {

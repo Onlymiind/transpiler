@@ -183,7 +183,7 @@ namespace checker {
             call.visit([&result](auto val) { result->expr = std::move(val); });
         } else if(expr->expr.is<types::Token>()) {
             types::Token constant = expr->expr.get<types::Token>();
-            result->type = mod_.get_type_for_constant(constant);
+            result->type = get_type_for_constant(constant);
             constant.value.visit([&result](auto val){
                 if constexpr(std::is_same_v<util::StringConstRef, decltype(val)>) {
                     result->expr = val;

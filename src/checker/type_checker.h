@@ -44,6 +44,8 @@ namespace checker {
         bool is_cast_legal(TypeID src, TypeID dst);
         bool are_types_compatible(TypeID lhs, TypeID rhs);
 
+        TypeID get_type_for_constant(types::Token constant);
+
 
     private:
         Module mod_;

@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 #include <list>
+#include <stack>
 
 #include "checker/traits.h"
 #include "types/operators.h"
@@ -96,8 +97,7 @@ namespace checker {
         SymbolID get_symbol_id_by_name(util::StringConstRef name, ScopeID scope = k_global_scope);
         TypeID get_type_id_by_name(util::StringConstRef name, ScopeID scope = k_global_scope);
 
-        TypeID get_symbol_type(SymbolID sym);
-        TypeID get_type_for_constant(types::Token constant);
+        TypeID get_symbol_type(SymbolID id);
 
         Symbol& get_symbol(SymbolID id);
         TypeTraits get_traits(TypeID id);
@@ -119,6 +119,7 @@ namespace checker {
     private:
         //TODO: imports
         ScopeID current_scope_ = k_global_scope;
+        std::stack<SymbolID> symbol_stack_;
         std::vector<Scope> scopes_;
         std::unordered_map<util::StringConstRef, std::list<SymbolID>> sym_table_;
         std::unordered_map<ScopeID, std::unordered_set<ScopeID>> scope_to_parents_;
