@@ -34,6 +34,8 @@ namespace checker {
         CALLABLE,
         BOOLEAN,
         DEREFERENCABLE,
-        CONSTANT
+        CONSTANT,
+        INTEGRAL,
+        FLOATING_POINT
     };
 }

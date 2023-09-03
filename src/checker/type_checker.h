@@ -14,8 +14,8 @@ namespace checker {
 
     class TypeChecker {
     public:
-        TypeChecker(util::ErrorHandler& err, parser::File&& file, Module& module)
-            : mod_(module), file_(std::move(file)), err_(err)
+        TypeChecker(util::ErrorHandler& err, parser::File&& file, Module& module, util::StringAllocator& alloc)
+            : mod_(module), file_(std::move(file)), err_(err), alloc_(alloc)
         {}
 
         Block* check_block(const parser::Block* block, ScopeID scope);
@@ -39,15 +39,18 @@ namespace checker {
 
         TypeID get_binop_result(TypeID lhs, TypeID rhs, types::Operation op);
         TypeID get_unop_result(TypeID type, types::Operation op);
-        bool is_cast_legal(TypeID src, TypeID dst);
+        TypeID get_cast_result(TypeID src, TypeID dst);
         bool are_types_compatible(TypeID lhs, TypeID rhs);
 
         TypeID get_type_for_constant(types::Token constant);
+
+        TypeID get_dereference_result_type(TypeID type, TypeTraits traits);
 
     private:
         Module& mod_;
         util::ArenaPool<Block, Expression, IfStatement> arena_;
         parser::File file_;
         util::ErrorHandler& err_;
+        util::StringAllocator& alloc_;
     };
 }

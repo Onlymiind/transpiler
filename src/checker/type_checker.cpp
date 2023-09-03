@@ -3,6 +3,7 @@
 #include "checker/sym_table.h"
 #include "checker/traits.h"
 #include "parser/statement.h"
+#include "types/operators.h"
 #include "types/token.h"
 #include "util/arena.h"
 #include "util/error_handler.h"
@@ -112,9 +113,17 @@ namespace checker {
                 err_.checker_error(pos, "expected exactly one argument for a type cast");
                 return err_return(k_invalid_symbol);
             }
-            TypeCast result{.dst_type = TypeID(sym_id), .expr = check_expression(call.args[0])};
-            if(!result.expr || !is_cast_legal(result.expr->type, result.dst_type)) {
+            TypeCast result{.expr = check_expression(call.args[0])};
+            if(!result.expr) {
                 result.dst_type = k_invalid_type;
+                //can this even happen?
+                err_.checker_error(0, "expected expression");
+                return {result, result.dst_type};
+            }
+
+            result.dst_type = get_cast_result(result.expr->type, TypeID(sym_id));
+            if(result.dst_type == k_invalid_type) {
+                err_.checker_error(result.expr->pos, "invalid cast");
             }
 
             return std::pair{result, result.dst_type};
@@ -160,6 +169,9 @@ namespace checker {
 
             if(bin_expr.rhs && bin_expr.lhs) {
                 result->type = get_binop_result(bin_expr.lhs->type, bin_expr.rhs->type, bin_expr.op);
+                if(result->type == k_invalid_type) {
+                    err_.checker_error(result->pos, "invalid types of arguments");
+                }
             }
             result->expr = bin_expr;
         } else if(expr->expr.is<parser::UnaryExpression>()) {
@@ -171,6 +183,9 @@ namespace checker {
 
             if(un_expr.expr) {
                 result->type = get_unop_result(un_expr.expr->type, un_expr.op);
+                if(result->type == k_invalid_type) {
+                    err_.checker_error(result->pos, "invalid argument type");
+                }
             }
             result->expr = un_expr;
         } else if(expr->expr.is<util::StringConstRef>()) {
@@ -390,23 +405,74 @@ namespace checker {
         }
     }
 
-    TypeID get_binop_result(TypeID lhs, TypeID rhs, types::Operation op) {
+    TypeID TypeChecker::get_binop_result(TypeID lhs, TypeID rhs, types::Operation op) {
+        if(lhs != rhs) {
+            return k_invalid_type;
+        }
+        TypeTraits traits = mod_.get_traits(lhs);
+
+        using op_t = types::Operation;
+        switch(op) {
+        case op_t::LESS:
+        case op_t::LESS_EQUALS:
+        case op_t::GREATER:
+        case op_t::GREATER_EQUALS:
+            if(traits != TypeTraits::INTEGRAL && traits != TypeTraits::FLOATING_POINT) {
+                return k_invalid_type;
+            }
+        case op_t::NOT_EQUALS:
+        case op_t::EQUALS:
+            return mod_.get_type_id_by_name(alloc_.allocate("bool"));
+        case op_t::BAND:
+        case op_t::BOR:
+        case op_t::XOR:
+        case op_t::LSHIFT:
+        case op_t::RSHIFT:
+            return traits == TypeTraits::INTEGRAL ? lhs : k_invalid_type;
+        default:
+            if(traits != TypeTraits::INTEGRAL && traits != TypeTraits::FLOATING_POINT) {
+                return k_invalid_type;
+            }
+            return lhs;
+        }
+    }
+
+    TypeID TypeChecker::get_unop_result(TypeID type, types::Operation op) {
+        using op_t = types::Operation;
+        TypeTraits traits = mod_.get_traits(type);
+        switch(op) {
+        case op_t::DEREF:
+            return get_dereference_result_type(type, traits);
+        case op_t::NOT:
+            return traits == TypeTraits::BOOLEAN ? type : k_invalid_type;
+        case op_t::INV:
+            return traits == TypeTraits::INTEGRAL ? type : k_invalid_type;
+        default:
+            return (traits == TypeTraits::INTEGRAL || traits == TypeTraits::FLOATING_POINT) ? type : k_invalid_type;
+        }
+    }
+
+    TypeID TypeChecker::get_dereference_result_type(TypeID type, TypeTraits traits) {
+        throw std::runtime_error("not implemented");
+        if(traits != TypeTraits::DEREFERENCABLE) {
+            return k_invalid_type;
+        }
+
+        Symbol& info = mod_.get_symbol(SymbolID(type));
+        //TODO
+    }
+
+    TypeID TypeChecker::get_cast_result(TypeID src, TypeID dst) {
+        if(src == dst) {
+            return dst;
+        }
+    }
+
+    bool TypeChecker::are_types_compatible(TypeID lhs, TypeID rhs) {
 
     }
 
-    TypeID get_unop_result(TypeID type, types::Operation op) {
-
-    }
-
-    bool is_cast_legal(TypeID src, TypeID dst) {
-
-    }
-
-    bool are_types_compatible(TypeID lhs, TypeID rhs) {
-
-    }
-
-    TypeID get_type_for_constant(types::Token constant) {
+    TypeID TypeChecker::get_type_for_constant(types::Token constant) {
 
     }
 }

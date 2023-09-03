@@ -32,6 +32,7 @@ namespace types {
         NOT,
         OR,
         AND,
+        EQUALS,
         NOT_EQUALS,
         LESS,
         GREATER,
