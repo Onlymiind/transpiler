@@ -50,6 +50,8 @@ add_executable(transpiler
 )
 
 add_executable(tests
+    tests/rpn_parser.h
+    tests/rpn_parser.cpp
     tests/expression_test.cpp
     tests/parser_tests.cpp
 )
