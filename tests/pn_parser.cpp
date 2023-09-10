@@ -1,4 +1,4 @@
-#include "rpn_parser.h"
+#include "pn_parser.h"
 #include "parser/statement.h"
 #include "types/operators.h"
 #include "types/token.h"
@@ -6,7 +6,7 @@
 #include <stdexcept>
 
 
-parser::Expression* RPNParser::parse_expression() {
+parser::Expression* PNParser::parse_expression() {
     if(rem_.empty()) {
         throw std::runtime_error("expected expression");
     }
@@ -49,7 +49,7 @@ parser::Expression* RPNParser::parse_expression() {
     return result;
 }
 
-parser::UnaryExpression RPNParser::parse_unary_expression() {
+parser::UnaryExpression PNParser::parse_unary_expression() {
     if(!types::g_unary_ops.contains(next().category)) {
         throw std::runtime_error("expected unary operator");
     }

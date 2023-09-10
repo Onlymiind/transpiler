@@ -5,9 +5,9 @@
 #include "types/operators.h"
 #include "util/arena.h"
 
-class RPNParser {
+class PNParser {
 public:
-    RPNParser(types::Tokens tokens, util::Arena<parser::Expression>& arena)
+    PNParser(types::Tokens tokens, util::Arena<parser::Expression>& arena)
         :rem_(tokens), arena_(arena)
     {}
 
