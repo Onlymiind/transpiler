@@ -1,86 +1,85 @@
-// #include <array>
-// #include <utility>
-// #include <string_view>
-// #include <iostream>
+#include "catch2/catch_test_macros.hpp"
+#include "catch2/generators/catch_generators.hpp"
 
-// #include <catch2/catch_all.hpp>
-// #include <catch2/catch_test_macros.hpp>
+#include "lexer/lexer.h"
+#include "parser/parser.h"
+#include "parser/statement.h"
+#include "pn_parser.h"
+#include "util/arena.h"
+#include "util/error_handler.h"
 
-// #include "parser/expression.h"
-// #include "parser/parser.h"
-// #include "lexer/lexer.h"
-// #include "util/arena.h"
-// #include "util/error_handler.h"
+#include <ostream>
+#include <sstream>
+#include <string>
 
-// struct TestData {
-//     std::string name;
-//     std::string str;
-//     parser::Expression expected;
-// };
+struct TestCase {
+    std::string expr;
+    std::string pn_expr;
+};
 
-// util::Arena<parser::Expression> g_arena;
+std::ostream& operator<<(std::ostream& out, const TestCase& t) {
+    out << "expression: " << t.expr << ", pn: " << t.pn_expr;
+    return out;
+}
 
-// inline std::array test_data{
-//     TestData{"integer", "1000", parser::integer(1000)},
-//     TestData{"identifier", "identifier", parser::ident("identifier")},
-//     TestData{"negative integer", "-1", parser::unary_expression(parser::ActionType::NEGATE, parser::integer(1), g_arena)},
-//     TestData{"identifier negation", "-identifier", parser::unary_expression(parser::ActionType::NEGATE, parser::ident("identifier"), g_arena)},
-//     TestData{"+integer", "+1", parser::integer(1)},
-//     TestData{"+identifier", "+identifier", parser::ident("identifier")},
-//     TestData{"float", "10.11", parser::floating(10.11)},
-//     TestData{"negative float", "-10.11", parser::unary_expression(parser::ActionType::NEGATE, parser::floating(10.11), g_arena)},
-//     TestData{"+float", "+10.11", parser::floating(10.11)},
-//     TestData{"deref", "*ptr", parser::unary_expression(parser::ActionType::DEREF, parser::ident("ptr"), g_arena)},
-//     TestData{"not", "!boolean", parser::unary_expression(parser::ActionType::NOT, parser::ident("boolean"), g_arena)},
-//     TestData{"invert", "~flags", parser::unary_expression(parser::ActionType::INV, parser::ident("flags"), g_arena)}
-// };
+TEST_CASE("simple expr") {
+    auto test_case = GENERATE(
+        TestCase{"1", "1"},
+        TestCase{"-1", "(-1"},
+        TestCase{"a", "a"},
+        TestCase{"a + 1", "+ a 1"},
+        TestCase{"100 * a", "* 100 a"}
+    );
 
-// TEST_CASE("Simple expressions") {
-//     util::ErrorHandler dummy_err;
-//     for(const auto& test : test_data) {
-//         INFO(test.name + ", expression: " + test.str);
-//         parser::Parser p{lexer::split(test.str), dummy_err};
-//         parser::Expression* result = p.parse_expression();
-//         REQUIRE(*result == test.expected);
-//     }
-// }
+    INFO(test_case);
 
-// TEST_CASE("Simple binary expressions") {
-//     util::ErrorHandler dummy_err;
-//     {
-//         util::Arena<parser::Expression> arena;
-//         parser::Expression expected = parser::Expression{parser::Expr{
-//             .lhs = arena.allocate(parser::ident("a")),
-//             .rhs = arena.allocate(parser::integer(10)),
-//             .action = parser::binary_actions.at(parser::ActionType::ADD),
-//         }};
+    util::StringAllocator alloc;
+    util::ErrorHandler err;
+    std::stringstream in;
+    parser::File f;
 
-//         parser::Parser p{lexer::split("a + 10"), dummy_err};
-//         parser::Expression* result = p.parse_expression();
-//         REQUIRE(*result == expected);
-//     }
-//     {
-//         util::Arena<parser::Expression> arena;
-//         parser::Expression expected = parser::Expression{parser::Expr{
-//             .lhs = arena.allocate(parser::ident("a")),
-//             .rhs = arena.allocate(parser::integer(10)),
-//             .action = parser::binary_actions.at(parser::ActionType::SUB),
-//         }};
+    in.str(test_case.expr);
+    parser::Parser p{lexer::Lexer{in, alloc, err}.split(), f, alloc, err};
+    auto expr = p.parse_expression();
 
-//         parser::Parser p{lexer::split("a - 10"), dummy_err};
-//         parser::Expression* result = p.parse_expression();
-//         REQUIRE(*result == expected);
-//     }
-//     {
-//         util::Arena<parser::Expression> arena;
-//         parser::Expression expected = parser::Expression{parser::Expr{
-//             .lhs = arena.allocate(parser::ident("a")),
-//             .rhs = arena.allocate(parser::integer(10)),
-//             .action = parser::binary_actions.at(parser::ActionType::MUL),
-//         }};
+    in.clear();
+    in.str(test_case.pn_expr);
+    auto pn_tokens = lexer::Lexer{in, alloc, err}.split();
+    util::Arena<parser::Expression> arena;
+    auto expected = PNParser{pn_tokens, arena}.parse_expression();
 
-//         parser::Parser p{lexer::split("a * 10"), dummy_err};
-//         parser::Expression* result = p.parse_expression();
-//         REQUIRE(*result == expected);
-//     }
-// }
+    REQUIRE(compare(expr, expected));
+}
+
+//TODO: add parenthesis support to parser... 
+TEST_CASE("precedence") {
+    auto test_case = GENERATE(
+        TestCase{"1 + a * b", "+ 1 * a b"},
+        TestCase{"a * b + 1", "+ * a b 1"}
+        //TestCase{"a * (b + 1)", "* a + b 1"},
+        // TestCase{},
+        // TestCase{},
+        // TestCase{},
+        // TestCase{},
+        // TestCase{}
+    );
+
+    INFO(test_case);
+
+    util::StringAllocator alloc;
+    util::ErrorHandler err;
+    std::stringstream in;
+    parser::File f;
+
+    in.str(test_case.expr);
+    parser::Parser p{lexer::Lexer{in, alloc, err}.split(), f, alloc, err};
+    auto expr = p.parse_expression();
+
+    in.clear();
+    in.str(test_case.pn_expr);
+    auto pn_tokens = lexer::Lexer{in, alloc, err}.split();
+    util::Arena<parser::Expression> arena;
+    auto expected = PNParser{pn_tokens, arena}.parse_expression();
+
+    REQUIRE(compare(expr, expected));
+}
