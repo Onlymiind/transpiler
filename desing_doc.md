@@ -2,12 +2,12 @@
 Legend:
   <name> - non-terminal
   '' - used for escaping of special symbols
-  stuff? - optional
-  stuff+ - repetition
+  <name>? - optional
+  <name>+ - repetition
   () - grouping
   | - or
-  NON_EMPTY_LIST(stuff, sep = ,) - stuff | (stuff sep NON_EMPTY_LIST(stuff))
-  LIST(stuff, sep = ,) - NON_EMPTY_LIST(stuff, sep) | empty
+  NON_EMPTY_LIST(<item>, sep = ,) - <item> | (<item> sep NON_EMPTY_LIST(<item>))
+  LIST(<item>, sep = ,) - NON_EMPTY_LIST(<item>, sep) | empty
 Type declaration:
 
   Syntax: type <identifier> <type_definition> //note: semicolon must follow, unless type definition is a struct
