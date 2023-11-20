@@ -12,7 +12,7 @@ In it's current form the compiler can parse, check (according to basic strict ty
 ## Building
 
 ```
-git clone git@github.com:Onlymiind/transpiler.git
+git clone --recurse-submodules git@github.com:Onlymiind/transpiler.git
 cd transpiler/src/v2
 mkdir build && cd build
 cmake ..
