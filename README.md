@@ -1,6 +1,6 @@
 ## About
 
-This is a work-in-progress implementation of custom compiled general-purpose language (some syntax sketches can be found in desing_doc.md).
+This is a work-in-progress implementation of custom compiled general-purpose language (some syntax sketches can be found in ```desing_doc.md```).
 
 ## Current Status
 
