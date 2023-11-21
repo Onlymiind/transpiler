@@ -1,8 +1,10 @@
 #include "codegen/generator.h"
 #include "common/expression.h"
+#include "common/literals.h"
 #include "common/token.h"
 #include "common/types.h"
 #include <iomanip>
+#include <ios>
 #include <limits>
 
 namespace codegen {
@@ -15,7 +17,7 @@ namespace codegen {
         if (expr.is_error()) {
             return;
         }
-        std::optional<common::BuiltinTypes> type = mod_->get_builtin(mod_->get_expression_type(expr));
+        std::optional<common::BuiltinTypes> type = mod_->get_builtin(mod_->get_expression_type(expr.id));
         if (!type) {
             return;
         }
@@ -69,20 +71,26 @@ namespace codegen {
 
     void Generator::codegen(common::Literal lit, common::Expression expr) {
         *out_ << '(';
-        codegen(*mod_->get_builtin(mod_->get_expression_type(expr)));
+        codegen(*mod_->get_builtin(mod_->get_expression_type(expr.id)));
         *out_ << ')';
 
-        switch (lit.value.type) {
-        case common::TokenType::BOOL:
-            *out_ << lit.value.bool_val;
+        switch (lit.type) {
+        case common::LiteralType::BOOL:
+            if (lit.value == common::Literals::g_false_id) {
+                *out_ << '0';
+            } else if (lit.value == common::Literals::g_true_id) {
+                *out_ << '1';
+            } else {
+                report_error("livalid literal id for boolean");
+            }
             break;
-        case common::TokenType::INTEGER:
-            *out_ << lit.value.int_val;
+        case common::LiteralType::UINT:
+            *out_ << *mod_->file().literals().get_integer(lit.value);
             break;
-        case common::TokenType::FLOAT: {
+        case common::LiteralType::FLOAT: {
             int presicion = out_->precision();
             *out_ << std::setprecision(std::numeric_limits<double>::digits10)
-                  << lit.value.float_val << std::setprecision(presicion);
+                  << *mod_->file().literals().get_double(lit.value) << std::setprecision(presicion);
             break;
         }
         default:

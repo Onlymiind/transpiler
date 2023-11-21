@@ -28,7 +28,8 @@ void run_tests(const std::vector<GeneratorTestCase> cases) {
         lexer::Lexer l{in};
         l.split();
         REQUIRE(l.get_error().empty());
-        parser::Parser p{l.reset()};
+        auto [tokens, literals] = l.reset();
+        parser::Parser p{std::move(tokens), std::move(literals)};
         p.parse();
         REQUIRE(p.get_error().empty());
 
@@ -92,8 +93,8 @@ TEST_CASE("generator: binary expressions", "[generator]") {
 
 TEST_CASE("generator: expressions", "[generator]") {
     std::vector<GeneratorTestCase> cases{
-        {"false && true || false && 1 != 2 * 3", "int result = (((int)0 && (int)1) || ((int)0 && ((uint64_t)1 != ((uint64_t)2 * (uint64_t)3))))"},
-        {"1 + 2 * (3 + 5) / 4", "uint64_t result = ((uint64_t)1 + (((uint64_t)2 * ((uint64_t)3 + (uint64_t)5)) / (uint64_t)4))"},
+        {"false && true || false && 1 != 2 * 3", "int result = ( ((int)0 && (int)1) ||  ((int)0 &&  ((uint64_t)1 !=  ((uint64_t)2 * (uint64_t)3))))"},
+        {"1 + 2 * (3 + 5) / 4", "uint64_t result = ((uint64_t)1 +  ( ((uint64_t)2 *  ((uint64_t)3 + (uint64_t)5)) / (uint64_t)4))"},
     };
 
     run_tests(cases);

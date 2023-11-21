@@ -36,6 +36,15 @@ namespace parser {
 
     common::Expression Parser::parse_primary_expression() {
         using enum common::TokenType;
+        auto make_literal_expr = [this](common::LiteralType type) {
+            common::Token tok = next();
+            consume();
+            return common::Expression{
+                .type = common::ExpressionType::LITERAL,
+                .id = file_.add(common::Literal{.type = type, .value = tok.data}),
+            };
+        };
+
         switch (next().type) {
         case LEFT_PARENTHESIS: {
             consume();
@@ -50,16 +59,9 @@ namespace parser {
             consume();
             return result;
         }
-        case BOOL: [[fallthrough]];
-        case INTEGER: [[fallthrough]];
-        case FLOAT: {
-            common::Token tok = next();
-            consume();
-            return common::Expression{
-                .type = common::ExpressionType::LITERAL,
-                .id = file_.add(common::Literal{tok}),
-            };
-        }
+        case BOOL: return make_literal_expr(common::LiteralType::BOOL);
+        case INTEGER: return make_literal_expr(common::LiteralType::UINT);
+        case FLOAT: return make_literal_expr(common::LiteralType::FLOAT);
         default:
             report_error("expected primary expression");
             break;

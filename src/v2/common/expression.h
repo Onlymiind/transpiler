@@ -1,6 +1,7 @@
 #ifndef COMPILER_V2_COMMON_EXPRESSION_HDR_
 #define COMPILER_V2_COMMON_EXPRESSION_HDR_
 
+#include "common/literals.h"
 #include "common/token.h"
 #include "common/util.h"
 
@@ -128,8 +129,15 @@ namespace common {
         }
     };
 
+    enum class LiteralType {
+        BOOL,
+        UINT,
+        FLOAT,
+    };
+
     struct Literal {
-        Token value{};
+        LiteralType type{};
+        Literals::ID value = Literals::g_invalid_id;
 
         constexpr bool operator==(const Literal &other) const noexcept {
             return value == other.value;

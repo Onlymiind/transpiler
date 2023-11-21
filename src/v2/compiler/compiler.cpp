@@ -2,6 +2,7 @@
 #include "checker/checker.h"
 #include "codegen/generator.h"
 #include "common/file.h"
+#include "common/literals.h"
 #include "common/module.h"
 #include "common/token.h"
 #include "lexer/lexer.h"
@@ -16,7 +17,7 @@
 
 namespace compiler {
 
-    std::optional<std::vector<common::Token>> lex(std::istream &file, std::ostream &err) {
+    std::optional<std::pair<std::vector<common::Token>, common::Literals>> lex(std::istream &file, std::ostream &err) {
         lexer::Lexer lexer{file};
         lexer.split();
         std::string_view error = lexer.get_error();
@@ -27,8 +28,8 @@ namespace compiler {
         return lexer.reset();
     }
 
-    std::optional<common::File> parse(std::vector<common::Token> &&tokens, std::ostream &err) {
-        parser::Parser parser{std::move(tokens)};
+    std::optional<common::File> parse(std::vector<common::Token> &&tokens, common::Literals &&literals, std::ostream &err) {
+        parser::Parser parser{std::move(tokens), std::move(literals)};
         parser.parse();
         std::string_view error = parser.get_error();
         if (!error.empty()) {
@@ -65,21 +66,23 @@ namespace compiler {
         }
 
         std::vector<common::Token> tokens;
+        common::Literals literals;
         try {
             auto t = lex(file, err);
             if (!t) {
                 return;
             }
-            tokens = std::move(*t);
+            tokens = std::move(t->first);
+            literals = std::move(t->second);
         } catch (...) {
             err << "unknown exception in lexer\n"
                 << std::endl;
             return;
         }
 
-        common::File parsed;
+        std::optional<common::File> parsed;
         try {
-            auto f = parse(std::move(tokens), err);
+            auto f = parse(std::move(tokens), std::move(literals), err);
             if (!f) {
                 return;
             }
@@ -93,7 +96,7 @@ namespace compiler {
         // not an optional, this is needed because module doesn't have default constructor
         std::optional<common::Module> mod;
         try {
-            auto m = check(std::move(parsed), err);
+            auto m = check(std::move(*parsed), err);
             if (!m) {
                 return;
             }

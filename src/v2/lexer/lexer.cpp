@@ -1,4 +1,5 @@
 #include "lexer/lexer.h"
+#include "common/literals.h"
 #include "common/token.h"
 #include <array>
 #include <cctype>
@@ -92,7 +93,7 @@ namespace lexer {
         }
 
         result.type = common::TokenType::BOOL;
-        result.bool_val = value;
+        result.data = value ? common::Literals::g_true_id : common::Literals::g_false_id;
 
         return result;
     }
@@ -115,7 +116,7 @@ namespace lexer {
                 file_->putback(*c);
             }
             result.type = common::TokenType::INTEGER;
-            result.int_val = integer;
+            result.data = literals_.add(integer);
             return result;
         } else if (*c != '.') {
             report_error("expected either . or a space after numeric literal");
@@ -140,9 +141,9 @@ namespace lexer {
         }
 
         result.type = common::TokenType::FLOAT;
-        result.float_val = static_cast<double>(integer) +
-                           static_cast<double>(fraction) /
-                               static_cast<double>(exponent);
+        result.data = literals_.add(static_cast<double>(integer) +
+                                    static_cast<double>(fraction) /
+                                        static_cast<double>(exponent));
 
         return result;
     }

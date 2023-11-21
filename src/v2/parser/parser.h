@@ -6,14 +6,14 @@
 #include "common/token.h"
 
 #include <string_view>
+#include <utility>
 #include <vector>
 namespace parser {
 
     class Parser {
       public:
-        Parser() noexcept = default;
-        Parser(std::vector<common::Token> &&tokens) noexcept
-            : tokens_(std::move(tokens)), remainder_(tokens_){};
+        Parser(std::vector<common::Token> &&tokens, common::Literals &&literals) noexcept
+            : tokens_(std::move(tokens)), remainder_(tokens_), file_(std::move(literals)) {}
 
         void set_tokens(std::vector<common::Token> &&tokens) noexcept {
             tokens_ = std::move(tokens);
@@ -42,7 +42,7 @@ namespace parser {
 
         std::vector<common::Token> tokens_{};
         common::Tokens remainder_{};
-        common::File file_{};
+        common::File file_;
 
         std::string_view err_{};
     };

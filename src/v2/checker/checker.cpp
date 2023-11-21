@@ -34,7 +34,7 @@ namespace checker {
         if (result.is_error()) {
             return result;
         }
-        module_.set_expression_type(expr, result);
+        module_.set_expression_type(expr.id, result);
         return result;
     }
 
@@ -124,12 +124,12 @@ namespace checker {
     }
 
     common::Type Checker::get_type_for_literal(common::Literal lit) {
-        switch (lit.value.type) {
-        case common::TokenType::BOOL:
+        switch (lit.type) {
+        case common::LiteralType::BOOL:
             return builtin_types_.at(common::BuiltinTypes::BOOL);
-        case common::TokenType::INTEGER:
+        case common::LiteralType::UINT:
             return builtin_types_.at(common::BuiltinTypes::UINT);
-        case common::TokenType::FLOAT:
+        case common::LiteralType::FLOAT:
             return builtin_types_.at(common::BuiltinTypes::FLOAT);
         default:
             report_error("unknown literal type");

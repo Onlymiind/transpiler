@@ -13,6 +13,7 @@ set(COMPILER_SRC
     common/file.h
     common/types.h
     common/module.h
+    common/literals.h
 
     lexer/lexer.h
     lexer/lexer.cpp

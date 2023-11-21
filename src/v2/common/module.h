@@ -33,7 +33,7 @@ namespace common {
             return it->second;
         }
 
-        Type get_expression_type(Expression expr) const {
+        Type get_expression_type(Expression::ID expr) const {
             auto it = expression_types_.find(expr);
             if (it == expression_types_.end()) {
                 return Type{};
@@ -46,7 +46,7 @@ namespace common {
             return types_.at(type.id);
         }
 
-        void set_expression_type(Expression expr, Type type) {
+        void set_expression_type(Expression::ID expr, Type type) {
             expression_types_[expr] = type;
         }
 
@@ -58,7 +58,7 @@ namespace common {
 
         std::unordered_map<Type::ID, TypeTraits> types_;
         std::unordered_map<Type::ID, BuiltinTypes> type_to_info_;
-        std::unordered_map<Expression, Type, ExpressionHash> expression_types_;
+        std::unordered_map<Expression::ID, Type> expression_types_;
         uint64_t current_id_ = 0;
     };
 } // namespace common

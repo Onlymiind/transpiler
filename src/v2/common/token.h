@@ -1,5 +1,6 @@
 #ifndef COMPILER_V2_COMMON_TOKEN_HDR_
 #define COMPILER_V2_COMMON_TOKEN_HDR_
+#include "common/literals.h"
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -51,14 +52,7 @@ namespace common {
     struct Token {
         TokenType type = TokenType::ERROR;
 
-        // Token is already a tagged union
-        // so there is no need for std::variant or similar class,
-        // assuming that the program works correctly of course
-        union {
-            uint64_t int_val = 0;
-            double float_val;
-            bool bool_val;
-        };
+        Literals::ID data = Literals::g_invalid_id;
 
         constexpr bool is_error() const noexcept {
             return type == TokenType::ERROR;
@@ -69,18 +63,7 @@ namespace common {
         }
 
         constexpr bool operator==(const Token &other) const noexcept {
-            if (type != other.type) {
-                return false;
-            }
-
-            if (type == TokenType::BOOL) {
-                return bool_val == other.bool_val;
-            } else if (type == TokenType::INTEGER) {
-                return int_val == other.int_val;
-            } else if (type == TokenType::FLOAT) {
-                return float_val == other.float_val;
-            }
-            return true;
+            return type == other.type && data == other.data;
         }
     };
 

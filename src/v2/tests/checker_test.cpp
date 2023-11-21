@@ -34,7 +34,8 @@ void run_tests(const std::vector<CheckerTestCase> cases) {
         lexer::Lexer l{in};
         l.split();
         REQUIRE(l.get_error().empty());
-        parser::Parser p{l.reset()};
+        auto [tokens, literals] = l.reset();
+        parser::Parser p{std::move(tokens), std::move(literals)};
         p.parse();
         REQUIRE(p.get_error().empty());
 
@@ -49,7 +50,7 @@ void run_tests(const std::vector<CheckerTestCase> cases) {
         REQUIRE(ch.get_error().empty());
 
         auto mod = ch.reset();
-        REQUIRE(c.expected == mod.get_builtin(mod.get_expression_type(mod.file().start())));
+        REQUIRE(c.expected == mod.get_builtin(mod.get_expression_type(mod.file().start().id)));
     }
 }
 

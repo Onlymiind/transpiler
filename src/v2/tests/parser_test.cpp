@@ -1,5 +1,6 @@
 #include "common/expression.h"
 #include "common/file.h"
+#include "common/literals.h"
 #include "common/token.h"
 #include "lexer/lexer.h"
 #include "parser/parser.h"
@@ -10,19 +11,18 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 class PolishNotationParser {
   public:
-    PolishNotationParser(std::vector<common::Token> tokens)
-        : tokens_(std::move(tokens)), remainder_(tokens_) {}
+    PolishNotationParser(std::vector<common::Token> tokens, common::Literals literals)
+        : tokens_(std::move(tokens)), remainder_(tokens_), file_(std::move(literals)) {}
 
     common::File parse() {
-        common::File result;
-
         file_.set_start(parse_expression());
 
-        result = std::move(file_);
+        common::File result = std::move(file_);
         return result;
     }
 
@@ -39,17 +39,19 @@ class PolishNotationParser {
             };
         }
 
-        switch (next().type) {
-        case common::TokenType::BOOL:
-        case common::TokenType::INTEGER:
-        case common::TokenType::FLOAT: {
+        auto make_literal_expr = [this](common::LiteralType type) {
             auto tok = next();
             consume();
             return common::Expression{
                 .type = common::ExpressionType::LITERAL,
-                .id = file_.add(common::Literal{tok}),
+                .id = file_.add(common::Literal{.type = type, .value = tok.data}),
             };
-        }
+        };
+
+        switch (next().type) {
+        case common::TokenType::BOOL: return make_literal_expr(common::LiteralType::BOOL);
+        case common::TokenType::INTEGER: return make_literal_expr(common::LiteralType::UINT);
+        case common::TokenType::FLOAT: return make_literal_expr(common::LiteralType::FLOAT);
         case common::TokenType::LEFT_PARENTHESIS:
             consume();
             return parse_unary_expression();
@@ -85,20 +87,61 @@ class PolishNotationParser {
     common::File file_;
 };
 
+bool compare(common::Expression lhs, common::Expression rhs, const common::File &lhs_file, const common::File &rhs_file) {
+    if (lhs.type != rhs.type) {
+        return false;
+    }
+
+    if (lhs.is_error()) {
+        return true;
+    }
+
+    switch (lhs.type) {
+    case common::ExpressionType::BINARY: {
+        auto lhs_binary = *lhs_file.get_binary_expression(lhs.id);
+        auto rhs_binary = *rhs_file.get_binary_expression(rhs.id);
+        return lhs_binary.op == rhs_binary.op &&
+               compare(lhs_binary.lhs, rhs_binary.lhs, lhs_file, rhs_file) &&
+               compare(lhs_binary.rhs, rhs_binary.rhs, lhs_file, rhs_file);
+    }
+    case common::ExpressionType::UNARY: {
+        auto lhs_unary = *lhs_file.get_unary_expression(lhs.id);
+        auto rhs_unary = *rhs_file.get_unary_expression(rhs.id);
+        return lhs_unary.op == rhs_unary.op && compare(lhs_unary.expr, rhs_unary.expr, lhs_file, rhs_file);
+    }
+    case common::ExpressionType::LITERAL: {
+        auto lhs_lit = *lhs_file.get_literal(lhs.id);
+        auto rhs_lit = *rhs_file.get_literal(rhs.id);
+        if (lhs_lit.type != rhs_lit.type) {
+            return false;
+        }
+        switch (lhs_lit.type) {
+        case common::LiteralType::BOOL:
+            return lhs_lit.value == rhs_lit.value;
+        case common::LiteralType::UINT:
+            return lhs_file.literals().get_integer(lhs_lit.value) == rhs_file.literals().get_integer(rhs_lit.value);
+        case common::LiteralType::FLOAT:
+            return lhs_file.literals().get_double(lhs_lit.value) == rhs_file.literals().get_double(rhs_lit.value);
+        }
+    }
+    }
+    return false;
+}
+
 TEST_CASE("parser: literals", "[parser]") {
     std::stringstream str{GENERATE(as<std::string>{}, "1234", "true", "1234.1234")};
 
     lexer::Lexer l{str};
     l.split();
     REQUIRE(l.get_error().empty());
-    auto tokens = l.reset();
+    auto [tokens, literals] = l.reset();
 
-    auto expected = PolishNotationParser{tokens}.parse();
-    parser::Parser p{std::move(tokens)};
+    auto expected = PolishNotationParser{tokens, literals}.parse();
+    parser::Parser p{std::move(tokens), std::move(literals)};
     p.parse();
     REQUIRE(p.get_error().empty());
     auto result = p.reset();
-    REQUIRE(result == expected);
+    REQUIRE(compare(result.start(), expected.start(), result, expected));
 }
 
 struct ParserTestCase {
@@ -112,22 +155,22 @@ void run_tests(const std::vector<ParserTestCase> &cases) {
         lexer::Lexer l{str};
         l.split();
         REQUIRE(l.get_error().empty());
-        auto tokens = l.reset();
+        auto lexer_result = l.reset();
 
-        auto expected = PolishNotationParser{tokens}.parse();
+        auto expected = PolishNotationParser{lexer_result.first, lexer_result.second}.parse();
 
         str.clear();
         str.str(c.expr);
         l.set_file(str);
         l.split();
         REQUIRE(l.get_error().empty());
-        tokens = l.reset();
+        lexer_result = l.reset();
 
-        parser::Parser p{std::move(tokens)};
+        parser::Parser p{std::move(lexer_result.first), std::move(lexer_result.second)};
         p.parse();
         REQUIRE(p.get_error().empty());
         auto result = p.reset();
-        REQUIRE(result == expected);
+        REQUIRE(compare(result.start(), expected.start(), result, expected));
     }
 }
 
@@ -179,7 +222,8 @@ TEST_CASE("parser: fails", "[parser]") {
     lexer::Lexer l{in};
     l.split();
     REQUIRE(l.get_error().empty());
-    parser::Parser p{l.reset()};
+    auto [tokens, literals] = l.reset();
+    parser::Parser p{std::move(tokens), std::move(literals)};
     p.parse();
     REQUIRE(!p.get_error().empty());
 }
