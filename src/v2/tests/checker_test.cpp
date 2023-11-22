@@ -17,9 +17,7 @@
 // TODO: Module class is simple for now,
 // later should definitely write tests for it
 
-// TODO: this doesn't check if Checker assigns correct types to all expressions
-// since there is no type conversions
-// in the future that should also be checked
+// TODO: those tests don't check if Checker assigns correct types to all expressions in the tree
 
 struct CheckerTestCase {
     std::string data;
@@ -50,7 +48,7 @@ void run_tests(const std::vector<CheckerTestCase> cases) {
         REQUIRE(ch.get_error().empty());
 
         auto mod = ch.reset();
-        REQUIRE(c.expected == mod.get_builtin(mod.get_expression_type(mod.file().start().id)));
+        REQUIRE(c.expected == mod.get_builtin(mod.get_expression_type(mod.file().start().id))->type);
     }
 }
 
@@ -116,6 +114,16 @@ TEST_CASE("checker: expressions", "[checker]") {
     run_tests(cases);
 }
 
+TEST_CASE("checker: casts", "[checker]") {
+    using enum common::BuiltinTypes;
+    std::vector<CheckerTestCase> cases{
+        {.data = "bool(true)", .expected = BOOL},
+        {.data = "u64(1.1)", .expected = UINT},
+        {.data = "f64(1)", .expected = FLOAT},
+    };
+    run_tests(cases);
+}
+
 TEST_CASE("checker: fails", "[checker]") {
     using enum common::BuiltinTypes;
     std::vector<CheckerTestCase> cases{
@@ -138,6 +146,11 @@ TEST_CASE("checker: fails", "[checker]") {
         {.data = "1234 + 1234.0", .should_fail = true},
         {.data = "1234.00 + false", .should_fail = true},
         {.data = "1234 - true", .should_fail = true},
+
+        // casts
+        {.data = "bool(1)", .should_fail = true},
+        {.data = "u64(true)", .should_fail = true},
+        {.data = "f64(false)", .should_fail = true},
     };
     run_tests(cases);
 }

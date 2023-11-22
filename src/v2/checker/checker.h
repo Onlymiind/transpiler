@@ -18,6 +18,7 @@ namespace checker {
         common::Type check_expression(common::Expression expr);
         common::Type check_unary_expression(common::UnaryExpression expr);
         common::Type check_binary_expression(common::BinaryExpression expr);
+        common::Type check_cast(common::Cast cast);
 
         common::Module reset() {
             common::Module result{std::move(module_)};
@@ -25,9 +26,6 @@ namespace checker {
         }
 
         common::Type get_type_for_literal(common::Literal lit);
-
-        // no type conversions for now, this is for future
-        bool can_implicitly_convert(common::Type dst, common::Type src) const;
 
         common::Type check_literal();
 

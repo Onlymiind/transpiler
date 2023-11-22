@@ -29,7 +29,7 @@ namespace lexer {
         void consume_spaces();
 
         common::Token get_numeric();
-        common::Token get_boolean();
+        common::Token get_identifier();
         common::Token get_op();
 
         std::optional<char> get_char();

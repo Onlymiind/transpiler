@@ -10,10 +10,13 @@
 #include <optional>
 
 namespace common {
-    enum class ExpressionType { ERROR,
-                                BINARY,
-                                UNARY,
-                                LITERAL };
+    enum class ExpressionType {
+        ERROR,
+        BINARY,
+        UNARY,
+        LITERAL,
+        CAST,
+    };
 
     enum class BinaryOp {
         ADD,
@@ -143,6 +146,13 @@ namespace common {
             return value == other.value;
         }
     };
+
+    // probably should implement separate ID for identifiers
+    struct Cast {
+        Literals::ID to = Literals::g_invalid_id;
+        Expression from{};
+    };
+
 } // namespace common
 
 #endif

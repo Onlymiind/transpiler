@@ -13,7 +13,7 @@ namespace parser {
 
     common::Expression Parser::parse_expression() {
         common::Expression lhs = parse_unary_expression();
-        if (lhs.is_error() || remainder_.empty()) {
+        if (lhs.is_error() || !common::is_binary_op(next().type)) {
             return lhs;
         }
         return parse_binary_expression(lhs, 0);
@@ -59,6 +59,8 @@ namespace parser {
             consume();
             return result;
         }
+
+        case IDENTIFIER: return parse_cast();
         case BOOL: return make_literal_expr(common::LiteralType::BOOL);
         case INTEGER: return make_literal_expr(common::LiteralType::UINT);
         case FLOAT: return make_literal_expr(common::LiteralType::FLOAT);
@@ -68,6 +70,28 @@ namespace parser {
         }
 
         return common::Expression{};
+    }
+
+    common::Expression Parser::parse_cast() {
+        if (next().type != common::TokenType::IDENTIFIER) {
+            report_error("expected identifier");
+            return common::Expression{};
+        }
+
+        common::Cast result{.to = next().data};
+        consume();
+        if (next().type != common::TokenType::LEFT_PARENTHESIS) {
+            report_error("cast: expected '('");
+            return common::Expression{};
+        }
+        consume();
+        result.from = parse_expression();
+        if (next().type != common::TokenType::RIGH_PARENTHESIS) {
+            report_error("cast: expected ')'");
+            return common::Expression{};
+        }
+        consume();
+        return common::Expression{.type = common::ExpressionType::CAST, .id = file_.add(result)};
     }
 
     common::Expression Parser::parse_binary_expression(common::Expression lhs, uint8_t precedence) {

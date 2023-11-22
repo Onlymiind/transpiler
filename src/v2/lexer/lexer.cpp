@@ -5,6 +5,7 @@
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string_view>
 
 namespace lexer {
@@ -44,7 +45,7 @@ namespace lexer {
             if (std::isdigit(c)) {
                 tok = get_numeric();
             } else if (std::isalpha(c)) {
-                tok = get_boolean();
+                tok = get_identifier();
             } else {
                 tok = get_op();
             }
@@ -60,40 +61,36 @@ namespace lexer {
         }
     }
 
-    common::Token Lexer::get_boolean() {
+    common::Token Lexer::get_identifier() {
         common::Token result{};
-        constexpr std::string_view true_str{"true"};
-        constexpr std::string_view false_str{"false"};
-        std::string_view str{};
         std::optional<char> c = get_char();
-        bool value = false;
-        if (!c) {
+        if (!c || !std::isalpha(*c) && *c != '_') {
+            report_error("exprected alphabetic character or _");
+            return common::Token{};
+        }
+
+        std::string buf;
+        buf.push_back(*c);
+        for (c = get_char(); c && (std::isalnum(*c) || *c == '_'); c = get_char()) {
+            buf.push_back(*c);
+        }
+
+        if (c) {
+            file_->putback(*c);
+        }
+
+        if (buf == "true") {
+            result.type = common::TokenType::BOOL;
+            result.data = common::Literals::g_true_id;
             return result;
-        } else if (*c == 't') {
-            value = true;
-            str = true_str;
-        } else if (*c == 'f') {
-            str = false_str;
-        } else {
+        } else if (buf == "false") {
+            result.type = common::TokenType::BOOL;
+            result.data = common::Literals::g_false_id;
             return result;
         }
 
-        for (size_t i = 1; i < str.size(); ++i) {
-            std::optional<char> c = get_char();
-            if (!c || *c != str[i]) {
-                report_error("unexpected symbol when parsing boolean literal");
-                return result;
-            }
-        }
-
-        c = get_char();
-        if (c && !std::isspace(*c)) {
-            report_error("expected a space after a boolean literal");
-            return result;
-        }
-
-        result.type = common::TokenType::BOOL;
-        result.data = value ? common::Literals::g_true_id : common::Literals::g_false_id;
+        result.type = common::TokenType::IDENTIFIER;
+        result.data = literals_.add(std::move(buf));
 
         return result;
     }

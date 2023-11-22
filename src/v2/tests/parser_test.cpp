@@ -16,7 +16,7 @@
 
 class PolishNotationParser {
   public:
-    PolishNotationParser(std::vector<common::Token> tokens, common::Literals literals)
+    PolishNotationParser(std::vector<common::Token> tokens, common::Literals &&literals)
         : tokens_(std::move(tokens)), remainder_(tokens_), file_(std::move(literals)) {}
 
     common::File parse() {
@@ -55,6 +55,12 @@ class PolishNotationParser {
         case common::TokenType::LEFT_PARENTHESIS:
             consume();
             return parse_unary_expression();
+        case common::TokenType::IDENTIFIER: {
+            common::Cast result{.to = next().data};
+            consume();
+            result.from = parse_expression();
+            return common::Expression{.type = common::ExpressionType::CAST, .id = file_.add(result)};
+        }
         }
 
         return common::Expression{};
@@ -109,6 +115,14 @@ bool compare(common::Expression lhs, common::Expression rhs, const common::File 
         auto rhs_unary = *rhs_file.get_unary_expression(rhs.id);
         return lhs_unary.op == rhs_unary.op && compare(lhs_unary.expr, rhs_unary.expr, lhs_file, rhs_file);
     }
+    case common::ExpressionType::CAST: {
+        auto lhs_cast = *lhs_file.get_cast(lhs.id);
+        auto rhs_cast = *rhs_file.get_cast(rhs.id);
+        auto str1 = *lhs_file.literals().get_string(lhs_cast.to);
+        auto str2 = *rhs_file.literals().get_string(rhs_cast.to);
+        return str1 == str2 &&
+               compare(lhs_cast.from, rhs_cast.from, lhs_file, rhs_file);
+    }
     case common::ExpressionType::LITERAL: {
         auto lhs_lit = *lhs_file.get_literal(lhs.id);
         auto rhs_lit = *rhs_file.get_literal(rhs.id);
@@ -129,15 +143,23 @@ bool compare(common::Expression lhs, common::Expression rhs, const common::File 
 }
 
 TEST_CASE("parser: literals", "[parser]") {
-    std::stringstream str{GENERATE(as<std::string>{}, "1234", "true", "1234.1234")};
+    std::string string{GENERATE(as<std::string>{}, "1234", "true", "1234.1234")};
 
+    std::stringstream str{string};
     lexer::Lexer l{str};
     l.split();
     REQUIRE(l.get_error().empty());
     auto [tokens, literals] = l.reset();
+    auto expected = PolishNotationParser{std::move(tokens), std::move(literals)}.parse();
 
-    auto expected = PolishNotationParser{tokens, literals}.parse();
-    parser::Parser p{std::move(tokens), std::move(literals)};
+    str.str(string);
+    str.clear();
+    l.set_file(str);
+    l.split();
+    REQUIRE(l.get_error().empty());
+    auto [got_tokens, got_literals] = l.reset();
+
+    parser::Parser p{std::move(got_tokens), std::move(got_literals)};
     p.parse();
     REQUIRE(p.get_error().empty());
     auto result = p.reset();
@@ -157,7 +179,7 @@ void run_tests(const std::vector<ParserTestCase> &cases) {
         REQUIRE(l.get_error().empty());
         auto lexer_result = l.reset();
 
-        auto expected = PolishNotationParser{lexer_result.first, lexer_result.second}.parse();
+        auto expected = PolishNotationParser{std::move(lexer_result.first), std::move(lexer_result.second)}.parse();
 
         str.clear();
         str.str(c.expr);
@@ -185,6 +207,17 @@ TEST_CASE("parser: unary operators", "[parser]") {
     run_tests(cases);
 }
 
+TEST_CASE("parser: casts", "[parser]") {
+    using namespace std::string_view_literals;
+    std::vector<ParserTestCase> cases = {
+        ParserTestCase{"bool(1234)", "bool 1234"},
+        ParserTestCase{"int(!true)", "int (!true"},
+        ParserTestCase{"float(1 + 2)", "float + 1 2"},
+    };
+
+    run_tests(cases);
+}
+
 TEST_CASE("parser: binary operators", "[parser]") {
     using namespace std::string_view_literals;
     std::vector<ParserTestCase> cases = {
@@ -206,8 +239,18 @@ TEST_CASE("parser: binary operators", "[parser]") {
     run_tests(cases);
 }
 
+TEST_CASE("parser: parenthesized expressions", "[parser]") {
+    std::vector<ParserTestCase> cases = {
+        ParserTestCase{"(1234)", "1234"},
+        ParserTestCase{"(!true)", "(!true"},
+        ParserTestCase{"(1 + 2)", "+ 1 2"},
+        ParserTestCase{"(bool(1))", "bool 1"},
+    };
+
+    run_tests(cases);
+}
+
 TEST_CASE("parser: precedence", "[parser]") {
-    using namespace std::string_view_literals;
     std::vector<ParserTestCase> cases = {
         ParserTestCase{"1234 + 5678 * true + 9012", "+ 1234 + * 5678 true 9012"},
         ParserTestCase{"1 || 2 && 3 == 4 + 5 * 6", "|| 1 && 2 == 3 + 4 * 5 6"},
@@ -218,7 +261,7 @@ TEST_CASE("parser: precedence", "[parser]") {
 }
 
 TEST_CASE("parser: fails", "[parser]") {
-    std::stringstream in{GENERATE(as<std::string>{}, "1 +", "-", "(1 + 3", "true && ==", "!*")};
+    std::stringstream in{GENERATE(as<std::string>{}, "1 +", "-", "(1 + 3", "true && ==", "!*", "bool", "bool 1", "bool(1")};
     lexer::Lexer l{in};
     l.split();
     REQUIRE(l.get_error().empty());

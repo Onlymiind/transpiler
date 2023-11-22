@@ -4,6 +4,8 @@
 #include "common/literals.h"
 
 #include <cstdint>
+#include <optional>
+#include <unordered_map>
 #include <vector>
 
 namespace common {
@@ -11,19 +13,24 @@ namespace common {
       public:
         File(Literals &&literals) : literals_(std::move(literals)) {}
 
-        const UnaryExpression *get_unary_expression(Expression::ID id) const {
+        std::optional<UnaryExpression> get_unary_expression(Expression::ID id) const {
             auto it = unary_exprs_.find(id);
-            return it == unary_exprs_.end() ? nullptr : &it->second;
+            return it == unary_exprs_.end() ? std::optional<UnaryExpression>{} : it->second;
         }
 
-        const BinaryExpression *get_binary_expression(Expression::ID id) const {
+        std::optional<BinaryExpression> get_binary_expression(Expression::ID id) const {
             auto it = binary_exprs_.find(id);
-            return it == binary_exprs_.end() ? nullptr : &it->second;
+            return it == binary_exprs_.end() ? std::optional<BinaryExpression>{} : it->second;
         }
 
-        const Literal *get_literal(Expression::ID id) const {
+        std::optional<Literal> get_literal(Expression::ID id) const {
             auto it = literal_exprs_.find(id);
-            return it == literal_exprs_.end() ? nullptr : &it->second;
+            return it == literal_exprs_.end() ? std::optional<Literal>{} : it->second;
+        }
+
+        std::optional<Cast> get_cast(Expression::ID id) const {
+            auto it = casts_.find(id);
+            return it == casts_.end() ? std::optional<Cast>{} : it->second;
         }
 
         Expression::ID add(BinaryExpression expr) {
@@ -47,6 +54,14 @@ namespace common {
             return result;
         }
 
+        Expression::ID add(Cast cast) {
+            Expression::ID result{current_id_};
+            ++current_id_;
+            casts_[result] = cast;
+            return result;
+        }
+
+        Literals &literals() { return literals_; }
         const Literals &literals() const { return literals_; }
 
         // TODO: this is temporary API
@@ -66,6 +81,7 @@ namespace common {
         std::unordered_map<Expression::ID, UnaryExpression> unary_exprs_;
         std::unordered_map<Expression::ID, BinaryExpression> binary_exprs_;
         std::unordered_map<Expression::ID, Literal> literal_exprs_;
+        std::unordered_map<Expression::ID, Cast> casts_;
         Literals literals_;
         uint64_t current_id_ = 0;
     };

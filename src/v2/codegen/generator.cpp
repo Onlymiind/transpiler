@@ -17,18 +17,18 @@ namespace codegen {
         if (expr.is_error()) {
             return;
         }
-        std::optional<common::BuiltinTypes> type = mod_->get_builtin(mod_->get_expression_type(expr.id));
+        std::optional<common::BuiltinType> type = mod_->get_builtin(mod_->get_expression_type(expr.id));
         if (!type) {
             return;
         }
 
         *out_ << g_prelude;
-        codegen(*type);
+        codegen(type->type);
         if (error_occured()) {
             return;
         }
 
-        *out_ << " result =";
+        *out_ << " result = ";
 
         codegen(mod_->file().start());
         if (error_occured()) {
@@ -36,7 +36,7 @@ namespace codegen {
         }
 
         *out_ << ";\nprintf(\"%";
-        switch (*type) {
+        switch (type->type) {
         case common::BuiltinTypes::BOOL: *out_ << "d"; break;
         case common::BuiltinTypes::UINT: *out_ << "u"; break;
         case common::BuiltinTypes::FLOAT: *out_ << "f"; break;
@@ -61,7 +61,10 @@ namespace codegen {
             codegen(*mod_->file().get_unary_expression(expr.id));
             break;
         case common::ExpressionType::LITERAL:
-            codegen(*mod_->file().get_literal(expr.id), expr);
+            codegen(*mod_->file().get_literal(expr.id), expr.id);
+            break;
+        case common::ExpressionType::CAST:
+            codegen(*mod_->file().get_cast(expr.id), expr.id);
             break;
         default:
             report_error("unknown expression type");
@@ -69,9 +72,9 @@ namespace codegen {
         }
     }
 
-    void Generator::codegen(common::Literal lit, common::Expression expr) {
+    void Generator::codegen(common::Literal lit, common::Expression::ID expr) {
         *out_ << '(';
-        codegen(*mod_->get_builtin(mod_->get_expression_type(expr.id)));
+        codegen(mod_->get_builtin(mod_->get_expression_type(expr))->type);
         *out_ << ')';
 
         switch (lit.type) {
@@ -100,7 +103,6 @@ namespace codegen {
     }
 
     void Generator::codegen(common::UnaryExpression expr) {
-        *out_ << ' ';
         switch (expr.op) {
         case common::UnaryOp::NOT: *out_ << '!'; break;
         case common::UnaryOp::NEGATE: *out_ << '-'; break;
@@ -113,7 +115,7 @@ namespace codegen {
     }
 
     void Generator::codegen(common::BinaryExpression expr) {
-        *out_ << " (";
+        *out_ << '(';
         codegen(expr.lhs);
         if (error_occured()) {
             return;
@@ -161,5 +163,18 @@ namespace codegen {
             report_error("unknown builtin type");
             break;
         }
+    }
+
+    void Generator::codegen(common::Cast cast, common::Expression::ID expr) {
+        if (cast.from.type == common::ExpressionType::LITERAL) {
+            // avoid unnecessary casts
+            codegen(*mod_->file().get_literal(cast.from.id), expr);
+            return;
+        }
+
+        *out_ << '(';
+        codegen(mod_->get_builtin(mod_->get_type(cast.to))->type);
+        *out_ << ')';
+        codegen(cast.from);
     }
 } // namespace codegen

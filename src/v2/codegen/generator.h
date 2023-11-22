@@ -28,16 +28,16 @@ namespace codegen {
 
         void codegen(common::Expression expr);
 
-        // TODO: for now, pass id to get literal's type and cast it
-        // in the generated code. Later this should be handled by
-        // cast expression
-        void codegen(common::Literal lit, common::Expression expr);
+        // expr parameter is needed to cast literal to the correct type
+        void codegen(common::Literal lit, common::Expression::ID expr);
 
         void codegen(common::UnaryExpression expr);
 
         void codegen(common::BinaryExpression expr);
 
         void codegen(common::BuiltinTypes type);
+
+        void codegen(common::Cast cast, common::Expression::ID expr);
 
         void report_error(std::string_view err) { err_ = err; }
         std::string_view get_error() const { return err_; }

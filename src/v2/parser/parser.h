@@ -25,6 +25,7 @@ namespace parser {
         common::Expression parse_expression();
         common::Expression parse_unary_expression();
         common::Expression parse_primary_expression();
+        common::Expression parse_cast();
 
         common::File reset() noexcept {
             common::File file{std::move(file_)};

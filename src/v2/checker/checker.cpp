@@ -4,9 +4,21 @@
 
 namespace checker {
     void Checker::check() {
-        builtin_types_[common::BuiltinTypes::BOOL] = module_.add_type(common::BuiltinTypes::BOOL, common::TypeTraits::BOOLEAN);
-        builtin_types_[common::BuiltinTypes::UINT] = module_.add_type(common::BuiltinTypes::UINT, common::TypeTraits::INTEGER);
-        builtin_types_[common::BuiltinTypes::FLOAT] = module_.add_type(common::BuiltinTypes::FLOAT, common::TypeTraits::FLOATING_POINT);
+        builtin_types_[common::BuiltinTypes::BOOL] = module_.add_type(common::BuiltinType{
+            .name = module_.file().literals().add("bool"),
+            .type = common::BuiltinTypes::BOOL,
+            .traits = common::TypeTraits::BOOLEAN,
+        });
+        builtin_types_[common::BuiltinTypes::UINT] = module_.add_type(common::BuiltinType{
+            .name = module_.file().literals().add("u64"),
+            .type = common::BuiltinTypes::UINT,
+            .traits = common::TypeTraits::INTEGER,
+        });
+        builtin_types_[common::BuiltinTypes::FLOAT] = module_.add_type(common::BuiltinType{
+            .name = module_.file().literals().add("f64"),
+            .type = common::BuiltinTypes::FLOAT,
+            .traits = common::TypeTraits::FLOATING_POINT,
+        });
         check_expression(module_.file().start());
     }
 
@@ -25,6 +37,9 @@ namespace checker {
             break;
         case common::ExpressionType::BINARY:
             result = check_binary_expression(*module_.file().get_binary_expression(expr.id));
+            break;
+        case common::ExpressionType::CAST:
+            result = check_cast(*module_.file().get_cast(expr.id));
             break;
         default:
             report_error("unknown expression type");
@@ -123,6 +138,34 @@ namespace checker {
         return lhs;
     }
 
+    common::Type Checker::check_cast(common::Cast cast) {
+        common::Type dst = module_.get_type(cast.to);
+        if (dst.is_error()) {
+            report_error("can not cast to unknown type");
+            return common::Type{};
+        }
+        common::TypeTraits dst_traits = module_.get_traits(dst);
+
+        common::Type src = check_expression(cast.from);
+        if (src.is_error()) {
+            return common::Type{};
+        }
+        common::TypeTraits src_traits = module_.get_traits(src);
+
+        // TODO: empty traits
+        if (dst_traits == src_traits) {
+            return dst;
+        }
+
+        if (!common::empty(dst_traits & common::TypeTraits::BOOLEAN) ||
+            !common::empty(src_traits & common::TypeTraits::BOOLEAN)) {
+            report_error("can not cast to bool");
+            return common::Type{};
+        }
+
+        return dst;
+    }
+
     common::Type Checker::get_type_for_literal(common::Literal lit) {
         switch (lit.type) {
         case common::LiteralType::BOOL:
@@ -135,18 +178,5 @@ namespace checker {
             report_error("unknown literal type");
             return common::Type{};
         }
-    }
-
-    bool Checker::can_implicitly_convert(common::Type dst, common::Type src) const {
-        std::optional<common::BuiltinTypes> builtin_dst = module_.get_builtin(dst);
-        if (!builtin_dst) {
-            return false;
-        }
-        std::optional<common::BuiltinTypes> builtin_src = module_.get_builtin(src);
-        if (!builtin_src) {
-            return false;
-        }
-
-        return builtin_dst == common::BuiltinTypes::FLOAT && builtin_src == common::BuiltinTypes::UINT;
     }
 } // namespace checker

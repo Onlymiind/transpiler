@@ -30,6 +30,9 @@ namespace common {
         GREATER_EQUALS,
         NOT,
 
+        // identifier
+        IDENTIFIER,
+
         // punctuation
         LEFT_PARENTHESIS,
         RIGH_PARENTHESIS,

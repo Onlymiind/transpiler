@@ -1,6 +1,7 @@
 #ifndef COMPILER_V2_COMMON_TYPES_HDR_
 #define COMPILER_V2_COMMON_TYPES_HDR_
 
+#include "common/literals.h"
 #include "common/util.h"
 
 #include <cstdint>
@@ -34,6 +35,12 @@ namespace common {
     constexpr inline bool empty(TypeTraits traits) {
         return traits == TypeTraits::NONE;
     }
+
+    struct BuiltinType {
+        Literals::ID name = Literals::g_invalid_id;
+        BuiltinTypes type{};
+        TypeTraits traits{};
+    };
 
     struct Type {
         using ID = Distinct<uint64_t, Type>;
