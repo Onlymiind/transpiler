@@ -97,6 +97,7 @@ namespace common {
 
         ExpressionType type = ExpressionType::ERROR;
         ID id = g_invalid_id;
+        size_t pos = 0;
 
         constexpr bool is_error() const {
             return type == ExpressionType::ERROR;

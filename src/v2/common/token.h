@@ -57,6 +57,8 @@ namespace common {
 
         Literals::ID data = Literals::g_invalid_id;
 
+        size_t pos = 0;
+
         constexpr bool is_error() const noexcept {
             return type == TokenType::ERROR;
         }
@@ -75,11 +77,20 @@ namespace common {
         static constexpr Token g_eof = Token{.type = TokenType::END_OF_FILE};
 
       public:
-        using Base::span;
+        constexpr Tokens() = default;
         constexpr Tokens(std::span<const Token> tokens) noexcept
-            : Base(tokens) {}
+            : Base(tokens) {
+            if (!tokens.empty()) {
+                eof_.pos = tokens.back().pos;
+            }
+        }
 
-        using Base::operator=;
+        constexpr Tokens &operator=(Tokens other) noexcept {
+            Base::operator=(other);
+            eof_ = other.eof_;
+            return *this;
+        }
+
         using Base::begin;
         using Base::data;
         using Base::empty;
@@ -91,7 +102,7 @@ namespace common {
 
         constexpr inline const Token &back() const noexcept {
             if (empty()) {
-                return g_eof;
+                return eof_;
             }
 
             return Base::back();
@@ -99,7 +110,7 @@ namespace common {
 
         constexpr inline const Token &front() const noexcept {
             if (empty()) {
-                return g_eof;
+                return eof_;
             }
 
             return Base::front();
@@ -117,6 +128,7 @@ namespace common {
             }
 
             Tokens result{Base::subspan(offset, count)};
+            result.eof_ = eof_;
             return result;
         }
 
@@ -126,6 +138,10 @@ namespace common {
             }
 
             Tokens result{Base::first(count)};
+            result.eof_ = eof_;
+            if (count < size()) {
+                result.eof_.pos = Base::operator[](count).pos;
+            }
             return result;
         }
 
@@ -135,18 +151,20 @@ namespace common {
             }
 
             Tokens result{Base::last(count)};
+            result.eof_ = eof_;
             return result;
         }
 
         constexpr inline const Token &operator[](size_t idx) const noexcept {
             if (idx >= size()) {
-                return g_eof;
+                return eof_;
             }
 
             return Base::operator[](idx);
         }
 
       private:
+        Token eof_{.type = TokenType::END_OF_FILE};
     };
 
 } // namespace common

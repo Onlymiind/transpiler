@@ -3,6 +3,7 @@
 #include "common/types.h"
 
 namespace checker {
+
     void Checker::check() {
         builtin_types_[common::BuiltinTypes::BOOL] = module_.add_type(common::BuiltinType{
             .name = module_.file().literals().add("bool"),
@@ -28,6 +29,7 @@ namespace checker {
         }
 
         common::Type result{};
+        err_positions_.push(expr.pos);
         switch (expr.type) {
         case common::ExpressionType::LITERAL:
             result = get_type_for_literal(*module_.file().get_literal(expr.id));
@@ -50,6 +52,7 @@ namespace checker {
             return result;
         }
         module_.set_expression_type(expr.id, result);
+        err_positions_.pop();
         return result;
     }
 

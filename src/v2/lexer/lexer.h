@@ -3,6 +3,7 @@
 
 #include "common/literals.h"
 #include "common/token.h"
+#include "common/util.h"
 
 #include <cstdio>
 #include <fstream>
@@ -33,17 +34,22 @@ namespace lexer {
         common::Token get_op();
 
         std::optional<char> get_char();
+        void put_back(char c);
 
-        void report_error(std::string_view error) { err_ = error; }
+        void report_error(std::string_view error) {
+            err_.msg = error;
+            err_.pos = current_pos_;
+        }
 
-        std::string_view get_error() const { return err_; }
+        common::Error get_error() const { return err_; }
 
       private:
         std::vector<common::Token> tokens_{};
         common::Literals literals_;
         std::istream *file_ = nullptr;
 
-        std::string_view err_{};
+        common::Error err_;
+        size_t current_pos_ = 0;
     };
 } // namespace lexer
 

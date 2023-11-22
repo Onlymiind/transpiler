@@ -4,10 +4,12 @@
 #include "common/expression.h"
 #include "common/file.h"
 #include "common/token.h"
+#include "common/util.h"
 
 #include <string_view>
 #include <utility>
 #include <vector>
+
 namespace parser {
 
     class Parser {
@@ -32,8 +34,11 @@ namespace parser {
             return file;
         }
 
-        void report_error(std::string_view error) noexcept { err_ = error; }
-        std::string_view get_error() const noexcept { return err_; }
+        void report_error(std::string_view error) noexcept {
+            err_.msg = error;
+            err_.pos = next().pos;
+        }
+        common::Error get_error() const noexcept { return err_; }
 
         const common::Token &next() const { return remainder_.front(); }
         void consume() { remainder_ = remainder_.subspan(1); }
@@ -45,7 +50,7 @@ namespace parser {
         common::Tokens remainder_{};
         common::File file_;
 
-        std::string_view err_{};
+        common::Error err_{};
     };
 } // namespace parser
 

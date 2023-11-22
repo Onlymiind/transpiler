@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <functional>
+#include <string_view>
 #include <type_traits>
 
 namespace common {
@@ -33,6 +34,13 @@ namespace common {
     {
         return static_cast<std::underlying_type_t<T>>(val);
     }
+
+    struct Error {
+        std::string_view msg{};
+        size_t pos = 0;
+
+        constexpr bool empty() const { return msg.empty(); }
+    };
 } // namespace common
 
 namespace std {

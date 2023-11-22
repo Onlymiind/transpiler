@@ -5,7 +5,10 @@
 #include "common/file.h"
 #include "common/module.h"
 #include "common/types.h"
+#include "common/util.h"
 
+#include <cstddef>
+#include <stack>
 #include <string_view>
 
 namespace checker {
@@ -29,13 +32,17 @@ namespace checker {
 
         common::Type check_literal();
 
-        void report_error(std::string_view err) { err_ = err; }
-        std::string_view get_error() const { return err_; }
+        void report_error(std::string_view err) {
+            err_.msg = err;
+            err_.pos = err_positions_.top();
+        }
+        common::Error get_error() const { return err_; }
 
       private:
         common::Module module_;
         std::unordered_map<common::BuiltinTypes, common::Type> builtin_types_;
-        std::string_view err_;
+        common::Error err_;
+        std::stack<size_t> err_positions_;
     };
 
 } // namespace checker

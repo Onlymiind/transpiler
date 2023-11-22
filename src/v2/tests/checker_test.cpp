@@ -39,7 +39,7 @@ void run_tests(const std::vector<CheckerTestCase> cases) {
 
         checker::Checker ch{p.reset()};
         ch.check();
-        INFO(ch.get_error());
+        INFO(ch.get_error().msg);
         if (c.should_fail) {
             REQUIRE(!ch.get_error().empty());
             continue;

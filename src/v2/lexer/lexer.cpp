@@ -18,7 +18,15 @@ namespace lexer {
         if (c == EOF) {
             return {};
         }
+        ++current_pos_;
         return static_cast<char>(c);
+    }
+
+    void Lexer::put_back(char c) {
+        file_->putback(c);
+        if (current_pos_ > 0) {
+            --current_pos_;
+        }
     }
 
     void Lexer::consume_spaces() {
@@ -26,7 +34,7 @@ namespace lexer {
         for (; c && std::isspace(*c); c = get_char()) {
         }
         if (file_ && c) {
-            file_->putback(*c);
+            put_back(*c);
         }
     }
 
@@ -51,7 +59,7 @@ namespace lexer {
             }
             if (tok.is_error()) {
                 if (err_.empty()) {
-                    err_ = "unknown error";
+                    report_error("unknown error");
                 }
                 return;
             }
@@ -76,21 +84,24 @@ namespace lexer {
         }
 
         if (c) {
-            file_->putback(*c);
+            put_back(*c);
         }
 
         if (buf == "true") {
             result.type = common::TokenType::BOOL;
             result.data = common::Literals::g_true_id;
+            result.pos = current_pos_;
             return result;
         } else if (buf == "false") {
             result.type = common::TokenType::BOOL;
             result.data = common::Literals::g_false_id;
+            result.pos = current_pos_;
             return result;
         }
 
         result.type = common::TokenType::IDENTIFIER;
         result.data = literals_.add(std::move(buf));
+        result.pos = current_pos_;
 
         return result;
     }
@@ -110,10 +121,11 @@ namespace lexer {
 
         if (!c || (*c != '.' && !std::isalpha(*c))) {
             if (c) {
-                file_->putback(*c);
+                put_back(*c);
             }
             result.type = common::TokenType::INTEGER;
             result.data = literals_.add(integer);
+            result.pos = current_pos_;
             return result;
         } else if (*c != '.') {
             report_error("expected either . or a space after numeric literal");
@@ -134,20 +146,21 @@ namespace lexer {
         }
 
         if (c) {
-            file_->putback(*c);
+            put_back(*c);
         }
 
         result.type = common::TokenType::FLOAT;
         result.data = literals_.add(static_cast<double>(integer) +
                                     static_cast<double>(fraction) /
                                         static_cast<double>(exponent));
+        result.pos = current_pos_;
 
         return result;
     }
 
     common::Token Lexer::get_op() {
-        common::Token result;
         std::optional<char> c = get_char();
+        common::Token result{.pos = current_pos_};
         if (!c || !std::ispunct(*c)) {
             return result;
         }
@@ -167,6 +180,7 @@ namespace lexer {
             } else {
                 result.type = NOT;
             }
+            result.pos = current_pos_;
             return result;
         case '<':
             if (file_->peek() == '=') {
@@ -175,6 +189,7 @@ namespace lexer {
             } else {
                 result.type = LESS;
             }
+            result.pos = current_pos_;
             return result;
         case '>':
             if (file_->peek() == '=') {
@@ -183,6 +198,7 @@ namespace lexer {
             } else {
                 result.type = GREATER;
             }
+            result.pos = current_pos_;
             return result;
         case '&': result.type = AND; break;
         case '|': result.type = OR; break;
@@ -195,6 +211,7 @@ namespace lexer {
             result.type = ERROR;
             report_error("invalid operator");
         }
+        result.pos = current_pos_;
 
         return result;
     }

@@ -1,6 +1,8 @@
 #include "parser/parser.h"
 #include "common/expression.h"
 #include "common/token.h"
+
+#include <cstddef>
 #include <cstdint>
 
 namespace parser {
@@ -25,13 +27,14 @@ namespace parser {
         }
 
         common::UnaryExpression result{.op = *common::to_unary_op(next().type)};
+        size_t pos = next().pos;
         consume();
         result.expr = parse_primary_expression();
         if (result.expr.is_error()) {
             return common::Expression{};
         }
 
-        return common::Expression{.type = common::ExpressionType::UNARY, .id = file_.add(result)};
+        return common::Expression{.type = common::ExpressionType::UNARY, .id = file_.add(result), .pos = pos};
     }
 
     common::Expression Parser::parse_primary_expression() {
@@ -42,6 +45,7 @@ namespace parser {
             return common::Expression{
                 .type = common::ExpressionType::LITERAL,
                 .id = file_.add(common::Literal{.type = type, .value = tok.data}),
+                .pos = tok.pos,
             };
         };
 
@@ -79,6 +83,7 @@ namespace parser {
         }
 
         common::Cast result{.to = next().data};
+        size_t pos = next().pos;
         consume();
         if (next().type != common::TokenType::LEFT_PARENTHESIS) {
             report_error("cast: expected '('");
@@ -91,7 +96,7 @@ namespace parser {
             return common::Expression{};
         }
         consume();
-        return common::Expression{.type = common::ExpressionType::CAST, .id = file_.add(result)};
+        return common::Expression{.type = common::ExpressionType::CAST, .id = file_.add(result), .pos = pos};
     }
 
     common::Expression Parser::parse_binary_expression(common::Expression lhs, uint8_t precedence) {
@@ -108,6 +113,7 @@ namespace parser {
                 report_error("operator precedence not implemented");
                 return common::Expression{};
             }
+            size_t pos = next().pos;
             consume();
             common::Expression rhs = parse_unary_expression();
             if (rhs.is_error()) {
@@ -129,6 +135,7 @@ namespace parser {
                     .lhs = lhs,
                     .rhs = rhs,
                 }),
+                .pos = pos,
             };
         }
 
