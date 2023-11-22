@@ -27,7 +27,6 @@ gcc <path-to-output-file>
 ```
 
 ## TODO next (roadmap):
-- nicer error messages
 - parameterless functions
 - scopes and statements
 - variables and parameterised functions
