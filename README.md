@@ -7,7 +7,11 @@ This is a work-in-progress implementation of custom compiled general-purpose lan
 A vertical slice of a future compiler is fully implemented (albeit for now quite incapable) and can be found in ```src/v2``` directory.
 All other files are part of "older" implementation and are left as a reference.
 
-In it's current form the compiler can parse, check (according to basic strict type system) and transpile into C type casts and arbitrary arithmetic and logic expressions.
+Implemented:
+- Basic strict type system
+- Arbitrary arithmetic and logic expressions
+- Explicit type conversions
+- Basic functions and function calls
 
 ## Building
 
@@ -27,7 +31,6 @@ gcc <path-to-output-file>
 ```
 
 ## TODO next (roadmap):
-- parameterless functions
 - scopes and statements
 - variables and parameterised functions
 - if statements
