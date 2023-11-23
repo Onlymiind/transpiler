@@ -54,7 +54,7 @@ namespace checker {
         }
 
         if (module_.entrypoint() == common::Function::g_invalid_id) {
-            err_positions_.push(0);
+            err_positions_.push(1);
             report_error("entrypoint not declared");
         }
     }

@@ -10,7 +10,7 @@
             "name": "tests",
             "program": "${command:cmake.launchTargetDirectory}/tests",
             "args": [],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}/tests/functional"
         },
         {
             "name": "compiler",
