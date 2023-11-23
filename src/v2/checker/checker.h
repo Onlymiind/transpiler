@@ -1,6 +1,7 @@
 #ifndef COMPILER_V2_CHECKER_CHECKER_HDR_
 #define COMPILER_V2_CHECKER_CHECKER_HDR_
 
+#include "common/declarations.h"
 #include "common/expression.h"
 #include "common/file.h"
 #include "common/module.h"
@@ -16,12 +17,16 @@ namespace checker {
       public:
         Checker(common::File &&file) : module_(std::move(file)) {}
 
+        void add_builtins();
+        void add_declarations();
         void check();
 
-        common::Type check_expression(common::Expression expr);
-        common::Type check_unary_expression(common::UnaryExpression expr);
-        common::Type check_binary_expression(common::BinaryExpression expr);
-        common::Type check_cast(common::Cast cast);
+        common::Type check_expression(common::Expression &expr);
+        common::Type check_unary_expression(common::UnaryExpression &expr);
+        common::Type check_binary_expression(common::BinaryExpression &expr);
+        common::Type check_cast(common::Cast &cast);
+        common::Type check_function_call(common::FunctionCall call, common::Expression &incoming_edge);
+        void check_function(common::Function &func);
 
         common::Module reset() {
             common::Module result{std::move(module_)};

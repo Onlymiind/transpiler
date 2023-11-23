@@ -30,12 +30,16 @@ namespace common {
         GREATER_EQUALS,
         NOT,
 
+        // keywords
+        FUNC,
+
         // identifier
         IDENTIFIER,
 
         // punctuation
         LEFT_PARENTHESIS,
-        RIGH_PARENTHESIS,
+        RIGHT_PARENTHESIS,
+        SEMICOLON,
 
         END_OF_FILE
     };

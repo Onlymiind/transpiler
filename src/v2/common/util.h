@@ -1,7 +1,9 @@
 #ifndef COMPILER_V2_COMMON_UTIL_HDR_
 #define COMPILER_V2_COMMON_UTIL_HDR_
 
+#include <concepts>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <string_view>
 #include <type_traits>
@@ -33,6 +35,11 @@ namespace common {
         requires std::is_enum_v<T>
     {
         return static_cast<std::underlying_type_t<T>>(val);
+    }
+
+    template <std::unsigned_integral T>
+    constexpr inline T set_bit(uint8_t bit) {
+        return T{1} << bit;
     }
 
     struct Error {

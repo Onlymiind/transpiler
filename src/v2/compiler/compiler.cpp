@@ -81,7 +81,7 @@ namespace compiler {
         return checker.reset();
     }
 
-    void generate(const common::Module &mod, std::ostream &out, std::ostream &err) {
+    void generate(common::Module &mod, std::ostream &out, std::ostream &err) {
         codegen::Generator generator{out, mod};
         generator.codegen();
         std::string_view error = generator.get_error();

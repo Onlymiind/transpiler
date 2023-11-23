@@ -1,5 +1,4 @@
 #include "compiler/compiler.h"
-#include "lexer/lexer.h"
 
 #include <filesystem>
 #include <fstream>

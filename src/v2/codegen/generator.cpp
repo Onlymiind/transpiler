@@ -1,5 +1,7 @@
 #include "codegen/generator.h"
+#include "common/declarations.h"
 #include "common/expression.h"
+#include "common/file.h"
 #include "common/literals.h"
 #include "common/token.h"
 #include "common/types.h"
@@ -13,39 +15,15 @@ namespace codegen {
             return;
         }
 
-        common::Expression expr = mod_->file().start();
-        if (expr.is_error()) {
-            return;
-        }
-        std::optional<common::BuiltinType> type = mod_->get_builtin(mod_->get_expression_type(expr.id));
-        if (!type) {
-            return;
-        }
-
         *out_ << g_prelude;
-        codegen(type->type);
-        if (error_occured()) {
-            return;
+        codegen_forward_decls();
+        const auto &functions = mod_->file().functions();
+        for (const common::Function &func : functions) {
+            codegen(func);
+            if (error_occured()) {
+                break;
+            }
         }
-
-        *out_ << " result = ";
-
-        codegen(mod_->file().start());
-        if (error_occured()) {
-            return;
-        }
-
-        *out_ << ";\nprintf(\"%";
-        switch (type->type) {
-        case common::BuiltinTypes::BOOL: *out_ << "d"; break;
-        case common::BuiltinTypes::UINT: *out_ << "u"; break;
-        case common::BuiltinTypes::FLOAT: *out_ << "f"; break;
-        default:
-            report_error("result printing: unknown type");
-            return;
-        }
-        *out_ << "\\n\", result);\n"
-              << g_postlude;
     }
 
     void Generator::codegen(common::Expression expr) {
@@ -65,6 +43,9 @@ namespace codegen {
             break;
         case common::ExpressionType::CAST:
             codegen(*mod_->file().get_cast(expr.id), expr.id);
+            break;
+        case common::ExpressionType::FUNCTION_CALL:
+            codegen(*mod_->file().get_call(expr.id));
             break;
         default:
             report_error("unknown expression type");
@@ -176,5 +157,48 @@ namespace codegen {
         codegen(mod_->get_builtin(mod_->get_type(cast.to))->type);
         *out_ << ')';
         codegen(cast.from);
+    }
+
+    void Generator::codegen_forward_decls() {
+        const auto &functions = mod_->file().functions();
+        for (const common::Function &func : functions) {
+            if (func.body.is_error()) {
+                continue;
+            }
+            const std::string &name = *mod_->file().literals().get_string(func.name);
+            if (name == "main") {
+                continue;
+            }
+
+            codegen(mod_->get_builtin(mod_->get_expression_type(func.body.id))->type);
+            *out_ << ' ';
+            *out_ << name;
+            *out_ << "(void);\n";
+        }
+    }
+
+    void Generator::codegen(common::Function func) {
+        if (func.body.is_error()) {
+            return;
+        }
+
+        const std::string &name = *mod_->file().literals().get_string(func.name);
+        if (name == "main") {
+            *out_ << "int";
+        } else {
+            codegen(mod_->get_builtin(mod_->get_expression_type(func.body.id))->type);
+        }
+        *out_ << ' ';
+        *out_ << name;
+        *out_ << "(void) {\nreturn ";
+        if (name == "main") {
+            *out_ << "(int)";
+        }
+        codegen(func.body);
+        *out_ << ";\n}\n";
+    }
+
+    void Generator::codegen(common::FunctionCall call) {
+        *out_ << *mod_->file().literals().get_string(call.name) << "()";
     }
 } // namespace codegen

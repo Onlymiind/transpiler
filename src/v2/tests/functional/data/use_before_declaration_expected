@@ -1,0 +1,10 @@
+// clang-format off
+#include <stdint.h>
+
+uint64_t a(void);
+int main(void) {
+return (int)a();
+}
+uint64_t a(void) {
+return (uint64_t)1;
+}

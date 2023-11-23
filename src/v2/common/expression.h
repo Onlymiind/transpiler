@@ -16,6 +16,7 @@ namespace common {
         UNARY,
         LITERAL,
         CAST,
+        FUNCTION_CALL,
     };
 
     enum class BinaryOp {
@@ -146,6 +147,11 @@ namespace common {
         constexpr bool operator==(const Literal &other) const noexcept {
             return value == other.value;
         }
+    };
+
+    struct FunctionCall {
+        Literals::ID name = Literals::g_invalid_id;
+        std::vector<Expression> args;
     };
 
     // probably should implement separate ID for identifiers

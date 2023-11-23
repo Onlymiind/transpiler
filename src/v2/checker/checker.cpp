@@ -1,29 +1,65 @@
 #include "checker/checker.h"
+#include "common/declarations.h"
 #include "common/expression.h"
 #include "common/types.h"
 
 namespace checker {
 
-    void Checker::check() {
-        builtin_types_[common::BuiltinTypes::BOOL] = module_.add_type(common::BuiltinType{
+    void Checker::add_builtins() {
+        builtin_types_[common::BuiltinTypes::BOOL] = module_.add(common::BuiltinType{
             .name = module_.file().literals().add("bool"),
             .type = common::BuiltinTypes::BOOL,
             .traits = common::TypeTraits::BOOLEAN,
         });
-        builtin_types_[common::BuiltinTypes::UINT] = module_.add_type(common::BuiltinType{
+        builtin_types_[common::BuiltinTypes::UINT] = module_.add(common::BuiltinType{
             .name = module_.file().literals().add("u64"),
             .type = common::BuiltinTypes::UINT,
             .traits = common::TypeTraits::INTEGER,
         });
-        builtin_types_[common::BuiltinTypes::FLOAT] = module_.add_type(common::BuiltinType{
+        builtin_types_[common::BuiltinTypes::FLOAT] = module_.add(common::BuiltinType{
             .name = module_.file().literals().add("f64"),
             .type = common::BuiltinTypes::FLOAT,
             .traits = common::TypeTraits::FLOATING_POINT,
         });
-        check_expression(module_.file().start());
     }
 
-    common::Type Checker::check_expression(common::Expression expr) {
+    void Checker::add_declarations() {
+        add_builtins();
+        const auto &functions = module_.file().functions();
+        for (const auto &func : functions) {
+            if (!module_.add(func)) {
+                err_positions_.push(func.pos);
+                report_error("function redeclaration");
+                return;
+            }
+        }
+    }
+
+    void Checker::check() {
+        add_declarations();
+        if (!err_.empty()) {
+            return;
+        }
+        auto &functions = module_.file().functions();
+        auto &literals = module_.file().literals();
+        for (auto &func : functions) {
+            check_function(func);
+            if (!err_.empty()) {
+                return;
+            }
+
+            if (*literals.get_string(func.name) == "main") {
+                module_.set_entrypoint(func.id);
+            }
+        }
+
+        if (module_.entrypoint() == common::Function::g_invalid_id) {
+            err_positions_.push(0);
+            report_error("entrypoint not declared");
+        }
+    }
+
+    common::Type Checker::check_expression(common::Expression &expr) {
         if (expr.is_error()) {
             return common::Type{};
         }
@@ -43,6 +79,9 @@ namespace checker {
         case common::ExpressionType::CAST:
             result = check_cast(*module_.file().get_cast(expr.id));
             break;
+        case common::ExpressionType::FUNCTION_CALL:
+            result = check_function_call(*module_.file().get_call(expr.id), expr);
+            break;
         default:
             report_error("unknown expression type");
             return common::Type{};
@@ -56,7 +95,7 @@ namespace checker {
         return result;
     }
 
-    common::Type Checker::check_unary_expression(common::UnaryExpression expr) {
+    common::Type Checker::check_unary_expression(common::UnaryExpression &expr) {
         if (expr.expr.is_error()) {
             return common::Type{};
         }
@@ -86,7 +125,7 @@ namespace checker {
         }
     }
 
-    common::Type Checker::check_binary_expression(common::BinaryExpression expr) {
+    common::Type Checker::check_binary_expression(common::BinaryExpression &expr) {
         if (expr.lhs.is_error() || expr.rhs.is_error()) {
             return common::Type{};
         }
@@ -141,7 +180,7 @@ namespace checker {
         return lhs;
     }
 
-    common::Type Checker::check_cast(common::Cast cast) {
+    common::Type Checker::check_cast(common::Cast &cast) {
         common::Type dst = module_.get_type(cast.to);
         if (dst.is_error()) {
             report_error("can not cast to unknown type");
@@ -181,5 +220,39 @@ namespace checker {
             report_error("unknown literal type");
             return common::Type{};
         }
+    }
+
+    common::Type Checker::check_function_call(common::FunctionCall call, common::Expression &incoming_edge) {
+        if (!module_.get_type(call.name).is_error()) {
+            if (call.args.size() != 1) {
+                report_error("expected exactly 1 argument for a cast");
+                return common::Type{};
+            }
+            common::Cast cast{.to = call.name, .from = call.args[0]};
+            incoming_edge.type = common::ExpressionType::CAST;
+            incoming_edge.id = module_.file().add(cast);
+            return check_cast(cast);
+        }
+
+        common::Function::ID id = module_.get_function(call.name);
+        if (id == common::Function::g_invalid_id) {
+            report_error("function not defined");
+            return common::Type{};
+        }
+        common::Expression &expr = module_.file().get_function(id)->body;
+        if (expr.is_error()) {
+            // function declared, but not defined
+            report_error("function not defined");
+            return common::Type{};
+        }
+        if (common::Type result = module_.get_expression_type(expr.id); !result.is_error()) {
+            return result;
+        }
+
+        return check_expression(expr);
+    }
+
+    void Checker::check_function(common::Function &func) {
+        check_expression(func.body);
     }
 } // namespace checker

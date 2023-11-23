@@ -43,6 +43,7 @@ set(TEST_SRCS
     tests/parser_test.cpp
     tests/checker_test.cpp
     tests/generator_test.cpp
+    tests/functional/functional_tests.cpp
 )
 
 add_executable(tests ${TEST_SRCS})
@@ -51,6 +52,6 @@ target_link_libraries(tests Catch2WithMain compiler_lib)
 
 include(CTest)
 include(Catch)
-catch_discover_tests(tests)
+catch_discover_tests(tests WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/functional)
 
 

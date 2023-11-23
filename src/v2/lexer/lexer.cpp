@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <optional>
 #include <string_view>
+#include <unordered_map>
 
 namespace lexer {
     std::optional<char> Lexer::get_char() {
@@ -69,6 +70,11 @@ namespace lexer {
         }
     }
 
+    static const std::unordered_map<std::string_view, common::Token> g_keywords{
+        {"true", common::Token{.type = common::TokenType::BOOL, .data = common::Literals::g_true_id}},
+        {"false", common::Token{.type = common::TokenType::BOOL, .data = common::Literals::g_false_id}},
+        {"func", common::Token{.type = common::TokenType::FUNC}}};
+
     common::Token Lexer::get_identifier() {
         common::Token result{};
         std::optional<char> c = get_char();
@@ -87,14 +93,9 @@ namespace lexer {
             put_back(*c);
         }
 
-        if (buf == "true") {
-            result.type = common::TokenType::BOOL;
-            result.data = common::Literals::g_true_id;
-            result.pos = current_pos_;
-            return result;
-        } else if (buf == "false") {
-            result.type = common::TokenType::BOOL;
-            result.data = common::Literals::g_false_id;
+        auto it = g_keywords.find(buf);
+        if (it != g_keywords.end()) {
+            result = it->second;
             result.pos = current_pos_;
             return result;
         }
@@ -172,7 +173,8 @@ namespace lexer {
         case '%': result.type = REMAINDER; return result;
         case '/': result.type = DIV; return result;
         case '(': result.type = LEFT_PARENTHESIS; return result;
-        case ')': result.type = RIGH_PARENTHESIS; return result;
+        case ')': result.type = RIGHT_PARENTHESIS; return result;
+        case ';': result.type = SEMICOLON; return result;
         case '!':
             if (file_->peek() == '=') {
                 result.type = NOT_EQUALS;

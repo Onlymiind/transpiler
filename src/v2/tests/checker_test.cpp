@@ -34,11 +34,12 @@ void run_tests(const std::vector<CheckerTestCase> cases) {
         REQUIRE(l.get_error().empty());
         auto [tokens, literals] = l.reset();
         parser::Parser p{std::move(tokens), std::move(literals)};
-        p.parse();
+        auto expr = p.parse_expression();
         REQUIRE(p.get_error().empty());
-
-        checker::Checker ch{p.reset()};
-        ch.check();
+        auto file = p.reset();
+        checker::Checker ch{std::move(file)};
+        ch.add_builtins();
+        auto type = ch.check_expression(expr);
         INFO(ch.get_error().msg);
         if (c.should_fail) {
             REQUIRE(!ch.get_error().empty());
@@ -48,7 +49,7 @@ void run_tests(const std::vector<CheckerTestCase> cases) {
         REQUIRE(ch.get_error().empty());
 
         auto mod = ch.reset();
-        REQUIRE(c.expected == mod.get_builtin(mod.get_expression_type(mod.file().start().id))->type);
+        REQUIRE(c.expected == mod.get_builtin(type)->type);
     }
 }
 

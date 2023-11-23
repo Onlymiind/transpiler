@@ -1,3 +1,4 @@
+#include "common/declarations.h"
 #include "common/expression.h"
 #include "common/file.h"
 #include "common/literals.h"
@@ -8,6 +9,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
+#include <cstddef>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -20,7 +22,7 @@ class PolishNotationParser {
         : tokens_(std::move(tokens)), remainder_(tokens_), file_(std::move(literals)) {}
 
     common::File parse() {
-        file_.set_start(parse_expression());
+        file_.set_start_expression(parse_expression());
 
         common::File result = std::move(file_);
         return result;
@@ -56,10 +58,10 @@ class PolishNotationParser {
             consume();
             return parse_unary_expression();
         case common::TokenType::IDENTIFIER: {
-            common::Cast result{.to = next().data};
+            common::FunctionCall result{.name = next().data};
             consume();
-            result.from = parse_expression();
-            return common::Expression{.type = common::ExpressionType::CAST, .id = file_.add(result)};
+            result.args.push_back(parse_expression());
+            return common::Expression{.type = common::ExpressionType::FUNCTION_CALL, .id = file_.add(result)};
         }
         }
 
@@ -93,7 +95,7 @@ class PolishNotationParser {
     common::File file_;
 };
 
-bool compare(common::Expression lhs, common::Expression rhs, const common::File &lhs_file, const common::File &rhs_file) {
+bool compare(common::Expression lhs, common::Expression rhs, common::File &lhs_file, common::File &rhs_file) {
     if (lhs.type != rhs.type) {
         return false;
     }
@@ -122,6 +124,22 @@ bool compare(common::Expression lhs, common::Expression rhs, const common::File 
         auto str2 = *rhs_file.literals().get_string(rhs_cast.to);
         return str1 == str2 &&
                compare(lhs_cast.from, rhs_cast.from, lhs_file, rhs_file);
+    }
+    case common::ExpressionType::FUNCTION_CALL: {
+        auto lhs_call = *lhs_file.get_call(lhs.id);
+        auto rhs_call = *rhs_file.get_call(rhs.id);
+        if (*lhs_file.literals().get_string(lhs_call.name) != *rhs_file.literals().get_string(rhs_call.name)) {
+            return false;
+        }
+        if (lhs_call.args.size() != rhs_call.args.size()) {
+            return false;
+        }
+        for (size_t i = 0; i < lhs_call.args.size(); ++i) {
+            if (!compare(lhs_call.args[i], rhs_call.args[i], lhs_file, rhs_file)) {
+                return false;
+            }
+        }
+        return true;
     }
     case common::ExpressionType::LITERAL: {
         auto lhs_lit = *lhs_file.get_literal(lhs.id);
@@ -160,10 +178,10 @@ TEST_CASE("parser: literals", "[parser]") {
     auto [got_tokens, got_literals] = l.reset();
 
     parser::Parser p{std::move(got_tokens), std::move(got_literals)};
-    p.parse();
+    auto result = p.parse_expression();
     REQUIRE(p.get_error().empty());
-    auto result = p.reset();
-    REQUIRE(compare(result.start(), expected.start(), result, expected));
+    auto file = p.reset();
+    REQUIRE(compare(result, expected.start_expression(), file, expected));
 }
 
 struct ParserTestCase {
@@ -189,10 +207,10 @@ void run_tests(const std::vector<ParserTestCase> &cases) {
         lexer_result = l.reset();
 
         parser::Parser p{std::move(lexer_result.first), std::move(lexer_result.second)};
-        p.parse();
+        auto result = p.parse_expression();
         REQUIRE(p.get_error().empty());
-        auto result = p.reset();
-        REQUIRE(compare(result.start(), expected.start(), result, expected));
+        auto file = p.reset();
+        REQUIRE(compare(result, expected.start_expression(), file, expected));
     }
 }
 
@@ -260,6 +278,55 @@ TEST_CASE("parser: precedence", "[parser]") {
     run_tests(cases);
 }
 
+TEST_CASE("parser: functions", "[parser]") {
+    struct Case {
+        std::string str;
+        std::vector<common::Function> expected;
+        bool should_fail = false;
+    };
+
+    common::Literals lit;
+    std::vector<Case> cases = {
+        Case{"func abc() 1;", {common::Function{.name = lit.add("abc"), .body = common::Expression{.type = common::ExpressionType::LITERAL}}}},
+        Case{"func abc() 1; func cba() -1.1; func acb() 1 + 2;", {
+                                                                     common::Function{.name = lit.add("abc"), .body = common::Expression{.type = common::ExpressionType::LITERAL}},
+                                                                     common::Function{.name = lit.add("cba"), .body = common::Expression{.type = common::ExpressionType::UNARY}},
+                                                                     common::Function{.name = lit.add("acb"), .body = common::Expression{.type = common::ExpressionType::BINARY}},
+                                                                 }},
+        Case{.str = "func", .should_fail = true},
+        Case{.str = "func () 1;", .should_fail = true},
+        Case{.str = "func a(", .should_fail = true},
+        Case{.str = "func a()", .should_fail = true},
+        Case{.str = "func a();", .expected = {common::Function{.name = lit.add("a")}}},
+        Case{.str = "func a() 1", .should_fail = true},
+    };
+
+    for (auto &c : cases) {
+        INFO(c.str);
+        std::stringstream str(c.str);
+        lexer::Lexer l{str};
+        l.split();
+        REQUIRE(l.get_error().empty());
+        auto lexer_result = l.reset();
+
+        parser::Parser p{std::move(lexer_result.first), std::move(lexer_result.second)};
+        p.parse();
+        INFO(p.get_error().msg);
+        if (c.should_fail) {
+            REQUIRE(!p.get_error().empty());
+            continue;
+        }
+
+        REQUIRE(p.get_error().empty());
+        auto file = p.reset();
+        REQUIRE(file.functions().size() == c.expected.size());
+        for (size_t i = 0; i < c.expected.size(); ++i) {
+            REQUIRE(*lit.get_string(c.expected[i].name) == *file.literals().get_string(file.functions()[i].name));
+            REQUIRE(c.expected[i].body.type == file.functions()[i].body.type);
+        }
+    }
+}
+
 TEST_CASE("parser: fails", "[parser]") {
     std::stringstream in{GENERATE(as<std::string>{}, "1 +", "-", "(1 + 3", "true && ==", "!*", "bool", "bool 1", "bool(1")};
     lexer::Lexer l{in};
@@ -267,6 +334,6 @@ TEST_CASE("parser: fails", "[parser]") {
     REQUIRE(l.get_error().empty());
     auto [tokens, literals] = l.reset();
     parser::Parser p{std::move(tokens), std::move(literals)};
-    p.parse();
+    p.parse_expression();
     REQUIRE(!p.get_error().empty());
 }

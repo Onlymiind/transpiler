@@ -1,4 +1,5 @@
 #include "parser/parser.h"
+#include "common/declarations.h"
 #include "common/expression.h"
 #include "common/token.h"
 
@@ -7,9 +8,11 @@
 
 namespace parser {
     void Parser::parse() {
-        file_.set_start(parse_expression());
-        if (!next().is_eof()) {
-            report_error("expected end of file");
+        while (!next().is_eof()) {
+            parse_function();
+            if (!err_.empty()) {
+                break;
+            }
         }
     }
 
@@ -56,7 +59,7 @@ namespace parser {
             if (result.is_error()) {
                 break;
             }
-            if (next().type != RIGH_PARENTHESIS) {
+            if (next().type != RIGHT_PARENTHESIS) {
                 report_error("expected ')'");
                 break;
             }
@@ -64,7 +67,7 @@ namespace parser {
             return result;
         }
 
-        case IDENTIFIER: return parse_cast();
+        case IDENTIFIER: return parse_function_call();
         case BOOL: return make_literal_expr(common::LiteralType::BOOL);
         case INTEGER: return make_literal_expr(common::LiteralType::UINT);
         case FLOAT: return make_literal_expr(common::LiteralType::FLOAT);
@@ -76,27 +79,29 @@ namespace parser {
         return common::Expression{};
     }
 
-    common::Expression Parser::parse_cast() {
+    common::Expression Parser::parse_function_call() {
         if (next().type != common::TokenType::IDENTIFIER) {
-            report_error("expected identifier");
+            report_error("function call: expected identifier");
             return common::Expression{};
         }
 
-        common::Cast result{.to = next().data};
+        common::FunctionCall result{.name = next().data};
         size_t pos = next().pos;
         consume();
         if (next().type != common::TokenType::LEFT_PARENTHESIS) {
-            report_error("cast: expected '('");
+            report_error("function call: expected '('");
             return common::Expression{};
         }
         consume();
-        result.from = parse_expression();
-        if (next().type != common::TokenType::RIGH_PARENTHESIS) {
-            report_error("cast: expected ')'");
+        if (next().type != common::TokenType::RIGHT_PARENTHESIS) {
+            result.args.push_back(parse_expression());
+        }
+        if (next().type != common::TokenType::RIGHT_PARENTHESIS) {
+            report_error("function call: expected ')'");
             return common::Expression{};
         }
         consume();
-        return common::Expression{.type = common::ExpressionType::CAST, .id = file_.add(result), .pos = pos};
+        return common::Expression{.type = common::ExpressionType::FUNCTION_CALL, .id = file_.add(result), .pos = pos};
     }
 
     common::Expression Parser::parse_binary_expression(common::Expression lhs, uint8_t precedence) {
@@ -140,5 +145,45 @@ namespace parser {
         }
 
         return lhs;
+    }
+
+    common::Function Parser::parse_function() {
+        common::Function result{.pos = next().pos};
+        if (next().type != common::TokenType::FUNC) {
+            report_error("exprected \"func\" keyword");
+            return result;
+        }
+        consume();
+
+        if (next().type != common::TokenType::IDENTIFIER) {
+            report_error("expected function name");
+            return result;
+        }
+        result.name = next().data;
+        consume();
+        if (next().type != common::TokenType::LEFT_PARENTHESIS) {
+            report_error("expected \"(\"");
+            return common::Function{};
+        }
+        consume();
+        if (next().type != common::TokenType::RIGHT_PARENTHESIS) {
+            report_error("expected \")\"");
+            return common::Function{};
+        }
+        consume();
+        if (next().type != common::TokenType::SEMICOLON) {
+            result.body = parse_expression();
+            if (result.body.is_error()) {
+                return common::Function{};
+            }
+        }
+        if (next().type != common::TokenType::SEMICOLON) {
+            report_error("expected \";\"");
+            return common::Function{};
+        }
+        consume();
+
+        result.id = file_.add(result);
+        return result;
     }
 } // namespace parser

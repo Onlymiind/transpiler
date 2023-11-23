@@ -1,6 +1,7 @@
 #ifndef COMPILER_V2_CODEGEN_GENERATOR_HDR_
 #define COMPILER_V2_CODEGEN_GENERATOR_HDR_
 
+#include "common/declarations.h"
 #include "common/expression.h"
 #include "common/module.h"
 #include "common/types.h"
@@ -8,21 +9,18 @@
 #include <string_view>
 
 namespace codegen {
-    constexpr std::string_view g_prelude =
-        "#include <stdint.h>\n"
-        "#include <stdio.h>\n"
-        "int main() {\n";
+    constexpr std::string_view g_prelude = "#include <stdint.h>\n\n";
     constexpr std::string_view g_postlude = "\n}";
 
     class Generator {
       public:
         Generator() = default;
         Generator(std::ostream &out) : out_(&out) {}
-        Generator(const common::Module &mod) : mod_(&mod) {}
-        Generator(std::ostream &out, const common::Module &mod) : out_(&out), mod_(&mod) {}
+        Generator(common::Module &mod) : mod_(&mod) {}
+        Generator(std::ostream &out, common::Module &mod) : out_(&out), mod_(&mod) {}
 
         void set_file(std::ostream &out) { out_ = &out; }
-        void set_module(const common::Module &mod) { mod_ = &mod; }
+        void set_module(common::Module &mod) { mod_ = &mod; }
 
         void codegen();
 
@@ -39,6 +37,12 @@ namespace codegen {
 
         void codegen(common::Cast cast, common::Expression::ID expr);
 
+        void codegen(common::Function func);
+
+        void codegen(common::FunctionCall call);
+
+        void codegen_forward_decls();
+
         void report_error(std::string_view err) { err_ = err; }
         std::string_view get_error() const { return err_; }
 
@@ -46,7 +50,7 @@ namespace codegen {
 
       private:
         std::ostream *out_ = nullptr;
-        const common::Module *mod_ = nullptr;
+        common::Module *mod_ = nullptr;
         std::string_view err_;
     };
 } // namespace codegen

@@ -1,0 +1,4 @@
+func a() 1 + 2;
+func b() -1.1;
+
+func main() b() == f64(a());

@@ -47,6 +47,39 @@ TEST_CASE("lexer: booleans", "[lexer]") {
     }
 }
 
+TEST_CASE("lexer: keywords", "[lexer]") {
+    std::vector<TestCase> cases = {
+        {"func", common::Token{.type = common::TokenType::FUNC}},
+    };
+
+    for (auto c : cases) {
+        INFO("Test case: ");
+        INFO(c.str);
+        std::stringstream in{std::string{c.str.data(), c.str.size()}};
+        lexer::Lexer l{in};
+        auto t = l.get_identifier();
+
+        REQUIRE(t.type == c.expected.type);
+    }
+}
+
+TEST_CASE("lexer: punctuation", "[lexer]") {
+    std::vector<TestCase> cases = {
+        {"(", common::Token{.type = common::TokenType::LEFT_PARENTHESIS}},
+        {")", common::Token{.type = common::TokenType::RIGHT_PARENTHESIS}},
+        {";", common::Token{.type = common::TokenType::SEMICOLON}}};
+
+    for (auto c : cases) {
+        INFO("Test case: ");
+        INFO(c.str);
+        std::stringstream in{std::string{c.str.data(), c.str.size()}};
+        lexer::Lexer l{in};
+        auto t = l.get_op();
+
+        REQUIRE(t.type == c.expected.type);
+    }
+}
+
 TEST_CASE("lexer: integers", "[lexer]") {
     common::Literals lit;
 
@@ -159,6 +192,7 @@ TEST_CASE("lexer: identifiers", "[lexer]") {
         {"false12456_", common::Token{.type = common::TokenType::IDENTIFIER, .data = lit.add("false12456_")}},
         {"_1234", common::Token{.type = common::TokenType::IDENTIFIER, .data = lit.add("_1234")}},
         {"id_id_id ", common::Token{.type = common::TokenType::IDENTIFIER, .data = lit.add("id_id_id")}},
+        {"fun", common::Token{.type = common::TokenType::IDENTIFIER, .data = lit.add("fun")}},
         {.str = "1234", .should_fail = true},
         {.str = "", .should_fail = true},
         {.str = "+-", .should_fail = true},

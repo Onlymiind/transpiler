@@ -1,6 +1,7 @@
 #ifndef COMPILER_V2_PARSES_PARSER_HDR_
 #define COMPILER_V2_PARSES_PARSER_HDR_
 
+#include "common/declarations.h"
 #include "common/expression.h"
 #include "common/file.h"
 #include "common/token.h"
@@ -27,7 +28,9 @@ namespace parser {
         common::Expression parse_expression();
         common::Expression parse_unary_expression();
         common::Expression parse_primary_expression();
-        common::Expression parse_cast();
+        common::Expression parse_function_call();
+
+        common::Function parse_function();
 
         common::File reset() noexcept {
             common::File file{std::move(file_)};

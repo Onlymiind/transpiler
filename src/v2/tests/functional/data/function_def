@@ -1,0 +1,9 @@
+func a();
+
+func b() 1 + 2;
+
+func c() bool(f64(1) == f64(2));
+
+func d() -1.1;
+
+func main() 1;
