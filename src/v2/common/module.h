@@ -18,7 +18,7 @@ namespace common {
         Module(AST &&file) : file_(std::move(file)) {}
 
         Type add(BuiltinType type) {
-            Type result{.id = Type::ID{current_id_}};
+            Type result{.id = TypeID{current_id_}};
             ++current_id_;
             type_to_info_[result.id] = type;
             types_[result.id] = type.traits;
@@ -31,7 +31,7 @@ namespace common {
             if (name_to_type_.contains(func.name)) {
                 return false;
             }
-            return name_to_function_.insert(std::pair<Literals::ID, Function::ID>{func.name, func.id}).second;
+            return name_to_function_.insert(std::pair<LiteralID, FunctionID>{func.name, func.id}).second;
         }
 
         std::optional<BuiltinType> get_builtin(Type type) const {
@@ -43,17 +43,17 @@ namespace common {
             return it->second;
         }
 
-        Type get_type(Identifiers::ID name) const {
+        Type get_type(IdentifierID name) const {
             auto it = name_to_type_.find(name);
             return it == name_to_type_.end() ? Type{} : Type{.id = it->second};
         }
 
-        Function::ID get_function(Identifiers::ID name) const {
+        FunctionID get_function(IdentifierID name) const {
             auto it = name_to_function_.find(name);
-            return it == name_to_function_.end() ? Function::ID{g_invalid_id} : it->second;
+            return it == name_to_function_.end() ? FunctionID{g_invalid_id} : it->second;
         }
 
-        Type get_expression_type(Expression::ID expr) const {
+        Type get_expression_type(ExpressionID expr) const {
             auto it = expression_types_.find(expr);
             if (it == expression_types_.end()) {
                 return Type{};
@@ -66,26 +66,26 @@ namespace common {
             return types_.at(type.id);
         }
 
-        void set_expression_type(Expression::ID expr, Type type) {
+        void set_expression_type(ExpressionID expr, Type type) {
             expression_types_[expr] = type;
         }
 
         AST &file() { return file_; }
         const AST &file() const { return file_; }
 
-        common::Function::ID entrypoint() const { return entrypoint_; }
-        void set_entrypoint(common::Function::ID id) { entrypoint_ = id; }
+        common::FunctionID entrypoint() const { return entrypoint_; }
+        void set_entrypoint(common::FunctionID id) { entrypoint_ = id; }
 
       private:
         AST file_;
 
-        std::unordered_map<Type::ID, TypeTraits> types_;
-        std::unordered_map<Type::ID, BuiltinType> type_to_info_;
-        std::unordered_map<Identifiers::ID, Type::ID> name_to_type_;
-        std::unordered_map<Identifiers::ID, Function::ID> name_to_function_;
-        std::unordered_map<Expression::ID, Type> expression_types_;
+        std::unordered_map<TypeID, TypeTraits> types_;
+        std::unordered_map<TypeID, BuiltinType> type_to_info_;
+        std::unordered_map<IdentifierID, TypeID> name_to_type_;
+        std::unordered_map<IdentifierID, FunctionID> name_to_function_;
+        std::unordered_map<ExpressionID, Type> expression_types_;
 
-        common::Function::ID entrypoint_ = common::Function::ID{g_invalid_id};
+        common::FunctionID entrypoint_ = common::FunctionID{g_invalid_id};
         uint64_t current_id_ = 0;
     };
 } // namespace common

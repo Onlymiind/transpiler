@@ -20,10 +20,10 @@ struct TestCase {
 
 TEST_CASE("lexer: booleans", "[lexer]") {
     std::vector<TestCase> cases = {
-        {"true", common::Token{.type = common::TokenType::BOOL, .data = common::GenericID{common::Literals::g_true_id}}},
-        {"false", common::Token{.type = common::TokenType::BOOL, .data = common::GenericID{common::Literals::g_false_id}}},
-        {"true\t", common::Token{.type = common::TokenType::BOOL, .data = common::GenericID{common::Literals::g_true_id}}},
-        {"false ", common::Token{.type = common::TokenType::BOOL, .data = common::GenericID{common::Literals::g_false_id}}},
+        {"true", common::Token{.type = common::TokenType::BOOL, .data = common::GenericID{common::g_true_id}}},
+        {"false", common::Token{.type = common::TokenType::BOOL, .data = common::GenericID{common::g_false_id}}},
+        {"true\t", common::Token{.type = common::TokenType::BOOL, .data = common::GenericID{common::g_true_id}}},
+        {"false ", common::Token{.type = common::TokenType::BOOL, .data = common::GenericID{common::g_false_id}}},
         {.str = "1234", .should_fail = true},
         {.str = "", .should_fail = true},
         {.str = "+-", .should_fail = true},
@@ -106,7 +106,7 @@ TEST_CASE("lexer: integers", "[lexer]") {
 
         auto result = l.reset();
         REQUIRE(t.type == c.expected.type);
-        REQUIRE(result.literals.get_integer(common::Literals::ID{t.data}) == lit.get_integer(common::Literals::ID{c.expected.data}));
+        REQUIRE(result.literals.get_integer(common::LiteralID{t.data}) == lit.get_integer(common::LiteralID{c.expected.data}));
     }
 }
 
@@ -182,7 +182,7 @@ TEST_CASE("lexer: floats", "[lexer]") {
         }
         auto result = l.reset();
         REQUIRE(t.type == c.expected.type);
-        REQUIRE(std::abs(*result.literals.get_double(common::Literals::ID{t.data}) - *lit.get_double(common::Literals::ID{c.expected.data})) <= epsilon);
+        REQUIRE(std::abs(*result.literals.get_double(common::LiteralID{t.data}) - *lit.get_double(common::LiteralID{c.expected.data})) <= epsilon);
     }
 }
 
@@ -216,7 +216,7 @@ TEST_CASE("lexer: identifiers", "[lexer]") {
 
         auto result = l.reset();
         REQUIRE(t.type == c.expected.type);
-        REQUIRE(*result.identifiers.get(common::Identifiers::ID{t.data}) == *lit.get_string(common::Literals::ID{c.expected.data}));
+        REQUIRE(*result.identifiers.get(common::IdentifierID{t.data}) == *lit.get_string(common::LiteralID{c.expected.data}));
     }
 }
 
@@ -236,7 +236,7 @@ TEST_CASE("lexer: multiple tokens", "[lexer]") {
         {.type = FLOAT, .data = common::GenericID{lit.add(1234.1234)}},
         {.type = IDENTIFIER, .data = common::GenericID{lit.add("a")}},
         {.type = NOT},
-        {.type = BOOL, .data = common::GenericID{common::Literals::g_true_id}},
+        {.type = BOOL, .data = common::GenericID{common::g_true_id}},
         {.type = IDENTIFIER, .data = common::GenericID{lit.add("bbb")}},
     };
 
@@ -249,9 +249,9 @@ TEST_CASE("lexer: multiple tokens", "[lexer]") {
         REQUIRE(result.tokens[i].type == expected[i].type);
         switch (result.tokens[i].type) {
         case BOOL: REQUIRE(result.tokens[i].data == expected[i].data); break;
-        case INTEGER: REQUIRE(result.literals.get_integer(common::Literals::ID{result.tokens[i].data}) == lit.get_integer(common::Literals::ID{expected[i].data})); break;
-        case FLOAT: REQUIRE(std::abs(*result.literals.get_double(common::Literals::ID{result.tokens[i].data}) - *lit.get_double(common::Literals::ID{expected[i].data})) < epsilon); break;
-        case IDENTIFIER: REQUIRE(*result.identifiers.get(common::Identifiers::ID{result.tokens[i].data}) == *lit.get_string(common::Literals::ID{expected[i].data})); break;
+        case INTEGER: REQUIRE(result.literals.get_integer(common::LiteralID{result.tokens[i].data}) == lit.get_integer(common::LiteralID{expected[i].data})); break;
+        case FLOAT: REQUIRE(std::abs(*result.literals.get_double(common::LiteralID{result.tokens[i].data}) - *lit.get_double(common::LiteralID{expected[i].data})) < epsilon); break;
+        case IDENTIFIER: REQUIRE(*result.identifiers.get(common::IdentifierID{result.tokens[i].data}) == *lit.get_string(common::LiteralID{expected[i].data})); break;
         }
     }
 }

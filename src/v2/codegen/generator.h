@@ -30,7 +30,7 @@ namespace codegen {
         void codegen(common::Expression expr);
 
         // expr parameter is needed to cast literal to the correct type
-        void codegen(common::Literal lit, common::Expression::ID expr);
+        void codegen(common::Literal lit, common::ExpressionID expr);
 
         void codegen(common::UnaryExpression expr);
 
@@ -38,7 +38,7 @@ namespace codegen {
 
         void codegen(common::BuiltinTypes type);
 
-        void codegen(common::Cast cast, common::Expression::ID expr);
+        void codegen(common::Cast cast, common::ExpressionID expr);
 
         void codegen(common::Function func);
 

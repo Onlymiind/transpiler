@@ -47,7 +47,7 @@ class PolishNotationParser {
             consume();
             return common::Expression{
                 .type = common::ExpressionType::LITERAL,
-                .id = file_.add(common::Literal{.type = type, .value = common::Literals::ID{tok.data}}),
+                .id = file_.add(common::Literal{.type = type, .value = common::LiteralID{tok.data}}),
             };
         };
 
@@ -59,7 +59,7 @@ class PolishNotationParser {
             consume();
             return parse_unary_expression();
         case common::TokenType::IDENTIFIER: {
-            common::FunctionCall result{.name = common::Identifiers::ID{next().data}};
+            common::FunctionCall result{.name = common::IdentifierID{next().data}};
             consume();
             result.args.push_back(parse_expression());
             return common::Expression{.type = common::ExpressionType::FUNCTION_CALL, .id = file_.add(result)};
@@ -335,7 +335,7 @@ TEST_CASE("parser: functions", "[parser]") {
         auto file = p.reset();
         REQUIRE(file.functions().size() == c.expected.size());
         for (size_t i = 0; i < c.expected.size(); ++i) {
-            REQUIRE(*ids.get(c.expected[i].name) == *lexer_result.identifiers.get(common::Identifiers::ID{file.functions()[i].name}));
+            REQUIRE(*ids.get(c.expected[i].name) == *lexer_result.identifiers.get(common::IdentifierID{file.functions()[i].name}));
             REQUIRE(c.expected[i].body.type == file.functions()[i].body.type);
         }
     }

@@ -52,7 +52,7 @@ namespace checker {
             }
         }
 
-        if (module_.entrypoint() == common::Function::ID{common::g_invalid_id}) {
+        if (module_.entrypoint() == common::FunctionID{common::g_invalid_id}) {
             err_positions_.push(1);
             report_error("entrypoint not declared");
         }
@@ -233,8 +233,8 @@ namespace checker {
             return check_cast(cast);
         }
 
-        common::Function::ID id = module_.get_function(call.name);
-        if (id == common::Function::ID{common::g_invalid_id}) {
+        common::FunctionID id = module_.get_function(call.name);
+        if (id == common::FunctionID{common::g_invalid_id}) {
             report_error("function not defined");
             return common::Type{};
         }

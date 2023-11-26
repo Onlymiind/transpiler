@@ -9,14 +9,14 @@
 #include <type_traits>
 
 namespace common {
-    template <typename T, typename Tag>
+    template <typename T, size_t TAG>
     class Distinct {
       public:
         constexpr Distinct() = default;
         constexpr explicit Distinct(T val) : val_(val) {}
 
-        template <typename Tag2>
-        constexpr explicit Distinct(Distinct<T, Tag2> other) : val_(*other) {}
+        template <size_t TAG2>
+        constexpr explicit Distinct(Distinct<T, TAG2> other) : val_(*other) {}
 
         constexpr explicit operator T() const { return val_; }
 
@@ -27,7 +27,7 @@ namespace common {
         constexpr T *operator->() noexcept { return &val_; }
         constexpr const T *operator->() const noexcept { return &val_; }
 
-        constexpr bool operator==(const Distinct<T, Tag> &other) const { return val_ == other.val_; }
+        constexpr bool operator==(const Distinct<T, TAG> &other) const { return val_ == other.val_; }
 
       private:
         T val_{};
@@ -52,18 +52,36 @@ namespace common {
         constexpr bool empty() const { return msg.empty(); }
     };
 
-    template <typename T>
-    using IDBase = Distinct<uint64_t, T>;
-    using GenericID = IDBase<void>;
-    constexpr inline GenericID g_invalid_id{static_cast<uint64_t>(-1)};
+    namespace IDType {
+        enum IDType : size_t {
+            GENERIC,
+            LITERAL,
+            IDENTIFIER,
+            EXPRESSION,
+            FUNCTION,
+            TYPE
+        };
+    }
+    template <size_t TAG>
+    using IDBase = Distinct<uint64_t, TAG>;
+    using GenericID = IDBase<IDType::GENERIC>;
 
+    using LiteralID = IDBase<IDType::LITERAL>;
+    using IdentifierID = IDBase<IDType::IDENTIFIER>;
+    using ExpressionID = IDBase<IDType::EXPRESSION>;
+    using FunctionID = IDBase<IDType::FUNCTION>;
+    using TypeID = IDBase<IDType::TYPE>;
+
+    constexpr inline GenericID g_invalid_id{static_cast<uint64_t>(-1)};
+    constexpr inline LiteralID g_false_id{2};
+    constexpr inline LiteralID g_true_id{1};
 } // namespace common
 
 namespace std {
-    template <typename T, typename Tag>
-    struct hash<common::Distinct<T, Tag>> {
+    template <typename T, size_t TAG>
+    struct hash<common::Distinct<T, TAG>> {
 
-        constexpr size_t operator()(const common::Distinct<T, Tag> &val) const {
+        constexpr size_t operator()(const common::Distinct<T, TAG> &val) const {
             return std::hash<T>{}(*val);
         }
     };

@@ -93,11 +93,9 @@ namespace common {
     }
 
     struct Expression {
-        using ID = Distinct<uint64_t, Expression>;
-        constexpr static ID g_invalid_id{static_cast<uint64_t>(-1)};
 
         ExpressionType type = ExpressionType::ERROR;
-        ID id = g_invalid_id;
+        ExpressionID id = ExpressionID{g_invalid_id};
         size_t pos = 0;
 
         constexpr bool is_error() const {
@@ -142,7 +140,7 @@ namespace common {
 
     struct Literal {
         LiteralType type{};
-        Literals::ID value = Literals::ID{g_invalid_id};
+        LiteralID value = LiteralID{g_invalid_id};
 
         constexpr bool operator==(const Literal &other) const noexcept {
             return value == other.value;
@@ -150,13 +148,13 @@ namespace common {
     };
 
     struct FunctionCall {
-        Identifiers::ID name = Identifiers::ID{g_invalid_id};
+        IdentifierID name = IdentifierID{g_invalid_id};
         std::vector<Expression> args;
     };
 
     // probably should implement separate ID for identifiers
     struct Cast {
-        Identifiers::ID to = Identifiers::ID{g_invalid_id};
+        IdentifierID to = IdentifierID{g_invalid_id};
         Expression from{};
     };
 

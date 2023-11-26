@@ -10,14 +10,13 @@
 
 namespace common {
     struct Function {
-        using ID = Distinct<uint64_t, Function>;
 
-        ID id = ID{g_invalid_id};
-        Identifiers::ID name = Identifiers::ID{g_invalid_id};
+        FunctionID id = FunctionID{g_invalid_id};
+        IdentifierID name = IdentifierID{g_invalid_id};
         Expression body{};
         size_t pos = 0;
 
-        constexpr bool is_error() const { return id == ID{g_invalid_id}; }
+        constexpr bool is_error() const { return id == FunctionID{g_invalid_id}; }
         constexpr bool operator==(Function other) const { return id == other.id && name == other.name; }
     };
 } // namespace common

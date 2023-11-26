@@ -16,7 +16,7 @@ namespace common {
       public:
         AST() = default;
 
-        UnaryExpression *get_unary_expression(Expression::ID id) {
+        UnaryExpression *get_unary_expression(ExpressionID id) {
             auto [type, idx] = deconstruct(id);
             if (type != ExpressionType::UNARY || idx >= unary_exprs_.size()) {
                 return nullptr;
@@ -24,7 +24,7 @@ namespace common {
             return &unary_exprs_[idx];
         }
 
-        BinaryExpression *get_binary_expression(Expression::ID id) {
+        BinaryExpression *get_binary_expression(ExpressionID id) {
             auto [type, idx] = deconstruct(id);
             if (type != ExpressionType::BINARY || idx >= binary_exprs_.size()) {
                 return nullptr;
@@ -32,7 +32,7 @@ namespace common {
             return &binary_exprs_[idx];
         }
 
-        std::optional<Literal> get_literal(Expression::ID id) const {
+        std::optional<Literal> get_literal(ExpressionID id) const {
             auto [type, idx] = deconstruct(id);
             if (type != ExpressionType::LITERAL || idx >= literal_exprs_.size()) {
                 return {};
@@ -40,7 +40,7 @@ namespace common {
             return literal_exprs_[idx];
         }
 
-        Cast *get_cast(Expression::ID id) {
+        Cast *get_cast(ExpressionID id) {
             auto [type, idx] = deconstruct(id);
             if (type != ExpressionType::CAST || idx >= casts_.size()) {
                 return nullptr;
@@ -48,7 +48,7 @@ namespace common {
             return &casts_[idx];
         }
 
-        FunctionCall *get_call(Expression::ID id) {
+        FunctionCall *get_call(ExpressionID id) {
             auto [type, idx] = deconstruct(id);
             if (type != ExpressionType::FUNCTION_CALL || idx >= calls_.size()) {
                 return nullptr;
@@ -56,43 +56,43 @@ namespace common {
             return &calls_[idx];
         }
 
-        Expression::ID add(BinaryExpression expr) {
-            Expression::ID result{make_id(ExpressionType::BINARY, binary_exprs_.size())};
+        ExpressionID add(BinaryExpression expr) {
+            ExpressionID result{make_id(ExpressionType::BINARY, binary_exprs_.size())};
             binary_exprs_.push_back(expr);
             return result;
         }
 
-        Expression::ID add(UnaryExpression expr) {
-            Expression::ID result{make_id(ExpressionType::UNARY, unary_exprs_.size())};
+        ExpressionID add(UnaryExpression expr) {
+            ExpressionID result{make_id(ExpressionType::UNARY, unary_exprs_.size())};
             unary_exprs_.push_back(expr);
             return result;
         }
 
-        Expression::ID add(Literal lit) {
-            Expression::ID result{make_id(ExpressionType::LITERAL, literal_exprs_.size())};
+        ExpressionID add(Literal lit) {
+            ExpressionID result{make_id(ExpressionType::LITERAL, literal_exprs_.size())};
             literal_exprs_.push_back(lit);
             return result;
         }
 
-        Expression::ID add(Cast cast) {
-            Expression::ID result{make_id(ExpressionType::CAST, casts_.size())};
+        ExpressionID add(Cast cast) {
+            ExpressionID result{make_id(ExpressionType::CAST, casts_.size())};
             casts_.push_back(cast);
             return result;
         }
 
-        Expression::ID add(FunctionCall cast) {
-            Expression::ID result{make_id(ExpressionType::FUNCTION_CALL, calls_.size())};
+        ExpressionID add(FunctionCall cast) {
+            ExpressionID result{make_id(ExpressionType::FUNCTION_CALL, calls_.size())};
             calls_.push_back(cast);
             return result;
         }
 
-        Function::ID add(Function func) {
-            func.id = Function::ID{functions_.size()};
+        FunctionID add(Function func) {
+            func.id = FunctionID{functions_.size()};
             functions_.push_back(func);
             return func.id;
         }
 
-        Function *get_function(Function::ID id) {
+        Function *get_function(FunctionID id) {
             if (*id >= functions_.size()) {
                 return nullptr;
             }
@@ -109,11 +109,11 @@ namespace common {
         }
 
       private:
-        static Expression::ID make_id(ExpressionType type, uint64_t id) {
-            return Expression::ID{(static_cast<uint64_t>(type) << 56) | id};
+        static ExpressionID make_id(ExpressionType type, uint64_t id) {
+            return ExpressionID{(static_cast<uint64_t>(type) << 56) | id};
         }
 
-        static std::pair<ExpressionType, uint64_t> deconstruct(Expression::ID id) {
+        static std::pair<ExpressionType, uint64_t> deconstruct(ExpressionID id) {
             return {static_cast<ExpressionType>(*id >> 56), *id & 0xffffffffffffff};
         }
 

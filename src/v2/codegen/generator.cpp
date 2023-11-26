@@ -53,16 +53,16 @@ namespace codegen {
         }
     }
 
-    void Generator::codegen(common::Literal lit, common::Expression::ID expr) {
+    void Generator::codegen(common::Literal lit, common::ExpressionID expr) {
         *out_ << '(';
         codegen(mod_->get_builtin(mod_->get_expression_type(expr))->type);
         *out_ << ')';
 
         switch (lit.type) {
         case common::LiteralType::BOOL:
-            if (lit.value == common::Literals::g_false_id) {
+            if (lit.value == common::g_false_id) {
                 *out_ << '0';
-            } else if (lit.value == common::Literals::g_true_id) {
+            } else if (lit.value == common::g_true_id) {
                 *out_ << '1';
             } else {
                 report_error("livalid literal id for boolean");
@@ -146,7 +146,7 @@ namespace codegen {
         }
     }
 
-    void Generator::codegen(common::Cast cast, common::Expression::ID expr) {
+    void Generator::codegen(common::Cast cast, common::ExpressionID expr) {
         if (cast.from.type == common::ExpressionType::LITERAL) {
             // avoid unnecessary casts
             codegen(*mod_->file().get_literal(cast.from.id), expr);

@@ -48,7 +48,7 @@ namespace parser {
             consume();
             return common::Expression{
                 .type = common::ExpressionType::LITERAL,
-                .id = file_.add(common::Literal{.type = type, .value = common::Literals::ID{tok.data}}),
+                .id = file_.add(common::Literal{.type = type, .value = common::LiteralID{tok.data}}),
                 .pos = tok.pos,
             };
         };
@@ -86,7 +86,7 @@ namespace parser {
             return common::Expression{};
         }
 
-        common::FunctionCall result{.name = common::Identifiers::ID{next().data}};
+        common::FunctionCall result{.name = common::IdentifierID{next().data}};
         size_t pos = next().pos;
         consume();
         if (next().type != common::TokenType::LEFT_PARENTHESIS) {
@@ -160,7 +160,7 @@ namespace parser {
             report_error("expected function name");
             return result;
         }
-        result.name = common::Identifiers::ID{next().data};
+        result.name = common::IdentifierID{next().data};
         consume();
         if (next().type != common::TokenType::LEFT_PARENTHESIS) {
             report_error("expected \"(\"");

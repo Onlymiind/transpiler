@@ -17,10 +17,6 @@ namespace common {
         constexpr static uint64_t g_id_start = 2;
 
       public:
-        using ID = Distinct<uint64_t, Literals>;
-        constexpr static ID g_false_id = ID{0};
-        constexpr static ID g_true_id = ID{1};
-
         Literals() = default;
         ~Literals() = default;
 
@@ -44,43 +40,43 @@ namespace common {
             return *this;
         }
 
-        ID add(double val) {
-            ID result{current_id_};
+        LiteralID add(double val) {
+            LiteralID result{current_id_};
             doubles_[result] = val;
             ++current_id_;
             return result;
         }
 
-        ID add(uint64_t val) {
-            ID result{current_id_};
+        LiteralID add(uint64_t val) {
+            LiteralID result{current_id_};
             integers_[result] = val;
             ++current_id_;
             return result;
         }
 
-        ID add(std::string val) {
+        LiteralID add(std::string val) {
             auto [it, inserted] = string_storage_.insert(std::move(val));
             if (!inserted) {
                 return string_to_id_.at(&*it);
             }
-            ID result{current_id_};
+            LiteralID result{current_id_};
             ++current_id_;
             strings_[result] = &(*it);
             string_to_id_[&(*it)] = result;
             return result;
         }
 
-        std::optional<uint64_t> get_integer(ID id) const {
+        std::optional<uint64_t> get_integer(LiteralID id) const {
             auto it = integers_.find(id);
             return it == integers_.end() ? std::optional<uint64_t>{} : it->second;
         }
 
-        std::optional<double> get_double(ID id) const {
+        std::optional<double> get_double(LiteralID id) const {
             auto it = doubles_.find(id);
             return it == doubles_.end() ? std::optional<double>{} : it->second;
         }
 
-        const std::string *get_string(ID id) const {
+        const std::string *get_string(LiteralID id) const {
             auto it = strings_.find(id);
             return it == strings_.end() ? nullptr : it->second;
         }
@@ -93,10 +89,10 @@ namespace common {
         }
 
       private:
-        std::unordered_map<ID, uint64_t> integers_;
-        std::unordered_map<ID, double> doubles_;
-        std::unordered_map<ID, const std::string *> strings_;
-        std::unordered_map<const std::string *, ID> string_to_id_;
+        std::unordered_map<LiteralID, uint64_t> integers_;
+        std::unordered_map<LiteralID, double> doubles_;
+        std::unordered_map<LiteralID, const std::string *> strings_;
+        std::unordered_map<const std::string *, LiteralID> string_to_id_;
         std::unordered_set<std::string> string_storage_;
 
         uint64_t current_id_ = g_id_start;
@@ -104,8 +100,6 @@ namespace common {
 
     class Identifiers {
       public:
-        using ID = Distinct<uint64_t, Identifiers>;
-
         Identifiers() = default;
         ~Identifiers() = default;
         Identifiers(Identifiers &&) = default;
@@ -114,7 +108,7 @@ namespace common {
         Identifiers(const Identifiers &) = delete;
         Identifiers &operator=(const Identifiers &) = delete;
 
-        ID add(std::string str) {
+        IdentifierID add(std::string str) {
             auto [it, inserted] = name_to_id_.try_emplace(std::move(str), id_to_name_.size());
             if (inserted) {
                 id_to_name_.push_back(&it->first);
@@ -122,18 +116,18 @@ namespace common {
             return it->second;
         }
 
-        const std::string *get(ID id) const {
-            return id == ID{g_invalid_id} || *id >= id_to_name_.size() ? nullptr : id_to_name_[*id];
+        const std::string *get(IdentifierID id) const {
+            return id == IdentifierID{g_invalid_id} || *id >= id_to_name_.size() ? nullptr : id_to_name_[*id];
         }
 
-        ID get(const std::string &name) const {
+        IdentifierID get(const std::string &name) const {
             auto it = name_to_id_.find(name);
-            return it == name_to_id_.end() ? ID{g_invalid_id} : it->second;
+            return it == name_to_id_.end() ? IdentifierID{g_invalid_id} : it->second;
         }
 
       private:
         std::vector<const std::string *> id_to_name_;
-        std::unordered_map<std::string, ID> name_to_id_;
+        std::unordered_map<std::string, IdentifierID> name_to_id_;
     };
 } // namespace common
 

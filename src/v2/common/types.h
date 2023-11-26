@@ -37,17 +37,15 @@ namespace common {
     }
 
     struct BuiltinType {
-        Identifiers::ID name = Identifiers::ID{g_invalid_id};
+        IdentifierID name = IdentifierID{g_invalid_id};
         BuiltinTypes type{};
         TypeTraits traits{};
     };
 
     struct Type {
-        using ID = IDBase<Type>;
+        TypeID id = TypeID{g_invalid_id};
 
-        ID id = ID{g_invalid_id};
-
-        constexpr bool is_error() const { return id == ID{g_invalid_id}; }
+        constexpr bool is_error() const { return id == TypeID{g_invalid_id}; }
         constexpr bool operator==(Type other) const { return id == other.id; }
     };
 } // namespace common
