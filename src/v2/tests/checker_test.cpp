@@ -36,8 +36,8 @@ void run_tests(const std::vector<CheckerTestCase> cases) {
         parser::Parser p{std::move(lexer_result.tokens)};
         auto expr = p.parse_expression();
         REQUIRE(p.get_error().empty());
-        auto file = p.reset();
-        checker::Checker ch{std::move(file), lexer_result.identifiers};
+        auto ast = p.reset();
+        checker::Checker ch{ast, lexer_result.identifiers};
         ch.add_builtins();
         auto type = ch.check_expression(expr);
         INFO(ch.get_error().msg);

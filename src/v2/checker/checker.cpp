@@ -25,7 +25,7 @@ namespace checker {
 
     void Checker::add_declarations() {
         add_builtins();
-        const auto &functions = module_.file().functions();
+        const auto &functions = ast_->functions();
         for (const auto &func : functions) {
             if (!module_.add(func)) {
                 err_positions_.push(func.pos);
@@ -40,7 +40,7 @@ namespace checker {
         if (!err_.empty()) {
             return;
         }
-        auto &functions = module_.file().functions();
+        auto &functions = ast_->functions();
         for (auto &func : functions) {
             check_function(func);
             if (!err_.empty()) {
@@ -67,19 +67,19 @@ namespace checker {
         err_positions_.push(expr.pos);
         switch (expr.type) {
         case common::ExpressionType::LITERAL:
-            result = get_type_for_literal(*module_.file().get_literal(expr.id));
+            result = get_type_for_literal(*ast_->get_literal(expr.id));
             break;
         case common::ExpressionType::UNARY:
-            result = check_unary_expression(*module_.file().get_unary_expression(expr.id));
+            result = check_unary_expression(*ast_->get_unary_expression(expr.id));
             break;
         case common::ExpressionType::BINARY:
-            result = check_binary_expression(*module_.file().get_binary_expression(expr.id));
+            result = check_binary_expression(*ast_->get_binary_expression(expr.id));
             break;
         case common::ExpressionType::CAST:
-            result = check_cast(*module_.file().get_cast(expr.id));
+            result = check_cast(*ast_->get_cast(expr.id));
             break;
         case common::ExpressionType::FUNCTION_CALL:
-            result = check_function_call(*module_.file().get_call(expr.id), expr);
+            result = check_function_call(*ast_->get_call(expr.id), expr);
             break;
         default:
             report_error("unknown expression type");
@@ -234,7 +234,7 @@ namespace checker {
                 return common::Type{};
             }
             incoming_edge.type = common::ExpressionType::CAST;
-            incoming_edge.id = module_.file().add_cast(cast);
+            incoming_edge.id = ast_->add_cast(cast);
             return result;
         }
 
@@ -243,7 +243,7 @@ namespace checker {
             report_error("function not defined");
             return common::Type{};
         }
-        common::Expression &expr = module_.file().get_function(id)->body;
+        common::Expression &expr = ast_->get_function(id)->body;
         if (expr.is_error()) {
             // function declared, but not defined
             report_error("function not defined");

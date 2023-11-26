@@ -1,6 +1,7 @@
 #ifndef COMPILER_V2_CODEGEN_GENERATOR_HDR_
 #define COMPILER_V2_CODEGEN_GENERATOR_HDR_
 
+#include "common/ast.h"
 #include "common/declarations.h"
 #include "common/expression.h"
 #include "common/literals.h"
@@ -15,12 +16,13 @@ namespace codegen {
 
     class Generator {
       public:
-        Generator(std::ostream &out, common::Module &mod, common::Identifiers &identifiers, common::Literals &literals)
-            : out_(&out), mod_(&mod), identifiers_(&identifiers), literals_(&literals) {}
+        Generator(std::ostream &out, common::Module &mod, common::AST &ast, common::Identifiers &identifiers, common::Literals &literals)
+            : out_(&out), mod_(&mod), ast_(&ast), identifiers_(&identifiers), literals_(&literals) {}
 
         void set_file(std::ostream &out) { out_ = &out; }
-        void set_module(common::Module &mod, common::Identifiers &identifiers, common::Literals &literals) {
+        void set_module(common::Module &mod, common::AST &ast, common::Identifiers &identifiers, common::Literals &literals) {
             mod_ = &mod;
+            ast_ = &ast;
             identifiers_ = &identifiers;
             literals_ = &literals;
         }
@@ -54,6 +56,7 @@ namespace codegen {
       private:
         std::ostream *out_ = nullptr;
         common::Module *mod_ = nullptr;
+        common::AST *ast_ = nullptr;
         common::Identifiers *identifiers_ = nullptr;
         common::Literals *literals_ = nullptr;
         std::string_view err_;

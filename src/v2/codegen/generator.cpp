@@ -17,7 +17,7 @@ namespace codegen {
 
         *out_ << g_prelude;
         codegen_forward_decls();
-        const auto &functions = mod_->file().functions();
+        const auto &functions = ast_->functions();
         for (const common::Function &func : functions) {
             codegen(func);
             if (error_occured()) {
@@ -33,19 +33,19 @@ namespace codegen {
 
         switch (expr.type) {
         case common::ExpressionType::BINARY:
-            codegen(*mod_->file().get_binary_expression(expr.id));
+            codegen(*ast_->get_binary_expression(expr.id));
             break;
         case common::ExpressionType::UNARY:
-            codegen(*mod_->file().get_unary_expression(expr.id));
+            codegen(*ast_->get_unary_expression(expr.id));
             break;
         case common::ExpressionType::LITERAL:
-            codegen(*mod_->file().get_literal(expr.id), expr.id);
+            codegen(*ast_->get_literal(expr.id), expr.id);
             break;
         case common::ExpressionType::CAST:
-            codegen(*mod_->file().get_cast(expr.id), expr.id);
+            codegen(*ast_->get_cast(expr.id), expr.id);
             break;
         case common::ExpressionType::FUNCTION_CALL:
-            codegen(*mod_->file().get_call(expr.id));
+            codegen(*ast_->get_call(expr.id));
             break;
         default:
             report_error("unknown expression type");
@@ -149,7 +149,7 @@ namespace codegen {
     void Generator::codegen(common::Cast cast, common::ExpressionID expr) {
         if (cast.from.type == common::ExpressionType::LITERAL) {
             // avoid unnecessary casts
-            codegen(*mod_->file().get_literal(cast.from.id), expr);
+            codegen(*ast_->get_literal(cast.from.id), expr);
             return;
         }
 
@@ -160,7 +160,7 @@ namespace codegen {
     }
 
     void Generator::codegen_forward_decls() {
-        const auto &functions = mod_->file().functions();
+        const auto &functions = ast_->functions();
         for (const common::Function &func : functions) {
             if (func.body.is_error()) {
                 continue;

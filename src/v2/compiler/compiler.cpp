@@ -70,8 +70,8 @@ namespace compiler {
         return parser.reset();
     }
 
-    std::optional<common::Module> check(common::AST &&file, common::Identifiers &identifiers, std::istream &in_file, std::ostream &err) {
-        checker::Checker checker{std::move(file), identifiers};
+    std::optional<common::Module> check(common::AST &file, common::Identifiers &identifiers, std::istream &in_file, std::ostream &err) {
+        checker::Checker checker{file, identifiers};
         checker.check();
         common::Error error = checker.get_error();
         if (!error.empty()) {
@@ -81,8 +81,8 @@ namespace compiler {
         return checker.reset();
     }
 
-    void generate(common::Module &mod, common::Identifiers &identifiers, common::Literals &literals, std::ostream &out, std::ostream &err) {
-        codegen::Generator generator{out, mod, identifiers, literals};
+    void generate(common::Module &mod, common::AST &ast, common::Identifiers &identifiers, common::Literals &literals, std::ostream &out, std::ostream &err) {
+        codegen::Generator generator{out, mod, ast, identifiers, literals};
         generator.codegen();
         std::string_view error = generator.get_error();
         if (!error.empty()) {
@@ -125,7 +125,7 @@ namespace compiler {
         // not an optional, this is needed because module doesn't have default constructor
         std::optional<common::Module> mod;
         try {
-            auto m = check(std::move(*parsed), lexer_result.identifiers, file, err);
+            auto m = check(*parsed, lexer_result.identifiers, file, err);
             if (!m) {
                 return;
             }
@@ -142,7 +142,7 @@ namespace compiler {
         }
 
         try {
-            generate(*mod, lexer_result.identifiers, lexer_result.literals, out, err);
+            generate(*mod, *parsed, lexer_result.identifiers, lexer_result.literals, out, err);
         } catch (...) {
             err << "unknown exception in generator\n"
                 << std::endl;

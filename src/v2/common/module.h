@@ -15,7 +15,7 @@ namespace common {
 
     class Module {
       public:
-        Module(AST &&file) : file_(std::move(file)) {}
+        Module() = default;
 
         Type add(BuiltinType type) {
             Type result{.id = TypeID{current_id_}};
@@ -70,15 +70,10 @@ namespace common {
             expression_types_[expr] = type;
         }
 
-        AST &file() { return file_; }
-        const AST &file() const { return file_; }
-
         common::FunctionID entrypoint() const { return entrypoint_; }
         void set_entrypoint(common::FunctionID id) { entrypoint_ = id; }
 
       private:
-        AST file_;
-
         std::unordered_map<TypeID, TypeTraits> types_;
         std::unordered_map<TypeID, BuiltinType> type_to_info_;
         std::unordered_map<IdentifierID, TypeID> name_to_type_;

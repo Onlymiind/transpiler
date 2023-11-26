@@ -16,7 +16,7 @@
 namespace checker {
     class Checker {
       public:
-        Checker(common::AST &&file, common::Identifiers &identifiers) : module_(std::move(file)), identifiers_(&identifiers) {}
+        Checker(common::AST &ast, common::Identifiers &identifiers) : ast_(&ast), identifiers_(&identifiers) {}
 
         void add_builtins();
         void add_declarations();
@@ -46,6 +46,7 @@ namespace checker {
 
       private:
         common::Module module_;
+        common::AST *ast_ = nullptr;
         common::Identifiers *identifiers_ = nullptr;
         std::unordered_map<common::BuiltinTypes, common::Type> builtin_types_;
         common::Error err_;

@@ -32,15 +32,15 @@ void run_tests(const std::vector<GeneratorTestCase> cases) {
         parser::Parser p{std::move(lexer_result.tokens)};
         auto expr = p.parse_expression();
         REQUIRE(p.get_error().empty());
-        auto file = p.reset();
-        checker::Checker ch{std::move(file), lexer_result.identifiers};
+        auto ast = p.reset();
+        checker::Checker ch{ast, lexer_result.identifiers};
         ch.add_declarations();
         ch.check_expression(expr);
         REQUIRE(ch.get_error().empty());
 
         std::stringstream out;
         auto mod = ch.reset();
-        codegen::Generator g{out, mod, lexer_result.identifiers, lexer_result.literals};
+        codegen::Generator g{out, mod, ast, lexer_result.identifiers, lexer_result.literals};
         g.codegen(expr);
         REQUIRE(!g.error_occured());
         std::string result = out.str();
