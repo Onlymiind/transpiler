@@ -31,20 +31,20 @@ namespace codegen {
             return;
         }
 
-        switch (expr.type) {
-        case common::ExpressionType::BINARY:
+        switch (expr.kind) {
+        case common::ExpressionKind::BINARY:
             codegen(*ast_->get_binary_expression(expr.id));
             break;
-        case common::ExpressionType::UNARY:
+        case common::ExpressionKind::UNARY:
             codegen(*ast_->get_unary_expression(expr.id));
             break;
-        case common::ExpressionType::LITERAL:
-            codegen(*ast_->get_literal(expr.id), expr.id);
+        case common::ExpressionKind::LITERAL:
+            codegen(*ast_->get_literal(expr.id), expr);
             break;
-        case common::ExpressionType::CAST:
-            codegen(*ast_->get_cast(expr.id), expr.id);
+        case common::ExpressionKind::CAST:
+            codegen(*ast_->get_cast(expr.id), expr);
             break;
-        case common::ExpressionType::FUNCTION_CALL:
+        case common::ExpressionKind::FUNCTION_CALL:
             codegen(*ast_->get_call(expr.id));
             break;
         default:
@@ -53,9 +53,9 @@ namespace codegen {
         }
     }
 
-    void Generator::codegen(common::Literal lit, common::ExpressionID expr) {
+    void Generator::codegen(common::Literal lit, common::Expression expr) {
         *out_ << '(';
-        codegen(mod_->get_builtin(mod_->get_expression_type(expr))->type);
+        codegen(mod_->get_builtin(expr.type)->type);
         *out_ << ')';
 
         switch (lit.type) {
@@ -146,15 +146,15 @@ namespace codegen {
         }
     }
 
-    void Generator::codegen(common::Cast cast, common::ExpressionID expr) {
-        if (cast.from.type == common::ExpressionType::LITERAL) {
+    void Generator::codegen(common::Cast cast, common::Expression expr) {
+        if (cast.from.kind == common::ExpressionKind::LITERAL) {
             // avoid unnecessary casts
             codegen(*ast_->get_literal(cast.from.id), expr);
             return;
         }
 
         *out_ << '(';
-        codegen(mod_->get_builtin(mod_->get_type(cast.to))->type);
+        codegen(mod_->get_builtin(mod_->get_type(cast.to).id)->type);
         *out_ << ')';
         codegen(cast.from);
     }
@@ -170,7 +170,7 @@ namespace codegen {
                 continue;
             }
 
-            codegen(mod_->get_builtin(mod_->get_expression_type(func.body.id))->type);
+            codegen(mod_->get_builtin(func.body.type)->type);
             *out_ << ' ';
             *out_ << name;
             *out_ << "(void);\n";
@@ -186,7 +186,7 @@ namespace codegen {
         if (name == "main") {
             *out_ << "int";
         } else {
-            codegen(mod_->get_builtin(mod_->get_expression_type(func.body.id))->type);
+            codegen(mod_->get_builtin(func.body.type)->type);
         }
         *out_ << ' ';
         *out_ << name;

@@ -2,6 +2,7 @@
 #include "common/declarations.h"
 #include "common/expression.h"
 #include "common/types.h"
+#include "common/util.h"
 
 namespace checker {
 
@@ -65,20 +66,20 @@ namespace checker {
 
         common::Type result{};
         err_positions_.push(expr.pos);
-        switch (expr.type) {
-        case common::ExpressionType::LITERAL:
+        switch (expr.kind) {
+        case common::ExpressionKind::LITERAL:
             result = get_type_for_literal(*ast_->get_literal(expr.id));
             break;
-        case common::ExpressionType::UNARY:
+        case common::ExpressionKind::UNARY:
             result = check_unary_expression(*ast_->get_unary_expression(expr.id));
             break;
-        case common::ExpressionType::BINARY:
+        case common::ExpressionKind::BINARY:
             result = check_binary_expression(*ast_->get_binary_expression(expr.id));
             break;
-        case common::ExpressionType::CAST:
+        case common::ExpressionKind::CAST:
             result = check_cast(*ast_->get_cast(expr.id));
             break;
-        case common::ExpressionType::FUNCTION_CALL:
+        case common::ExpressionKind::FUNCTION_CALL:
             result = check_function_call(*ast_->get_call(expr.id), expr);
             break;
         default:
@@ -89,7 +90,7 @@ namespace checker {
         if (result.is_error()) {
             return result;
         }
-        module_.set_expression_type(expr.id, result);
+        expr.type = result.id;
         err_positions_.pop();
         return result;
     }
@@ -103,7 +104,7 @@ namespace checker {
             return common::Type{};
         }
 
-        common::TypeTraits traits = module_.get_traits(type);
+        common::TypeTraits traits = module_.get_traits(type.id);
         switch (expr.op) {
         case common::UnaryOp::NOT:
             if (common::empty(traits & common::TypeTraits::BOOLEAN)) {
@@ -143,7 +144,7 @@ namespace checker {
             return common::Type{};
         }
 
-        common::TypeTraits traits = module_.get_traits(lhs);
+        common::TypeTraits traits = module_.get_traits(lhs.id);
 
         if (common::is_logic_op(expr.op)) {
             if (common::empty(traits & common::TypeTraits::BOOLEAN)) {
@@ -185,13 +186,13 @@ namespace checker {
             report_error("can not cast to unknown type");
             return common::Type{};
         }
-        common::TypeTraits dst_traits = module_.get_traits(dst);
+        common::TypeTraits dst_traits = module_.get_traits(dst.id);
 
         common::Type src = check_expression(cast.from);
         if (src.is_error()) {
             return common::Type{};
         }
-        common::TypeTraits src_traits = module_.get_traits(src);
+        common::TypeTraits src_traits = module_.get_traits(src.id);
 
         // TODO: empty traits
         if (dst_traits == src_traits) {
@@ -233,7 +234,7 @@ namespace checker {
             if (result.is_error()) {
                 return common::Type{};
             }
-            incoming_edge.type = common::ExpressionType::CAST;
+            incoming_edge.kind = common::ExpressionKind::CAST;
             incoming_edge.id = ast_->add_cast(cast);
             return result;
         }
@@ -249,8 +250,8 @@ namespace checker {
             report_error("function not defined");
             return common::Type{};
         }
-        if (common::Type result = module_.get_expression_type(expr.id); !result.is_error()) {
-            return result;
+        if (expr.type != common::TypeID{common::g_invalid_id}) {
+            return common::Type{expr.type};
         }
 
         return check_expression(expr);

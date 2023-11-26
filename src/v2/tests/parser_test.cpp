@@ -33,7 +33,7 @@ class PolishNotationParser {
         if (auto op = common::to_binary_op(next().type); op) {
             consume();
             return common::Expression{
-                .type = common::ExpressionType::BINARY,
+                .kind = common::ExpressionKind::BINARY,
                 .id = file_.add(common::BinaryExpression{
                     .op = *op,
                     .lhs = parse_expression(),
@@ -46,7 +46,7 @@ class PolishNotationParser {
             auto tok = next();
             consume();
             return common::Expression{
-                .type = common::ExpressionType::LITERAL,
+                .kind = common::ExpressionKind::LITERAL,
                 .id = file_.add(common::Literal{.type = type, .value = common::LiteralID{tok.data}}),
             };
         };
@@ -62,7 +62,7 @@ class PolishNotationParser {
             common::FunctionCall result{.name = common::IdentifierID{next().data}};
             consume();
             result.args.push_back(parse_expression());
-            return common::Expression{.type = common::ExpressionType::FUNCTION_CALL, .id = file_.add(result)};
+            return common::Expression{.kind = common::ExpressionKind::FUNCTION_CALL, .id = file_.add(result)};
         }
         }
 
@@ -75,7 +75,7 @@ class PolishNotationParser {
             return common::Expression{};
         }
         return common::Expression{
-            .type = common::ExpressionType::UNARY,
+            .kind = common::ExpressionKind::UNARY,
             .id = file_.add(common::UnaryExpression{
                 .op = *op,
                 .expr = parse_expression(),
@@ -105,7 +105,7 @@ struct ExprComparer {
     common::Identifiers &rhs_identifiers;
 
     bool compare(common::Expression lhs, common::Expression rhs) {
-        if (lhs.type != rhs.type) {
+        if (lhs.kind != rhs.kind) {
             return false;
         }
 
@@ -113,20 +113,20 @@ struct ExprComparer {
             return true;
         }
 
-        switch (lhs.type) {
-        case common::ExpressionType::BINARY: {
+        switch (lhs.kind) {
+        case common::ExpressionKind::BINARY: {
             auto lhs_binary = *lhs_file.get_binary_expression(lhs.id);
             auto rhs_binary = *rhs_file.get_binary_expression(rhs.id);
             return lhs_binary.op == rhs_binary.op &&
                    compare(lhs_binary.lhs, rhs_binary.lhs) &&
                    compare(lhs_binary.rhs, rhs_binary.rhs);
         }
-        case common::ExpressionType::UNARY: {
+        case common::ExpressionKind::UNARY: {
             auto lhs_unary = *lhs_file.get_unary_expression(lhs.id);
             auto rhs_unary = *rhs_file.get_unary_expression(rhs.id);
             return lhs_unary.op == rhs_unary.op && compare(lhs_unary.expr, rhs_unary.expr);
         }
-        case common::ExpressionType::CAST: {
+        case common::ExpressionKind::CAST: {
             auto lhs_cast = *lhs_file.get_cast(lhs.id);
             auto rhs_cast = *rhs_file.get_cast(rhs.id);
             auto str1 = *lhs_identifiers.get(lhs_cast.to);
@@ -134,7 +134,7 @@ struct ExprComparer {
             return str1 == str2 &&
                    compare(lhs_cast.from, rhs_cast.from);
         }
-        case common::ExpressionType::FUNCTION_CALL: {
+        case common::ExpressionKind::FUNCTION_CALL: {
             auto lhs_call = *lhs_file.get_call(lhs.id);
             auto rhs_call = *rhs_file.get_call(rhs.id);
             if (*lhs_identifiers.get(lhs_call.name) != *rhs_identifiers.get(rhs_call.name)) {
@@ -150,7 +150,7 @@ struct ExprComparer {
             }
             return true;
         }
-        case common::ExpressionType::LITERAL: {
+        case common::ExpressionKind::LITERAL: {
             auto lhs_lit = *lhs_file.get_literal(lhs.id);
             auto rhs_lit = *rhs_file.get_literal(rhs.id);
             if (lhs_lit.type != rhs_lit.type) {
@@ -302,11 +302,11 @@ TEST_CASE("parser: functions", "[parser]") {
 
     common::Identifiers ids;
     std::vector<Case> cases = {
-        Case{"func abc() 1;", {common::Function{.name = ids.add("abc"), .body = common::Expression{.type = common::ExpressionType::LITERAL}}}},
+        Case{"func abc() 1;", {common::Function{.name = ids.add("abc"), .body = common::Expression{.kind = common::ExpressionKind::LITERAL}}}},
         Case{"func abc() 1; func cba() -1.1; func acb() 1 + 2;", {
-                                                                     common::Function{.name = ids.add("abc"), .body = common::Expression{.type = common::ExpressionType::LITERAL}},
-                                                                     common::Function{.name = ids.add("cba"), .body = common::Expression{.type = common::ExpressionType::UNARY}},
-                                                                     common::Function{.name = ids.add("acb"), .body = common::Expression{.type = common::ExpressionType::BINARY}},
+                                                                     common::Function{.name = ids.add("abc"), .body = common::Expression{.kind = common::ExpressionKind::LITERAL}},
+                                                                     common::Function{.name = ids.add("cba"), .body = common::Expression{.kind = common::ExpressionKind::UNARY}},
+                                                                     common::Function{.name = ids.add("acb"), .body = common::Expression{.kind = common::ExpressionKind::BINARY}},
                                                                  }},
         Case{.str = "func", .should_fail = true},
         Case{.str = "func () 1;", .should_fail = true},
@@ -337,7 +337,7 @@ TEST_CASE("parser: functions", "[parser]") {
         REQUIRE(file.functions().size() == c.expected.size());
         for (size_t i = 0; i < c.expected.size(); ++i) {
             REQUIRE(*ids.get(c.expected[i].name) == *lexer_result.identifiers.get(common::IdentifierID{file.functions()[i].name}));
-            REQUIRE(c.expected[i].body.type == file.functions()[i].body.type);
+            REQUIRE(c.expected[i].body.kind == file.functions()[i].body.kind);
         }
     }
 }

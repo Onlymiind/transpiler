@@ -34,8 +34,8 @@ namespace common {
             return name_to_function_.insert(std::pair<LiteralID, FunctionID>{func.name, func.id}).second;
         }
 
-        std::optional<BuiltinType> get_builtin(Type type) const {
-            auto it = type_to_info_.find(type.id);
+        std::optional<BuiltinType> get_builtin(TypeID type) const {
+            auto it = type_to_info_.find(type);
             if (it == type_to_info_.end()) {
                 return {};
             }
@@ -53,21 +53,8 @@ namespace common {
             return it == name_to_function_.end() ? FunctionID{g_invalid_id} : it->second;
         }
 
-        Type get_expression_type(ExpressionID expr) const {
-            auto it = expression_types_.find(expr);
-            if (it == expression_types_.end()) {
-                return Type{};
-            }
-
-            return it->second;
-        }
-
-        TypeTraits get_traits(Type type) const {
-            return types_.at(type.id);
-        }
-
-        void set_expression_type(ExpressionID expr, Type type) {
-            expression_types_[expr] = type;
+        TypeTraits get_traits(TypeID type) const {
+            return types_.at(type);
         }
 
         common::FunctionID entrypoint() const { return entrypoint_; }

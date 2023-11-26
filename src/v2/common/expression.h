@@ -9,7 +9,7 @@
 #include <optional>
 
 namespace common {
-    enum class ExpressionType : uint8_t {
+    enum class ExpressionKind : uint8_t {
         ERROR,
         BINARY,
         UNARY,
@@ -93,16 +93,18 @@ namespace common {
 
     struct Expression {
 
-        ExpressionType type = ExpressionType::ERROR;
+        ExpressionKind kind = ExpressionKind::ERROR;
         ExpressionID id = ExpressionID{g_invalid_id};
         size_t pos = 0;
 
+        TypeID type = TypeID{g_invalid_id};
+
         constexpr bool is_error() const {
-            return type == ExpressionType::ERROR;
+            return kind == ExpressionKind::ERROR;
         }
 
         constexpr bool operator==(Expression other) const noexcept {
-            return id == other.id && type == other.type;
+            return id == other.id && kind == other.kind;
         }
     };
 

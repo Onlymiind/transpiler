@@ -38,7 +38,7 @@ namespace parser {
             return common::Expression{};
         }
 
-        return common::Expression{.type = common::ExpressionType::UNARY, .id = file_.add(result), .pos = pos};
+        return common::Expression{.kind = common::ExpressionKind::UNARY, .id = file_.add(result), .pos = pos};
     }
 
     common::Expression Parser::parse_primary_expression() {
@@ -47,7 +47,7 @@ namespace parser {
             common::Token tok = next();
             consume();
             return common::Expression{
-                .type = common::ExpressionType::LITERAL,
+                .kind = common::ExpressionKind::LITERAL,
                 .id = file_.add(common::Literal{.type = type, .value = common::LiteralID{tok.data}}),
                 .pos = tok.pos,
             };
@@ -102,7 +102,7 @@ namespace parser {
             return common::Expression{};
         }
         consume();
-        return common::Expression{.type = common::ExpressionType::FUNCTION_CALL, .id = file_.add(result), .pos = pos};
+        return common::Expression{.kind = common::ExpressionKind::FUNCTION_CALL, .id = file_.add(result), .pos = pos};
     }
 
     common::Expression Parser::parse_binary_expression(common::Expression lhs, uint8_t precedence) {
@@ -135,7 +135,7 @@ namespace parser {
             }
 
             lhs = common::Expression{
-                .type = common::ExpressionType::BINARY,
+                .kind = common::ExpressionKind::BINARY,
                 .id = file_.add(common::BinaryExpression{
                     .op = *op,
                     .lhs = lhs,

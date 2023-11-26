@@ -40,6 +40,8 @@ namespace common {
         IdentifierID name = IdentifierID{g_invalid_id};
         BuiltinTypes type{};
         TypeTraits traits{};
+
+        constexpr bool is_error() const { return name == IdentifierID{g_invalid_id}; }
     };
 
     struct Type {

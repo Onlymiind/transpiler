@@ -17,71 +17,71 @@ namespace common {
         AST() = default;
 
         UnaryExpression *get_unary_expression(ExpressionID id) {
-            auto [type, idx] = decompose<ExpressionType>(id);
-            if (type != ExpressionType::UNARY || idx >= unary_exprs_.size()) {
+            auto [type, idx] = decompose<ExpressionKind>(id);
+            if (type != ExpressionKind::UNARY || idx >= unary_exprs_.size()) {
                 return nullptr;
             }
             return &unary_exprs_[idx];
         }
 
         BinaryExpression *get_binary_expression(ExpressionID id) {
-            auto [type, idx] = decompose<ExpressionType>(id);
-            if (type != ExpressionType::BINARY || idx >= binary_exprs_.size()) {
+            auto [type, idx] = decompose<ExpressionKind>(id);
+            if (type != ExpressionKind::BINARY || idx >= binary_exprs_.size()) {
                 return nullptr;
             }
             return &binary_exprs_[idx];
         }
 
         std::optional<Literal> get_literal(ExpressionID id) const {
-            auto [type, idx] = decompose<ExpressionType>(id);
-            if (type != ExpressionType::LITERAL || idx >= literal_exprs_.size()) {
+            auto [type, idx] = decompose<ExpressionKind>(id);
+            if (type != ExpressionKind::LITERAL || idx >= literal_exprs_.size()) {
                 return {};
             }
             return literal_exprs_[idx];
         }
 
         Cast *get_cast(ExpressionID id) {
-            auto [type, idx] = decompose<ExpressionType>(id);
-            if (type != ExpressionType::CAST || idx >= casts_.size()) {
+            auto [type, idx] = decompose<ExpressionKind>(id);
+            if (type != ExpressionKind::CAST || idx >= casts_.size()) {
                 return nullptr;
             }
             return &casts_[idx];
         }
 
         FunctionCall *get_call(ExpressionID id) {
-            auto [type, idx] = decompose<ExpressionType>(id);
-            if (type != ExpressionType::FUNCTION_CALL || idx >= calls_.size()) {
+            auto [type, idx] = decompose<ExpressionKind>(id);
+            if (type != ExpressionKind::FUNCTION_CALL || idx >= calls_.size()) {
                 return nullptr;
             }
             return &calls_[idx];
         }
 
         ExpressionID add(BinaryExpression expr) {
-            ExpressionID result{make_id<ExpressionID>(ExpressionType::BINARY, binary_exprs_.size())};
+            ExpressionID result{make_id<ExpressionID>(ExpressionKind::BINARY, binary_exprs_.size())};
             binary_exprs_.push_back(expr);
             return result;
         }
 
         ExpressionID add(UnaryExpression expr) {
-            ExpressionID result{make_id<ExpressionID>(ExpressionType::UNARY, unary_exprs_.size())};
+            ExpressionID result{make_id<ExpressionID>(ExpressionKind::UNARY, unary_exprs_.size())};
             unary_exprs_.push_back(expr);
             return result;
         }
 
         ExpressionID add(Literal lit) {
-            ExpressionID result{make_id<ExpressionID>(ExpressionType::LITERAL, literal_exprs_.size())};
+            ExpressionID result{make_id<ExpressionID>(ExpressionKind::LITERAL, literal_exprs_.size())};
             literal_exprs_.push_back(lit);
             return result;
         }
 
         ExpressionID add_cast(Cast cast) {
-            ExpressionID result{make_id<ExpressionID>(ExpressionType::CAST, casts_.size())};
+            ExpressionID result{make_id<ExpressionID>(ExpressionKind::CAST, casts_.size())};
             casts_.push_back(cast);
             return result;
         }
 
         ExpressionID add(FunctionCall cast) {
-            ExpressionID result{make_id<ExpressionID>(ExpressionType::FUNCTION_CALL, calls_.size())};
+            ExpressionID result{make_id<ExpressionID>(ExpressionKind::FUNCTION_CALL, calls_.size())};
             calls_.push_back(cast);
             return result;
         }
