@@ -65,7 +65,6 @@ namespace common {
     template <size_t TAG>
     using IDBase = Distinct<uint64_t, TAG>;
     using GenericID = IDBase<IDType::GENERIC>;
-
     using LiteralID = IDBase<IDType::LITERAL>;
     using IdentifierID = IDBase<IDType::IDENTIFIER>;
     using ExpressionID = IDBase<IDType::EXPRESSION>;

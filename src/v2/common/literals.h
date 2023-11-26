@@ -1,7 +1,10 @@
 #ifndef COMPILER_V2_COMMON_LITERALS_HDR_
 #define COMPILER_V2_COMMON_LITERALS_HDR_
 
+#include "common/expression.h"
 #include "common/util.h"
+
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -11,74 +14,53 @@
 
 namespace common {
 
-    // TODO: store each unique literal only once
-    // NOTE: also used to store identifiers' strings
+    // TODO: do string literals really need to be stored only once per unique literal?
     class Literals {
-        constexpr static uint64_t g_id_start = 2;
-
       public:
         Literals() = default;
         ~Literals() = default;
 
         Literals(const Literals &) = delete;
-        Literals(Literals &&other)
-            : integers_(std::move(other.integers_)), doubles_(std::move(other.doubles_)),
-              strings_(std::move(other.strings_)), string_to_id_(std::move(other.string_to_id_)),
-              string_storage_(std::move(other.string_storage_)), current_id_(other.current_id_) {
-            other.current_id_ = g_id_start;
-        }
+        Literals(Literals &&other) = default;
 
         Literals &operator=(const Literals &) = delete;
-        Literals &operator=(Literals &&other) {
-            integers_ = std::move(other.integers_);
-            doubles_ = std::move(other.doubles_);
-            strings_ = std::move(other.strings_);
-            string_to_id_ = std::move(other.string_to_id_);
-            string_storage_ = std::move(other.string_storage_);
-            current_id_ = other.current_id_;
-            other.current_id_ = g_id_start;
-            return *this;
-        }
+        Literals &operator=(Literals &&other) = default;
 
         LiteralID add(double val) {
-            LiteralID result{current_id_};
-            doubles_[result] = val;
-            ++current_id_;
+            LiteralID result{make_id(LiteralType::FLOAT, doubles_.size())};
+            doubles_.push_back(val);
             return result;
         }
 
         LiteralID add(uint64_t val) {
-            LiteralID result{current_id_};
-            integers_[result] = val;
-            ++current_id_;
+            LiteralID result{make_id(LiteralType::UINT, integers_.size())};
+            integers_.push_back(val);
             return result;
         }
 
         LiteralID add(std::string val) {
-            auto [it, inserted] = string_storage_.insert(std::move(val));
+            LiteralID result = make_id(LiteralType::STRING, strings_.size());
+            auto [it, inserted] = string_storage_.try_emplace(std::move(val), result);
             if (!inserted) {
-                return string_to_id_.at(&*it);
+                return it->second;
             }
-            LiteralID result{current_id_};
-            ++current_id_;
-            strings_[result] = &(*it);
-            string_to_id_[&(*it)] = result;
+            strings_.push_back(&it->first);
             return result;
         }
 
         std::optional<uint64_t> get_integer(LiteralID id) const {
-            auto it = integers_.find(id);
-            return it == integers_.end() ? std::optional<uint64_t>{} : it->second;
+            auto [type, idx] = decompose(id);
+            return type != LiteralType::UINT || idx >= integers_.size() ? std::optional<uint64_t>{} : integers_[idx];
         }
 
         std::optional<double> get_double(LiteralID id) const {
-            auto it = doubles_.find(id);
-            return it == doubles_.end() ? std::optional<double>{} : it->second;
+            auto [type, idx] = decompose(id);
+            return type != LiteralType::FLOAT || idx >= doubles_.size() ? std::optional<double>{} : doubles_[idx];
         }
 
         const std::string *get_string(LiteralID id) const {
-            auto it = strings_.find(id);
-            return it == strings_.end() ? nullptr : it->second;
+            auto [type, idx] = decompose(id);
+            return type != LiteralType::STRING || idx >= strings_.size() ? nullptr : strings_[idx];
         }
 
         bool operator==(const Literals &other) const {
@@ -89,13 +71,18 @@ namespace common {
         }
 
       private:
-        std::unordered_map<LiteralID, uint64_t> integers_;
-        std::unordered_map<LiteralID, double> doubles_;
-        std::unordered_map<LiteralID, const std::string *> strings_;
-        std::unordered_map<const std::string *, LiteralID> string_to_id_;
-        std::unordered_set<std::string> string_storage_;
+        static constexpr LiteralID make_id(LiteralType type, uint64_t idx) {
+            return LiteralID{(static_cast<uint64_t>(type) << 56) | idx};
+        }
 
-        uint64_t current_id_ = g_id_start;
+        static constexpr std::pair<LiteralType, uint64_t> decompose(LiteralID id) {
+            return {static_cast<LiteralType>(*id >> 56), *id & 0xffffffffffffff};
+        }
+
+        std::vector<uint64_t> integers_;
+        std::vector<double> doubles_;
+        std::vector<const std::string *> strings_;
+        std::unordered_map<std::string, LiteralID> string_storage_;
     };
 
     class Identifiers {

@@ -1,7 +1,6 @@
 #ifndef COMPILER_V2_COMMON_EXPRESSION_HDR_
 #define COMPILER_V2_COMMON_EXPRESSION_HDR_
 
-#include "common/literals.h"
 #include "common/token.h"
 #include "common/util.h"
 
@@ -136,6 +135,7 @@ namespace common {
         BOOL,
         UINT,
         FLOAT,
+        STRING,
     };
 
     struct Literal {
