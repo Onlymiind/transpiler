@@ -85,7 +85,7 @@ namespace common {
         std::unordered_map<IdentifierID, FunctionID> name_to_function_;
         std::unordered_map<ExpressionID, Type> expression_types_;
 
-        common::FunctionID entrypoint_ = common::FunctionID{g_invalid_id};
+        FunctionID entrypoint_ = FunctionID{g_invalid_id};
         uint64_t current_id_ = 0;
     };
 } // namespace common

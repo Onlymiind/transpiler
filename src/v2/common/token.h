@@ -41,6 +41,8 @@ namespace common {
         LEFT_PARENTHESIS,
         RIGHT_PARENTHESIS,
         SEMICOLON,
+        LEFT_BRACE,
+        RIGHT_BRACE,
 
         END_OF_FILE
     };

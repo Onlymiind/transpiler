@@ -221,16 +221,21 @@ namespace checker {
         }
     }
 
-    common::Type Checker::check_function_call(common::FunctionCall call, common::Expression &incoming_edge) {
+    common::Type Checker::check_function_call(common::FunctionCall &call, common::Expression &incoming_edge) {
         if (!module_.get_type(call.name).is_error()) {
             if (call.args.size() != 1) {
                 report_error("expected exactly 1 argument for a cast");
                 return common::Type{};
             }
+
             common::Cast cast{.to = call.name, .from = call.args[0]};
+            common::Type result = check_cast(cast);
+            if (result.is_error()) {
+                return common::Type{};
+            }
             incoming_edge.type = common::ExpressionType::CAST;
-            incoming_edge.id = module_.file().add(cast);
-            return check_cast(cast);
+            incoming_edge.id = module_.file().add_cast(cast);
+            return result;
         }
 
         common::FunctionID id = module_.get_function(call.name);

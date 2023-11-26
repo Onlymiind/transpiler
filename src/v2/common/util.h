@@ -16,7 +16,12 @@ namespace common {
         constexpr explicit Distinct(T val) : val_(val) {}
 
         template <size_t TAG2>
-        constexpr explicit Distinct(Distinct<T, TAG2> other) : val_(*other) {}
+        constexpr explicit Distinct(Distinct<T, TAG2> other)
+            requires(TAG2 !=
+                     TAG)
+            : val_(*other) {}
+
+        Distinct<T, TAG> &operator=(const Distinct<T, TAG> &) = default;
 
         constexpr explicit operator T() const { return val_; }
 
@@ -59,7 +64,8 @@ namespace common {
             IDENTIFIER,
             EXPRESSION,
             FUNCTION,
-            TYPE
+            TYPE,
+            STATEMENT
         };
     }
     template <size_t TAG>
@@ -70,10 +76,26 @@ namespace common {
     using ExpressionID = IDBase<IDType::EXPRESSION>;
     using FunctionID = IDBase<IDType::FUNCTION>;
     using TypeID = IDBase<IDType::TYPE>;
+    using StatementID = IDBase<IDType::STATEMENT>;
 
     constexpr inline GenericID g_invalid_id{static_cast<uint64_t>(-1)};
     constexpr inline LiteralID g_false_id{2};
     constexpr inline LiteralID g_true_id{1};
+
+    template <typename ID, typename Type>
+    constexpr inline ID make_id(Type tag, uint64_t idx)
+        requires std::is_enum_v<Type> && std::is_same_v<std::underlying_type_t<Type>, uint8_t>
+    {
+        return ID{(static_cast<uint64_t>(tag) << 56) | idx};
+    }
+
+    template <typename Type, size_t TAG>
+    constexpr inline std::pair<Type, uint64_t> decompose(IDBase<TAG> id)
+        requires std::is_enum_v<Type> && std::is_same_v<std::underlying_type_t<Type>, uint8_t>
+    {
+        return {static_cast<Type>(*id >> 56), *id & 0xffffffffffffff};
+    }
+
 } // namespace common
 
 namespace std {

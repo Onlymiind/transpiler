@@ -103,6 +103,7 @@ struct ExprComparer {
     common::AST &rhs_file;
     common::Literals &rhs_literals;
     common::Identifiers &rhs_identifiers;
+
     bool compare(common::Expression lhs, common::Expression rhs) {
         if (lhs.type != rhs.type) {
             return false;

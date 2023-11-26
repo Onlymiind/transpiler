@@ -14,6 +14,8 @@ set(COMPILER_SRC
     common/types.h
     common/module.h
     common/literals.h
+    common/scope.h
+    common/statement.h
 
     lexer/lexer.h
     lexer/lexer.cpp

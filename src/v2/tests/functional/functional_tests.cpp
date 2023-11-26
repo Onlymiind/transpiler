@@ -8,7 +8,7 @@
 #include <iostream>
 
 TEST_CASE("functional tests") {
-    std::string name = GENERATE(as<std::string>{}, "function_calls", "function_def", "use_before_declaration");
+    std::string name = GENERATE(as<std::string>{}, "function_calls", "function_def", "use_before_declaration", "function_call_converts_to_cast");
 
     std::filesystem::path data{"data/" + name};
     std::ifstream in{data};

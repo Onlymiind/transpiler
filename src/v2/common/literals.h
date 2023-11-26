@@ -27,19 +27,19 @@ namespace common {
         Literals &operator=(Literals &&other) = default;
 
         LiteralID add(double val) {
-            LiteralID result{make_id(LiteralType::FLOAT, doubles_.size())};
+            LiteralID result{make_id<LiteralID>(LiteralType::FLOAT, doubles_.size())};
             doubles_.push_back(val);
             return result;
         }
 
         LiteralID add(uint64_t val) {
-            LiteralID result{make_id(LiteralType::UINT, integers_.size())};
+            LiteralID result{make_id<LiteralID>(LiteralType::UINT, integers_.size())};
             integers_.push_back(val);
             return result;
         }
 
         LiteralID add(std::string val) {
-            LiteralID result = make_id(LiteralType::STRING, strings_.size());
+            LiteralID result = make_id<LiteralID>(LiteralType::STRING, strings_.size());
             auto [it, inserted] = string_storage_.try_emplace(std::move(val), result);
             if (!inserted) {
                 return it->second;
@@ -49,17 +49,17 @@ namespace common {
         }
 
         std::optional<uint64_t> get_integer(LiteralID id) const {
-            auto [type, idx] = decompose(id);
+            auto [type, idx] = decompose<LiteralType>(id);
             return type != LiteralType::UINT || idx >= integers_.size() ? std::optional<uint64_t>{} : integers_[idx];
         }
 
         std::optional<double> get_double(LiteralID id) const {
-            auto [type, idx] = decompose(id);
+            auto [type, idx] = decompose<LiteralType>(id);
             return type != LiteralType::FLOAT || idx >= doubles_.size() ? std::optional<double>{} : doubles_[idx];
         }
 
         const std::string *get_string(LiteralID id) const {
-            auto [type, idx] = decompose(id);
+            auto [type, idx] = decompose<LiteralType>(id);
             return type != LiteralType::STRING || idx >= strings_.size() ? nullptr : strings_[idx];
         }
 
@@ -71,14 +71,6 @@ namespace common {
         }
 
       private:
-        static constexpr LiteralID make_id(LiteralType type, uint64_t idx) {
-            return LiteralID{(static_cast<uint64_t>(type) << 56) | idx};
-        }
-
-        static constexpr std::pair<LiteralType, uint64_t> decompose(LiteralID id) {
-            return {static_cast<LiteralType>(*id >> 56), *id & 0xffffffffffffff};
-        }
-
         std::vector<uint64_t> integers_;
         std::vector<double> doubles_;
         std::vector<const std::string *> strings_;

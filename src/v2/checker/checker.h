@@ -26,7 +26,7 @@ namespace checker {
         common::Type check_unary_expression(common::UnaryExpression &expr);
         common::Type check_binary_expression(common::BinaryExpression &expr);
         common::Type check_cast(common::Cast &cast);
-        common::Type check_function_call(common::FunctionCall call, common::Expression &incoming_edge);
+        common::Type check_function_call(common::FunctionCall &call, common::Expression &incoming_edge);
         void check_function(common::Function &func);
 
         common::Module reset() {

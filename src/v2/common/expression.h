@@ -9,7 +9,7 @@
 #include <optional>
 
 namespace common {
-    enum class ExpressionType {
+    enum class ExpressionType : uint8_t {
         ERROR,
         BINARY,
         UNARY,
@@ -106,12 +106,6 @@ namespace common {
         }
     };
 
-    struct ExpressionHash {
-        constexpr size_t operator()(Expression expr) const {
-            return static_cast<size_t>(static_cast<uint64_t>(expr.type) * 7919 + *expr.id);
-        }
-    };
-
     struct BinaryExpression {
         BinaryOp op{};
         Expression lhs{};
@@ -131,7 +125,7 @@ namespace common {
         }
     };
 
-    enum class LiteralType {
+    enum class LiteralType : uint8_t {
         BOOL,
         UINT,
         FLOAT,
