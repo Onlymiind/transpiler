@@ -13,6 +13,12 @@
 #include <vector>
 
 namespace lexer {
+    struct LexerResult {
+        std::vector<common::Token> tokens;
+        common::Literals literals;
+        common::Identifiers identifiers;
+    };
+
     class Lexer {
       public:
         Lexer() = default;
@@ -20,8 +26,8 @@ namespace lexer {
 
         void set_file(std::istream &file) { file_ = &file; }
 
-        std::pair<std::vector<common::Token>, common::Literals> reset() {
-            std::pair<std::vector<common::Token>, common::Literals> result{std::move(tokens_), std::move(literals_)};
+        LexerResult reset() {
+            LexerResult result{std::move(result_)};
             return result;
         }
 
@@ -44,8 +50,7 @@ namespace lexer {
         common::Error get_error() const { return err_; }
 
       private:
-        std::vector<common::Token> tokens_{};
-        common::Literals literals_;
+        LexerResult result_;
         std::istream *file_ = nullptr;
 
         common::Error err_;

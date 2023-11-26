@@ -1,6 +1,7 @@
 #ifndef COMPILER_V2_COMMON_TOKEN_HDR_
 #define COMPILER_V2_COMMON_TOKEN_HDR_
 #include "common/literals.h"
+#include "common/util.h"
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -59,7 +60,7 @@ namespace common {
     struct Token {
         TokenType type = TokenType::ERROR;
 
-        Literals::ID data = Literals::g_invalid_id;
+        GenericID data = g_invalid_id;
 
         size_t pos = 0;
 

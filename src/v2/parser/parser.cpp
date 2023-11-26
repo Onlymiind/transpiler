@@ -1,6 +1,7 @@
 #include "parser/parser.h"
 #include "common/declarations.h"
 #include "common/expression.h"
+#include "common/literals.h"
 #include "common/token.h"
 
 #include <cstddef>
@@ -47,7 +48,7 @@ namespace parser {
             consume();
             return common::Expression{
                 .type = common::ExpressionType::LITERAL,
-                .id = file_.add(common::Literal{.type = type, .value = tok.data}),
+                .id = file_.add(common::Literal{.type = type, .value = common::Literals::ID{tok.data}}),
                 .pos = tok.pos,
             };
         };
@@ -85,7 +86,7 @@ namespace parser {
             return common::Expression{};
         }
 
-        common::FunctionCall result{.name = next().data};
+        common::FunctionCall result{.name = common::Identifiers::ID{next().data}};
         size_t pos = next().pos;
         consume();
         if (next().type != common::TokenType::LEFT_PARENTHESIS) {
@@ -159,7 +160,7 @@ namespace parser {
             report_error("expected function name");
             return result;
         }
-        result.name = next().data;
+        result.name = common::Identifiers::ID{next().data};
         consume();
         if (next().type != common::TokenType::LEFT_PARENTHESIS) {
             report_error("expected \"(\"");

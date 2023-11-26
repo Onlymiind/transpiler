@@ -7,17 +7,17 @@ namespace checker {
 
     void Checker::add_builtins() {
         builtin_types_[common::BuiltinTypes::BOOL] = module_.add(common::BuiltinType{
-            .name = module_.file().literals().add("bool"),
+            .name = identifiers_->add("bool"),
             .type = common::BuiltinTypes::BOOL,
             .traits = common::TypeTraits::BOOLEAN,
         });
         builtin_types_[common::BuiltinTypes::UINT] = module_.add(common::BuiltinType{
-            .name = module_.file().literals().add("u64"),
+            .name = identifiers_->add("u64"),
             .type = common::BuiltinTypes::UINT,
             .traits = common::TypeTraits::INTEGER,
         });
         builtin_types_[common::BuiltinTypes::FLOAT] = module_.add(common::BuiltinType{
-            .name = module_.file().literals().add("f64"),
+            .name = identifiers_->add("f64"),
             .type = common::BuiltinTypes::FLOAT,
             .traits = common::TypeTraits::FLOATING_POINT,
         });
@@ -41,19 +41,18 @@ namespace checker {
             return;
         }
         auto &functions = module_.file().functions();
-        auto &literals = module_.file().literals();
         for (auto &func : functions) {
             check_function(func);
             if (!err_.empty()) {
                 return;
             }
 
-            if (*literals.get_string(func.name) == "main") {
+            if (*identifiers_->get(func.name) == "main") {
                 module_.set_entrypoint(func.id);
             }
         }
 
-        if (module_.entrypoint() == common::Function::g_invalid_id) {
+        if (module_.entrypoint() == common::Function::ID{common::g_invalid_id}) {
             err_positions_.push(1);
             report_error("entrypoint not declared");
         }
@@ -235,7 +234,7 @@ namespace checker {
         }
 
         common::Function::ID id = module_.get_function(call.name);
-        if (id == common::Function::g_invalid_id) {
+        if (id == common::Function::ID{common::g_invalid_id}) {
             report_error("function not defined");
             return common::Type{};
         }

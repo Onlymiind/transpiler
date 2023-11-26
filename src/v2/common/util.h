@@ -15,6 +15,9 @@ namespace common {
         constexpr Distinct() = default;
         constexpr explicit Distinct(T val) : val_(val) {}
 
+        template <typename Tag2>
+        constexpr explicit Distinct(Distinct<T, Tag2> other) : val_(*other) {}
+
         constexpr explicit operator T() const { return val_; }
 
         constexpr T &operator*() noexcept { return val_; }
@@ -48,6 +51,12 @@ namespace common {
 
         constexpr bool empty() const { return msg.empty(); }
     };
+
+    template <typename T>
+    using IDBase = Distinct<uint64_t, T>;
+    using GenericID = IDBase<void>;
+    constexpr inline GenericID g_invalid_id{static_cast<uint64_t>(-1)};
+
 } // namespace common
 
 namespace std {

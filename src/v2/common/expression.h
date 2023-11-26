@@ -142,7 +142,7 @@ namespace common {
 
     struct Literal {
         LiteralType type{};
-        Literals::ID value = Literals::g_invalid_id;
+        Literals::ID value = Literals::ID{g_invalid_id};
 
         constexpr bool operator==(const Literal &other) const noexcept {
             return value == other.value;
@@ -150,13 +150,13 @@ namespace common {
     };
 
     struct FunctionCall {
-        Literals::ID name = Literals::g_invalid_id;
+        Identifiers::ID name = Identifiers::ID{g_invalid_id};
         std::vector<Expression> args;
     };
 
     // probably should implement separate ID for identifiers
     struct Cast {
-        Literals::ID to = Literals::g_invalid_id;
+        Identifiers::ID to = Identifiers::ID{g_invalid_id};
         Expression from{};
     };
 

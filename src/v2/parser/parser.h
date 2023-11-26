@@ -15,8 +15,8 @@ namespace parser {
 
     class Parser {
       public:
-        Parser(std::vector<common::Token> &&tokens, common::Literals &&literals) noexcept
-            : tokens_(std::move(tokens)), remainder_(tokens_), file_(std::move(literals)) {}
+        Parser(std::vector<common::Token> &&tokens) noexcept
+            : tokens_(std::move(tokens)), remainder_(tokens_) {}
 
         void set_tokens(std::vector<common::Token> &&tokens) noexcept {
             tokens_ = std::move(tokens);

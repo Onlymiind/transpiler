@@ -18,7 +18,6 @@ namespace common {
 
       public:
         using ID = Distinct<uint64_t, Literals>;
-        constexpr static ID g_invalid_id = ID{static_cast<uint64_t>(-1)};
         constexpr static ID g_false_id = ID{0};
         constexpr static ID g_true_id = ID{1};
 
@@ -101,6 +100,40 @@ namespace common {
         std::unordered_set<std::string> string_storage_;
 
         uint64_t current_id_ = g_id_start;
+    };
+
+    class Identifiers {
+      public:
+        using ID = Distinct<uint64_t, Identifiers>;
+
+        Identifiers() = default;
+        ~Identifiers() = default;
+        Identifiers(Identifiers &&) = default;
+        Identifiers &operator=(Identifiers &&) = default;
+
+        Identifiers(const Identifiers &) = delete;
+        Identifiers &operator=(const Identifiers &) = delete;
+
+        ID add(std::string str) {
+            auto [it, inserted] = name_to_id_.try_emplace(std::move(str), id_to_name_.size());
+            if (inserted) {
+                id_to_name_.push_back(&it->first);
+            }
+            return it->second;
+        }
+
+        const std::string *get(ID id) const {
+            return id == ID{g_invalid_id} || *id >= id_to_name_.size() ? nullptr : id_to_name_[*id];
+        }
+
+        ID get(const std::string &name) const {
+            auto it = name_to_id_.find(name);
+            return it == name_to_id_.end() ? ID{g_invalid_id} : it->second;
+        }
+
+      private:
+        std::vector<const std::string *> id_to_name_;
+        std::unordered_map<std::string, ID> name_to_id_;
     };
 } // namespace common
 

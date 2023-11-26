@@ -3,6 +3,7 @@
 #include "common/file.h"
 #include "common/literals.h"
 #include "common/token.h"
+#include "common/util.h"
 #include "lexer/lexer.h"
 #include "parser/parser.h"
 
@@ -18,13 +19,13 @@
 
 class PolishNotationParser {
   public:
-    PolishNotationParser(std::vector<common::Token> tokens, common::Literals &&literals)
-        : tokens_(std::move(tokens)), remainder_(tokens_), file_(std::move(literals)) {}
+    PolishNotationParser(std::vector<common::Token> tokens)
+        : tokens_(std::move(tokens)), remainder_(tokens_) {}
 
-    common::File parse() {
-        file_.set_start_expression(parse_expression());
+    std::pair<common::File, common::Expression> parse() {
+        common::Expression start = parse_expression();
 
-        common::File result = std::move(file_);
+        std::pair<common::File, common::Expression> result = {std::move(file_), start};
         return result;
     }
 
@@ -46,7 +47,7 @@ class PolishNotationParser {
             consume();
             return common::Expression{
                 .type = common::ExpressionType::LITERAL,
-                .id = file_.add(common::Literal{.type = type, .value = tok.data}),
+                .id = file_.add(common::Literal{.type = type, .value = common::Literals::ID{tok.data}}),
             };
         };
 
@@ -58,7 +59,7 @@ class PolishNotationParser {
             consume();
             return parse_unary_expression();
         case common::TokenType::IDENTIFIER: {
-            common::FunctionCall result{.name = next().data};
+            common::FunctionCall result{.name = common::Identifiers::ID{next().data}};
             consume();
             result.args.push_back(parse_expression());
             return common::Expression{.type = common::ExpressionType::FUNCTION_CALL, .id = file_.add(result)};
@@ -95,70 +96,78 @@ class PolishNotationParser {
     common::File file_;
 };
 
-bool compare(common::Expression lhs, common::Expression rhs, common::File &lhs_file, common::File &rhs_file) {
-    if (lhs.type != rhs.type) {
-        return false;
-    }
-
-    if (lhs.is_error()) {
-        return true;
-    }
-
-    switch (lhs.type) {
-    case common::ExpressionType::BINARY: {
-        auto lhs_binary = *lhs_file.get_binary_expression(lhs.id);
-        auto rhs_binary = *rhs_file.get_binary_expression(rhs.id);
-        return lhs_binary.op == rhs_binary.op &&
-               compare(lhs_binary.lhs, rhs_binary.lhs, lhs_file, rhs_file) &&
-               compare(lhs_binary.rhs, rhs_binary.rhs, lhs_file, rhs_file);
-    }
-    case common::ExpressionType::UNARY: {
-        auto lhs_unary = *lhs_file.get_unary_expression(lhs.id);
-        auto rhs_unary = *rhs_file.get_unary_expression(rhs.id);
-        return lhs_unary.op == rhs_unary.op && compare(lhs_unary.expr, rhs_unary.expr, lhs_file, rhs_file);
-    }
-    case common::ExpressionType::CAST: {
-        auto lhs_cast = *lhs_file.get_cast(lhs.id);
-        auto rhs_cast = *rhs_file.get_cast(rhs.id);
-        auto str1 = *lhs_file.literals().get_string(lhs_cast.to);
-        auto str2 = *rhs_file.literals().get_string(rhs_cast.to);
-        return str1 == str2 &&
-               compare(lhs_cast.from, rhs_cast.from, lhs_file, rhs_file);
-    }
-    case common::ExpressionType::FUNCTION_CALL: {
-        auto lhs_call = *lhs_file.get_call(lhs.id);
-        auto rhs_call = *rhs_file.get_call(rhs.id);
-        if (*lhs_file.literals().get_string(lhs_call.name) != *rhs_file.literals().get_string(rhs_call.name)) {
+struct ExprComparer {
+    common::File &lhs_file;
+    common::Literals &lhs_literals;
+    common::Identifiers &lhs_identifiers;
+    common::File &rhs_file;
+    common::Literals &rhs_literals;
+    common::Identifiers &rhs_identifiers;
+    bool compare(common::Expression lhs, common::Expression rhs) {
+        if (lhs.type != rhs.type) {
             return false;
         }
-        if (lhs_call.args.size() != rhs_call.args.size()) {
-            return false;
+
+        if (lhs.is_error()) {
+            return true;
         }
-        for (size_t i = 0; i < lhs_call.args.size(); ++i) {
-            if (!compare(lhs_call.args[i], rhs_call.args[i], lhs_file, rhs_file)) {
+
+        switch (lhs.type) {
+        case common::ExpressionType::BINARY: {
+            auto lhs_binary = *lhs_file.get_binary_expression(lhs.id);
+            auto rhs_binary = *rhs_file.get_binary_expression(rhs.id);
+            return lhs_binary.op == rhs_binary.op &&
+                   compare(lhs_binary.lhs, rhs_binary.lhs) &&
+                   compare(lhs_binary.rhs, rhs_binary.rhs);
+        }
+        case common::ExpressionType::UNARY: {
+            auto lhs_unary = *lhs_file.get_unary_expression(lhs.id);
+            auto rhs_unary = *rhs_file.get_unary_expression(rhs.id);
+            return lhs_unary.op == rhs_unary.op && compare(lhs_unary.expr, rhs_unary.expr);
+        }
+        case common::ExpressionType::CAST: {
+            auto lhs_cast = *lhs_file.get_cast(lhs.id);
+            auto rhs_cast = *rhs_file.get_cast(rhs.id);
+            auto str1 = *lhs_identifiers.get(lhs_cast.to);
+            auto str2 = *rhs_identifiers.get(rhs_cast.to);
+            return str1 == str2 &&
+                   compare(lhs_cast.from, rhs_cast.from);
+        }
+        case common::ExpressionType::FUNCTION_CALL: {
+            auto lhs_call = *lhs_file.get_call(lhs.id);
+            auto rhs_call = *rhs_file.get_call(rhs.id);
+            if (*lhs_identifiers.get(lhs_call.name) != *rhs_identifiers.get(rhs_call.name)) {
                 return false;
             }
+            if (lhs_call.args.size() != rhs_call.args.size()) {
+                return false;
+            }
+            for (size_t i = 0; i < lhs_call.args.size(); ++i) {
+                if (!compare(lhs_call.args[i], rhs_call.args[i])) {
+                    return false;
+                }
+            }
+            return true;
         }
-        return true;
-    }
-    case common::ExpressionType::LITERAL: {
-        auto lhs_lit = *lhs_file.get_literal(lhs.id);
-        auto rhs_lit = *rhs_file.get_literal(rhs.id);
-        if (lhs_lit.type != rhs_lit.type) {
-            return false;
+        case common::ExpressionType::LITERAL: {
+            auto lhs_lit = *lhs_file.get_literal(lhs.id);
+            auto rhs_lit = *rhs_file.get_literal(rhs.id);
+            if (lhs_lit.type != rhs_lit.type) {
+                return false;
+            }
+            switch (lhs_lit.type) {
+            case common::LiteralType::BOOL:
+                return lhs_lit.value == rhs_lit.value;
+            case common::LiteralType::UINT:
+                return lhs_literals.get_integer(lhs_lit.value) == rhs_literals.get_integer(rhs_lit.value);
+            case common::LiteralType::FLOAT:
+                return lhs_literals.get_double(lhs_lit.value) == rhs_literals.get_double(rhs_lit.value);
+            }
         }
-        switch (lhs_lit.type) {
-        case common::LiteralType::BOOL:
-            return lhs_lit.value == rhs_lit.value;
-        case common::LiteralType::UINT:
-            return lhs_file.literals().get_integer(lhs_lit.value) == rhs_file.literals().get_integer(rhs_lit.value);
-        case common::LiteralType::FLOAT:
-            return lhs_file.literals().get_double(lhs_lit.value) == rhs_file.literals().get_double(rhs_lit.value);
         }
+        return false;
     }
-    }
-    return false;
-}
+};
 
 TEST_CASE("parser: literals", "[parser]") {
     std::string string{GENERATE(as<std::string>{}, "1234", "true", "1234.1234")};
@@ -167,21 +176,24 @@ TEST_CASE("parser: literals", "[parser]") {
     lexer::Lexer l{str};
     l.split();
     REQUIRE(l.get_error().empty());
-    auto [tokens, literals] = l.reset();
-    auto expected = PolishNotationParser{std::move(tokens), std::move(literals)}.parse();
+    auto lexer_result1 = l.reset();
+    auto expected = PolishNotationParser{std::move(lexer_result1.tokens)}.parse();
 
     str.str(string);
     str.clear();
     l.set_file(str);
     l.split();
     REQUIRE(l.get_error().empty());
-    auto [got_tokens, got_literals] = l.reset();
+    auto lexer_result2 = l.reset();
 
-    parser::Parser p{std::move(got_tokens), std::move(got_literals)};
+    parser::Parser p{std::move(lexer_result2.tokens)};
     auto result = p.parse_expression();
     REQUIRE(p.get_error().empty());
     auto file = p.reset();
-    REQUIRE(compare(result, expected.start_expression(), file, expected));
+    REQUIRE(ExprComparer{
+        file, lexer_result2.literals, lexer_result2.identifiers,
+        expected.first, lexer_result1.literals, lexer_result1.identifiers}
+                .compare(result, expected.second));
 }
 
 struct ParserTestCase {
@@ -195,22 +207,24 @@ void run_tests(const std::vector<ParserTestCase> &cases) {
         lexer::Lexer l{str};
         l.split();
         REQUIRE(l.get_error().empty());
-        auto lexer_result = l.reset();
+        auto lexer_result1 = l.reset();
 
-        auto expected = PolishNotationParser{std::move(lexer_result.first), std::move(lexer_result.second)}.parse();
+        auto expected = PolishNotationParser{std::move(lexer_result1.tokens)}.parse();
 
         str.clear();
         str.str(c.expr);
         l.set_file(str);
         l.split();
         REQUIRE(l.get_error().empty());
-        lexer_result = l.reset();
+        auto lexer_result2 = l.reset();
 
-        parser::Parser p{std::move(lexer_result.first), std::move(lexer_result.second)};
+        parser::Parser p{std::move(lexer_result2.tokens)};
         auto result = p.parse_expression();
         REQUIRE(p.get_error().empty());
         auto file = p.reset();
-        REQUIRE(compare(result, expected.start_expression(), file, expected));
+        REQUIRE(ExprComparer{file, lexer_result2.literals, lexer_result2.identifiers,
+                             expected.first, lexer_result1.literals, lexer_result1.identifiers}
+                    .compare(result, expected.second));
     }
 }
 
@@ -285,19 +299,19 @@ TEST_CASE("parser: functions", "[parser]") {
         bool should_fail = false;
     };
 
-    common::Literals lit;
+    common::Identifiers ids;
     std::vector<Case> cases = {
-        Case{"func abc() 1;", {common::Function{.name = lit.add("abc"), .body = common::Expression{.type = common::ExpressionType::LITERAL}}}},
+        Case{"func abc() 1;", {common::Function{.name = ids.add("abc"), .body = common::Expression{.type = common::ExpressionType::LITERAL}}}},
         Case{"func abc() 1; func cba() -1.1; func acb() 1 + 2;", {
-                                                                     common::Function{.name = lit.add("abc"), .body = common::Expression{.type = common::ExpressionType::LITERAL}},
-                                                                     common::Function{.name = lit.add("cba"), .body = common::Expression{.type = common::ExpressionType::UNARY}},
-                                                                     common::Function{.name = lit.add("acb"), .body = common::Expression{.type = common::ExpressionType::BINARY}},
+                                                                     common::Function{.name = ids.add("abc"), .body = common::Expression{.type = common::ExpressionType::LITERAL}},
+                                                                     common::Function{.name = ids.add("cba"), .body = common::Expression{.type = common::ExpressionType::UNARY}},
+                                                                     common::Function{.name = ids.add("acb"), .body = common::Expression{.type = common::ExpressionType::BINARY}},
                                                                  }},
         Case{.str = "func", .should_fail = true},
         Case{.str = "func () 1;", .should_fail = true},
         Case{.str = "func a(", .should_fail = true},
         Case{.str = "func a()", .should_fail = true},
-        Case{.str = "func a();", .expected = {common::Function{.name = lit.add("a")}}},
+        Case{.str = "func a();", .expected = {common::Function{.name = ids.add("a")}}},
         Case{.str = "func a() 1", .should_fail = true},
     };
 
@@ -309,7 +323,7 @@ TEST_CASE("parser: functions", "[parser]") {
         REQUIRE(l.get_error().empty());
         auto lexer_result = l.reset();
 
-        parser::Parser p{std::move(lexer_result.first), std::move(lexer_result.second)};
+        parser::Parser p{std::move(lexer_result.tokens)};
         p.parse();
         INFO(p.get_error().msg);
         if (c.should_fail) {
@@ -321,7 +335,7 @@ TEST_CASE("parser: functions", "[parser]") {
         auto file = p.reset();
         REQUIRE(file.functions().size() == c.expected.size());
         for (size_t i = 0; i < c.expected.size(); ++i) {
-            REQUIRE(*lit.get_string(c.expected[i].name) == *file.literals().get_string(file.functions()[i].name));
+            REQUIRE(*ids.get(c.expected[i].name) == *lexer_result.identifiers.get(common::Identifiers::ID{file.functions()[i].name}));
             REQUIRE(c.expected[i].body.type == file.functions()[i].body.type);
         }
     }
@@ -332,8 +346,8 @@ TEST_CASE("parser: fails", "[parser]") {
     lexer::Lexer l{in};
     l.split();
     REQUIRE(l.get_error().empty());
-    auto [tokens, literals] = l.reset();
-    parser::Parser p{std::move(tokens), std::move(literals)};
+    auto result = l.reset();
+    parser::Parser p{std::move(result.tokens)};
     p.parse_expression();
     REQUIRE(!p.get_error().empty());
 }

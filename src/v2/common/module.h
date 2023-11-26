@@ -43,14 +43,14 @@ namespace common {
             return it->second;
         }
 
-        Type get_type(common::Literals::ID name) const {
+        Type get_type(Identifiers::ID name) const {
             auto it = name_to_type_.find(name);
             return it == name_to_type_.end() ? Type{} : Type{.id = it->second};
         }
 
-        Function::ID get_function(common::Literals::ID name) const {
+        Function::ID get_function(Identifiers::ID name) const {
             auto it = name_to_function_.find(name);
-            return it == name_to_function_.end() ? Function::g_invalid_id : it->second;
+            return it == name_to_function_.end() ? Function::ID{g_invalid_id} : it->second;
         }
 
         Type get_expression_type(Expression::ID expr) const {
@@ -81,11 +81,11 @@ namespace common {
 
         std::unordered_map<Type::ID, TypeTraits> types_;
         std::unordered_map<Type::ID, BuiltinType> type_to_info_;
-        std::unordered_map<Literals::ID, Type::ID> name_to_type_;
-        std::unordered_map<Literals::ID, Function::ID> name_to_function_;
+        std::unordered_map<Identifiers::ID, Type::ID> name_to_type_;
+        std::unordered_map<Identifiers::ID, Function::ID> name_to_function_;
         std::unordered_map<Expression::ID, Type> expression_types_;
 
-        common::Function::ID entrypoint_ = common::Function::g_invalid_id;
+        common::Function::ID entrypoint_ = common::Function::ID{g_invalid_id};
         uint64_t current_id_ = 0;
     };
 } // namespace common

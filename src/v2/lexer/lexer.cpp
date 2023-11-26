@@ -1,6 +1,7 @@
 #include "lexer/lexer.h"
 #include "common/literals.h"
 #include "common/token.h"
+#include "common/util.h"
 #include <array>
 #include <cctype>
 #include <cstddef>
@@ -64,15 +65,15 @@ namespace lexer {
                 }
                 return;
             }
-            tokens_.push_back(tok);
+            result_.tokens.push_back(tok);
 
             consume_spaces();
         }
     }
 
     static const std::unordered_map<std::string_view, common::Token> g_keywords{
-        {"true", common::Token{.type = common::TokenType::BOOL, .data = common::Literals::g_true_id}},
-        {"false", common::Token{.type = common::TokenType::BOOL, .data = common::Literals::g_false_id}},
+        {"true", common::Token{.type = common::TokenType::BOOL, .data = common::GenericID{common::Literals::g_true_id}}},
+        {"false", common::Token{.type = common::TokenType::BOOL, .data = common::GenericID{common::Literals::g_false_id}}},
         {"func", common::Token{.type = common::TokenType::FUNC}}};
 
     common::Token Lexer::get_identifier() {
@@ -101,7 +102,7 @@ namespace lexer {
         }
 
         result.type = common::TokenType::IDENTIFIER;
-        result.data = literals_.add(std::move(buf));
+        result.data = common::GenericID{result_.identifiers.add(std::move(buf))};
         result.pos = current_pos_;
 
         return result;
@@ -125,7 +126,7 @@ namespace lexer {
                 put_back(*c);
             }
             result.type = common::TokenType::INTEGER;
-            result.data = literals_.add(integer);
+            result.data = common::GenericID{result_.literals.add(integer)};
             result.pos = current_pos_;
             return result;
         } else if (*c != '.') {
@@ -151,9 +152,9 @@ namespace lexer {
         }
 
         result.type = common::TokenType::FLOAT;
-        result.data = literals_.add(static_cast<double>(integer) +
-                                    static_cast<double>(fraction) /
-                                        static_cast<double>(exponent));
+        result.data = common::GenericID{result_.literals.add(static_cast<double>(integer) +
+                                                             static_cast<double>(fraction) /
+                                                                 static_cast<double>(exponent))};
         result.pos = current_pos_;
 
         return result;

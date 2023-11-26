@@ -4,6 +4,7 @@
 #include "common/declarations.h"
 #include "common/expression.h"
 #include "common/file.h"
+#include "common/literals.h"
 #include "common/module.h"
 #include "common/types.h"
 #include "common/util.h"
@@ -15,7 +16,7 @@
 namespace checker {
     class Checker {
       public:
-        Checker(common::File &&file) : module_(std::move(file)) {}
+        Checker(common::File &&file, common::Identifiers &identifiers) : module_(std::move(file)), identifiers_(&identifiers) {}
 
         void add_builtins();
         void add_declarations();
@@ -45,6 +46,7 @@ namespace checker {
 
       private:
         common::Module module_;
+        common::Identifiers *identifiers_ = nullptr;
         std::unordered_map<common::BuiltinTypes, common::Type> builtin_types_;
         common::Error err_;
         std::stack<size_t> err_positions_;

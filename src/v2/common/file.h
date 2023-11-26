@@ -11,9 +11,11 @@
 #include <vector>
 
 namespace common {
+
+    // TODO: rename this to AST
     class File {
       public:
-        File(Literals &&literals) : literals_(std::move(literals)) {}
+        File() = default;
 
         UnaryExpression *get_unary_expression(Expression::ID id) {
             auto [type, idx] = deconstruct(id);
@@ -101,20 +103,10 @@ namespace common {
         std::vector<Function> &functions() { return functions_; }
         const std::vector<Function> &functions() const { return functions_; }
 
-        Literals &literals() { return literals_; }
-        const Literals &literals() const { return literals_; }
-
-        // TODO: this is temporary API for tests
-        // later this should be replaced by something more permanent
-        Expression start_expression() const { return start_; }
-        void set_start_expression(Expression expr) { start_ = expr; }
-
         bool operator==(const File &other) const {
-            return start_ == other.start_ &&
-                   unary_exprs_ == other.unary_exprs_ &&
+            return unary_exprs_ == other.unary_exprs_ &&
                    binary_exprs_ == other.binary_exprs_ &&
-                   literal_exprs_ == other.literal_exprs_ &&
-                   literals_ == other.literals_;
+                   literal_exprs_ == other.literal_exprs_;
         }
 
       private:
@@ -126,14 +118,12 @@ namespace common {
             return {static_cast<ExpressionType>(*id >> 56), *id & 0xffffffffffffff};
         }
 
-        Expression start_{};
         std::vector<UnaryExpression> unary_exprs_;
         std::vector<BinaryExpression> binary_exprs_;
         std::vector<Literal> literal_exprs_;
         std::vector<Cast> casts_;
         std::vector<FunctionCall> calls_;
         std::vector<Function> functions_;
-        Literals literals_;
     };
 } // namespace common
 #endif

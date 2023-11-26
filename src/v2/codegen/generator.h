@@ -3,6 +3,7 @@
 
 #include "common/declarations.h"
 #include "common/expression.h"
+#include "common/literals.h"
 #include "common/module.h"
 #include "common/types.h"
 #include <ostream>
@@ -14,13 +15,15 @@ namespace codegen {
 
     class Generator {
       public:
-        Generator() = default;
-        Generator(std::ostream &out) : out_(&out) {}
-        Generator(common::Module &mod) : mod_(&mod) {}
-        Generator(std::ostream &out, common::Module &mod) : out_(&out), mod_(&mod) {}
+        Generator(std::ostream &out, common::Module &mod, common::Identifiers &identifiers, common::Literals &literals)
+            : out_(&out), mod_(&mod), identifiers_(&identifiers), literals_(&literals) {}
 
         void set_file(std::ostream &out) { out_ = &out; }
-        void set_module(common::Module &mod) { mod_ = &mod; }
+        void set_module(common::Module &mod, common::Identifiers &identifiers, common::Literals &literals) {
+            mod_ = &mod;
+            identifiers_ = &identifiers;
+            literals_ = &literals;
+        }
 
         void codegen();
 
@@ -51,6 +54,8 @@ namespace codegen {
       private:
         std::ostream *out_ = nullptr;
         common::Module *mod_ = nullptr;
+        common::Identifiers *identifiers_ = nullptr;
+        common::Literals *literals_ = nullptr;
         std::string_view err_;
     };
 } // namespace codegen

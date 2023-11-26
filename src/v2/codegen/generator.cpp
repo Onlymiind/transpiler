@@ -69,12 +69,12 @@ namespace codegen {
             }
             break;
         case common::LiteralType::UINT:
-            *out_ << *mod_->file().literals().get_integer(lit.value);
+            *out_ << *literals_->get_integer(lit.value);
             break;
         case common::LiteralType::FLOAT: {
             int presicion = out_->precision();
             *out_ << std::setprecision(std::numeric_limits<double>::digits10)
-                  << *mod_->file().literals().get_double(lit.value) << std::setprecision(presicion);
+                  << *literals_->get_double(lit.value) << std::setprecision(presicion);
             break;
         }
         default:
@@ -165,7 +165,7 @@ namespace codegen {
             if (func.body.is_error()) {
                 continue;
             }
-            const std::string &name = *mod_->file().literals().get_string(func.name);
+            const std::string &name = *identifiers_->get(func.name);
             if (name == "main") {
                 continue;
             }
@@ -182,7 +182,7 @@ namespace codegen {
             return;
         }
 
-        const std::string &name = *mod_->file().literals().get_string(func.name);
+        const std::string &name = *identifiers_->get(func.name);
         if (name == "main") {
             *out_ << "int";
         } else {
@@ -199,6 +199,6 @@ namespace codegen {
     }
 
     void Generator::codegen(common::FunctionCall call) {
-        *out_ << *mod_->file().literals().get_string(call.name) << "()";
+        *out_ << *identifiers_->get(call.name) << "()";
     }
 } // namespace codegen
