@@ -1,9 +1,9 @@
 #ifndef COMPILER_V2_PARSES_PARSER_HDR_
 #define COMPILER_V2_PARSES_PARSER_HDR_
 
+#include "common/ast.h"
 #include "common/declarations.h"
 #include "common/expression.h"
-#include "common/file.h"
 #include "common/token.h"
 #include "common/util.h"
 
@@ -32,8 +32,8 @@ namespace parser {
 
         common::Function parse_function();
 
-        common::File reset() noexcept {
-            common::File file{std::move(file_)};
+        common::AST reset() noexcept {
+            common::AST file{std::move(file_)};
             return file;
         }
 
@@ -51,7 +51,7 @@ namespace parser {
 
         std::vector<common::Token> tokens_{};
         common::Tokens remainder_{};
-        common::File file_;
+        common::AST file_;
 
         common::Error err_{};
     };

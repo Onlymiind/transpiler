@@ -10,7 +10,7 @@ set(COMPILER_SRC
     common/token.h
     common/util.h
     common/expression.h
-    common/file.h
+    common/ast.h
     common/types.h
     common/module.h
     common/literals.h

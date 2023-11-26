@@ -1,6 +1,6 @@
 #include "checker/checker.h"
+#include "common/ast.h"
 #include "common/expression.h"
-#include "common/file.h"
 #include "common/token.h"
 #include "common/types.h"
 #include "lexer/lexer.h"

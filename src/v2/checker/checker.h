@@ -1,9 +1,9 @@
 #ifndef COMPILER_V2_CHECKER_CHECKER_HDR_
 #define COMPILER_V2_CHECKER_CHECKER_HDR_
 
+#include "common/ast.h"
 #include "common/declarations.h"
 #include "common/expression.h"
-#include "common/file.h"
 #include "common/literals.h"
 #include "common/module.h"
 #include "common/types.h"
@@ -16,7 +16,7 @@
 namespace checker {
     class Checker {
       public:
-        Checker(common::File &&file, common::Identifiers &identifiers) : module_(std::move(file)), identifiers_(&identifiers) {}
+        Checker(common::AST &&file, common::Identifiers &identifiers) : module_(std::move(file)), identifiers_(&identifiers) {}
 
         void add_builtins();
         void add_declarations();

@@ -1,7 +1,7 @@
 #include "codegen/generator.h"
+#include "common/ast.h"
 #include "common/declarations.h"
 #include "common/expression.h"
-#include "common/file.h"
 #include "common/literals.h"
 #include "common/token.h"
 #include "common/types.h"

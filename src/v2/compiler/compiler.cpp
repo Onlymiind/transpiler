@@ -1,7 +1,7 @@
 #include "compiler/compiler.h"
 #include "checker/checker.h"
 #include "codegen/generator.h"
-#include "common/file.h"
+#include "common/ast.h"
 #include "common/literals.h"
 #include "common/module.h"
 #include "common/token.h"
@@ -59,7 +59,7 @@ namespace compiler {
         return lexer.reset();
     }
 
-    std::optional<common::File> parse(std::vector<common::Token> &&tokens, std::istream &file, std::ostream &err) {
+    std::optional<common::AST> parse(std::vector<common::Token> &&tokens, std::istream &file, std::ostream &err) {
         parser::Parser parser{std::move(tokens)};
         parser.parse();
         common::Error error = parser.get_error();
@@ -70,7 +70,7 @@ namespace compiler {
         return parser.reset();
     }
 
-    std::optional<common::Module> check(common::File &&file, common::Identifiers &identifiers, std::istream &in_file, std::ostream &err) {
+    std::optional<common::Module> check(common::AST &&file, common::Identifiers &identifiers, std::istream &in_file, std::ostream &err) {
         checker::Checker checker{std::move(file), identifiers};
         checker.check();
         common::Error error = checker.get_error();
@@ -109,7 +109,7 @@ namespace compiler {
             return;
         }
 
-        std::optional<common::File> parsed;
+        std::optional<common::AST> parsed;
         try {
             auto f = parse(std::move(lexer_result.tokens), file, err);
             if (!f) {

@@ -12,10 +12,9 @@
 
 namespace common {
 
-    // TODO: rename this to AST
-    class File {
+    class AST {
       public:
-        File() = default;
+        AST() = default;
 
         UnaryExpression *get_unary_expression(Expression::ID id) {
             auto [type, idx] = deconstruct(id);
@@ -103,7 +102,7 @@ namespace common {
         std::vector<Function> &functions() { return functions_; }
         const std::vector<Function> &functions() const { return functions_; }
 
-        bool operator==(const File &other) const {
+        bool operator==(const AST &other) const {
             return unary_exprs_ == other.unary_exprs_ &&
                    binary_exprs_ == other.binary_exprs_ &&
                    literal_exprs_ == other.literal_exprs_;

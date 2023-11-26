@@ -1,9 +1,9 @@
 #ifndef COMPILER_V2_COMMON_MODULE_HDR_
 #define COMPILER_V2_COMMON_MODULE_HDR_
 
+#include "common/ast.h"
 #include "common/declarations.h"
 #include "common/expression.h"
-#include "common/file.h"
 #include "common/literals.h"
 #include "common/token.h"
 #include "common/types.h"
@@ -15,7 +15,7 @@ namespace common {
 
     class Module {
       public:
-        Module(File &&file) : file_(std::move(file)) {}
+        Module(AST &&file) : file_(std::move(file)) {}
 
         Type add(BuiltinType type) {
             Type result{.id = Type::ID{current_id_}};
@@ -70,14 +70,14 @@ namespace common {
             expression_types_[expr] = type;
         }
 
-        File &file() { return file_; }
-        const File &file() const { return file_; }
+        AST &file() { return file_; }
+        const AST &file() const { return file_; }
 
         common::Function::ID entrypoint() const { return entrypoint_; }
         void set_entrypoint(common::Function::ID id) { entrypoint_ = id; }
 
       private:
-        File file_;
+        AST file_;
 
         std::unordered_map<Type::ID, TypeTraits> types_;
         std::unordered_map<Type::ID, BuiltinType> type_to_info_;

@@ -1,6 +1,6 @@
+#include "common/ast.h"
 #include "common/declarations.h"
 #include "common/expression.h"
-#include "common/file.h"
 #include "common/literals.h"
 #include "common/token.h"
 #include "common/util.h"
@@ -22,10 +22,10 @@ class PolishNotationParser {
     PolishNotationParser(std::vector<common::Token> tokens)
         : tokens_(std::move(tokens)), remainder_(tokens_) {}
 
-    std::pair<common::File, common::Expression> parse() {
+    std::pair<common::AST, common::Expression> parse() {
         common::Expression start = parse_expression();
 
-        std::pair<common::File, common::Expression> result = {std::move(file_), start};
+        std::pair<common::AST, common::Expression> result = {std::move(file_), start};
         return result;
     }
 
@@ -93,14 +93,14 @@ class PolishNotationParser {
   private:
     std::vector<common::Token> tokens_;
     common::Tokens remainder_;
-    common::File file_;
+    common::AST file_;
 };
 
 struct ExprComparer {
-    common::File &lhs_file;
+    common::AST &lhs_file;
     common::Literals &lhs_literals;
     common::Identifiers &lhs_identifiers;
-    common::File &rhs_file;
+    common::AST &rhs_file;
     common::Literals &rhs_literals;
     common::Identifiers &rhs_identifiers;
     bool compare(common::Expression lhs, common::Expression rhs) {
