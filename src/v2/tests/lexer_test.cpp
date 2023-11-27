@@ -52,6 +52,7 @@ TEST_CASE("lexer: keywords", "[lexer]") {
     std::vector<TestCase> cases = {
         {"func", common::Token{.type = common::TokenType::FUNC}},
         {"return", common::Token{.type = common::TokenType::RETURN}},
+        {"var", common::Token{.type = common::TokenType::VAR}},
     };
 
     for (auto c : cases) {

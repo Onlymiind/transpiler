@@ -76,6 +76,7 @@ namespace lexer {
         {"false", common::Token{.type = common::TokenType::BOOL, .data = common::GenericID{common::g_false_id}}},
         {"func", common::Token{.type = common::TokenType::FUNC}},
         {"return", common::Token{.type = common::TokenType::RETURN}},
+        {"var", common::Token{.type = common::TokenType::VAR}},
     };
 
     common::Token Lexer::get_identifier() {

@@ -34,6 +34,7 @@ namespace common {
         // keywords
         FUNC,
         RETURN,
+        VAR,
 
         // identifier
         IDENTIFIER,
