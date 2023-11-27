@@ -74,7 +74,9 @@ namespace lexer {
     static const std::unordered_map<std::string_view, common::Token> g_keywords{
         {"true", common::Token{.type = common::TokenType::BOOL, .data = common::GenericID{common::g_true_id}}},
         {"false", common::Token{.type = common::TokenType::BOOL, .data = common::GenericID{common::g_false_id}}},
-        {"func", common::Token{.type = common::TokenType::FUNC}}};
+        {"func", common::Token{.type = common::TokenType::FUNC}},
+        {"return", common::Token{.type = common::TokenType::RETURN}},
+    };
 
     common::Token Lexer::get_identifier() {
         common::Token result{};
@@ -176,6 +178,8 @@ namespace lexer {
         case '(': result.type = LEFT_PARENTHESIS; return result;
         case ')': result.type = RIGHT_PARENTHESIS; return result;
         case ';': result.type = SEMICOLON; return result;
+        case '{': result.type = LEFT_BRACE; return result;
+        case '}': result.type = RIGHT_BRACE; return result;
         case '!':
             if (file_->peek() == '=') {
                 result.type = NOT_EQUALS;

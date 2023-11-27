@@ -3,8 +3,10 @@
 #include "common/declarations.h"
 #include "common/expression.h"
 #include "common/literals.h"
+#include "common/statement.h"
 #include "common/token.h"
 #include "common/types.h"
+#include "common/util.h"
 #include <iomanip>
 #include <ios>
 #include <limits>
@@ -162,15 +164,16 @@ namespace codegen {
     void Generator::codegen_forward_decls() {
         const auto &functions = ast_->functions();
         for (const common::Function &func : functions) {
-            if (func.body.is_error()) {
-                continue;
-            }
             const std::string &name = *identifiers_->get(func.name);
             if (name == "main") {
                 continue;
             }
 
-            codegen(mod_->global_scope()->get_type(func.body.type)->type);
+            if (func.return_type == common::g_void_type) {
+                *out_ << "void";
+            } else {
+                codegen(mod_->global_scope()->get_type(func.return_type)->type);
+            }
             *out_ << ' ';
             *out_ << name;
             *out_ << "(void);\n";
@@ -178,23 +181,27 @@ namespace codegen {
     }
 
     void Generator::codegen(common::Function func) {
-        if (func.body.is_error()) {
-            return;
-        }
-
         const std::string &name = *identifiers_->get(func.name);
         if (name == "main") {
             *out_ << "int";
+        } else if (func.return_type == common::g_void_type) {
+            *out_ << "void";
         } else {
-            codegen(mod_->global_scope()->get_type(func.body.type)->type);
+            codegen(mod_->global_scope()->get_type(func.return_type)->type);
         }
+
         *out_ << ' ';
         *out_ << name;
         *out_ << "(void) {\nreturn ";
         if (name == "main") {
             *out_ << "(int)";
         }
-        codegen(func.body);
+        for (common::Statement smt : func.body.smts) {
+            if (smt.type == common::StatementType::RETURN) {
+                *out_ << "return ";
+            }
+            codegen(ast_->get_expression(smt.id));
+        }
         *out_ << ";\n}\n";
     }
 

@@ -51,6 +51,7 @@ TEST_CASE("lexer: booleans", "[lexer]") {
 TEST_CASE("lexer: keywords", "[lexer]") {
     std::vector<TestCase> cases = {
         {"func", common::Token{.type = common::TokenType::FUNC}},
+        {"return", common::Token{.type = common::TokenType::RETURN}},
     };
 
     for (auto c : cases) {
@@ -68,7 +69,10 @@ TEST_CASE("lexer: punctuation", "[lexer]") {
     std::vector<TestCase> cases = {
         {"(", common::Token{.type = common::TokenType::LEFT_PARENTHESIS}},
         {")", common::Token{.type = common::TokenType::RIGHT_PARENTHESIS}},
-        {";", common::Token{.type = common::TokenType::SEMICOLON}}};
+        {";", common::Token{.type = common::TokenType::SEMICOLON}},
+        {"{", common::Token{.type = common::TokenType::LEFT_BRACE}},
+        {"}", common::Token{.type = common::TokenType::RIGHT_BRACE}},
+    };
 
     for (auto c : cases) {
         INFO("Test case: ");

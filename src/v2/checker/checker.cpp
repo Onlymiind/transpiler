@@ -2,6 +2,7 @@
 #include "common/declarations.h"
 #include "common/expression.h"
 #include "common/scope.h"
+#include "common/statement.h"
 #include "common/types.h"
 #include "common/util.h"
 
@@ -45,6 +46,7 @@ namespace checker {
         }
         auto &functions = ast_->functions();
         for (auto &func : functions) {
+            // TODO: check each function only once
             check_function(func);
             if (!err_.empty()) {
                 return;
@@ -246,20 +248,37 @@ namespace checker {
             report_error("function not defined");
             return common::SymbolID{};
         }
-        common::Expression &expr = ast_->get_function(id)->body;
-        if (expr.is_error()) {
+        common::Function &func = *ast_->get_function(id);
+        if (func.decl_only) {
             // function declared, but not defined
             report_error("function not defined");
             return common::SymbolID{};
         }
-        if (expr.type != common::SymbolID{}) {
-            return expr.type;
+        if (func.return_type != common::SymbolID{}) {
+            return func.return_type;
         }
 
-        return check_expression(expr);
+        check_function(func);
+        return func.return_type;
     }
 
     void Checker::check_function(common::Function &func) {
-        check_expression(func.body);
+
+        if (func.return_typename != common::IdentifierID{}) {
+            func.return_type = module_.global_scope()->find(func.return_typename);
+            if (func.return_type == common::SymbolID{} ||
+                common::Scope::type(func.return_type) != common::SymbolType::BUILTIN_TYPE) {
+                report_error("unknown return type");
+                return;
+            }
+        }
+
+        for (common::Statement smt : func.body.smts) {
+            switch (smt.type) {
+            default:
+                report_error("statement type not implemented");
+                return;
+            }
+        }
     }
 } // namespace checker

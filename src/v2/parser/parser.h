@@ -30,11 +30,11 @@ namespace parser {
         common::Expression parse_primary_expression();
         common::Expression parse_function_call();
 
-        common::Function parse_function();
+        void parse_function();
 
         common::AST reset() noexcept {
-            common::AST file{std::move(file_)};
-            return file;
+            common::AST ast{std::move(ast_)};
+            return ast;
         }
 
         void report_error(std::string_view error) noexcept {
@@ -51,7 +51,7 @@ namespace parser {
 
         std::vector<common::Token> tokens_{};
         common::Tokens remainder_{};
-        common::AST file_;
+        common::AST ast_;
 
         common::Error err_{};
     };

@@ -33,6 +33,7 @@ namespace common {
 
         // keywords
         FUNC,
+        RETURN,
 
         // identifier
         IDENTIFIER,

@@ -9,6 +9,7 @@
 namespace common {
 
     enum class SymbolType : uint8_t {
+        VOID = 0,
         BUILTIN_TYPE,
         FUNCTION,
     };

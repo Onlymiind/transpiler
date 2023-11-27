@@ -2,7 +2,9 @@
 #include "common/declarations.h"
 #include "common/expression.h"
 #include "common/literals.h"
+#include "common/statement.h"
 #include "common/token.h"
+#include "common/util.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -38,7 +40,7 @@ namespace parser {
             return common::Expression{};
         }
 
-        return common::Expression{.kind = common::ExpressionKind::UNARY, .id = file_.add(result), .pos = pos};
+        return common::Expression{.kind = common::ExpressionKind::UNARY, .id = ast_.add(result), .pos = pos};
     }
 
     common::Expression Parser::parse_primary_expression() {
@@ -48,7 +50,7 @@ namespace parser {
             consume();
             return common::Expression{
                 .kind = common::ExpressionKind::LITERAL,
-                .id = file_.add(common::Literal{.type = type, .value = common::LiteralID{tok.data}}),
+                .id = ast_.add(common::Literal{.type = type, .value = common::LiteralID{tok.data}}),
                 .pos = tok.pos,
             };
         };
@@ -102,7 +104,7 @@ namespace parser {
             return common::Expression{};
         }
         consume();
-        return common::Expression{.kind = common::ExpressionKind::FUNCTION_CALL, .id = file_.add(result), .pos = pos};
+        return common::Expression{.kind = common::ExpressionKind::FUNCTION_CALL, .id = ast_.add(result), .pos = pos};
     }
 
     common::Expression Parser::parse_binary_expression(common::Expression lhs, uint8_t precedence) {
@@ -136,7 +138,7 @@ namespace parser {
 
             lhs = common::Expression{
                 .kind = common::ExpressionKind::BINARY,
-                .id = file_.add(common::BinaryExpression{
+                .id = ast_.add(common::BinaryExpression{
                     .op = *op,
                     .lhs = lhs,
                     .rhs = rhs,
@@ -148,43 +150,80 @@ namespace parser {
         return lhs;
     }
 
-    common::Function Parser::parse_function() {
+    void Parser::parse_function() {
         common::Function result{.pos = next().pos};
         if (next().type != common::TokenType::FUNC) {
             report_error("exprected \"func\" keyword");
-            return result;
+            return;
         }
         consume();
 
         if (next().type != common::TokenType::IDENTIFIER) {
             report_error("expected function name");
-            return result;
+            return;
         }
         result.name = common::IdentifierID{next().data};
         consume();
         if (next().type != common::TokenType::LEFT_PARENTHESIS) {
             report_error("expected \"(\"");
-            return common::Function{};
+            return;
         }
         consume();
         if (next().type != common::TokenType::RIGHT_PARENTHESIS) {
             report_error("expected \")\"");
-            return common::Function{};
+            return;
         }
         consume();
-        if (next().type != common::TokenType::SEMICOLON) {
-            result.body = parse_expression();
-            if (result.body.is_error()) {
-                return common::Function{};
-            }
+        if (next().type == common::TokenType::SEMICOLON) {
+            consume();
+            result.decl_only = true;
+            result.return_type = common::g_void_type;
+            result.id = ast_.add(std::move(result));
+            return;
         }
-        if (next().type != common::TokenType::SEMICOLON) {
-            report_error("expected \";\"");
-            return common::Function{};
+
+        if (next().type == common::TokenType::LEFT_BRACE) {
+            result.return_type = common::g_void_type;
+        } else if (next().type == common::TokenType::IDENTIFIER) {
+            result.return_typename = common::IdentifierID{next().data};
+            consume();
+        }
+
+        if (next().type != common::TokenType::LEFT_BRACE) {
+            report_error("expected '{' at the start of function definition");
+            return;
         }
         consume();
 
-        result.id = file_.add(result);
-        return result;
+        while (next().type != common::TokenType::RIGHT_BRACE && next().type != common::TokenType::END_OF_FILE) {
+            if (next().type == common::TokenType::SEMICOLON) {
+                consume();
+                continue;
+            }
+            common::Statement smt{.type = common::StatementType::EXPRESSION};
+            if (next().type == common::TokenType::RETURN) {
+                smt.type = common::StatementType::RETURN;
+                consume();
+            }
+            common::Expression expr = parse_expression();
+            if (expr.is_error()) {
+                return;
+            }
+            smt.id = ast_.add(expr);
+            result.body.smts.push_back(smt);
+
+            if (next().type != common::TokenType::SEMICOLON) {
+                report_error("expected ';' at the end of the statement");
+                return;
+            }
+        }
+        if (next().type != common::TokenType::RIGHT_BRACE) {
+            report_error("expected '}' at the end of the function definition");
+            return;
+        }
+        consume();
+
+        result.id = ast_.add(std::move(result));
+        return;
     }
 } // namespace parser

@@ -2,6 +2,7 @@
 #include "common/declarations.h"
 #include "common/expression.h"
 #include "common/literals.h"
+#include "common/statement.h"
 #include "common/token.h"
 #include "common/util.h"
 #include "lexer/lexer.h"
@@ -302,17 +303,22 @@ TEST_CASE("parser: functions", "[parser]") {
 
     common::Identifiers ids;
     std::vector<Case> cases = {
-        Case{"func abc() 1;", {common::Function{.name = ids.add("abc"), .body = common::Expression{.kind = common::ExpressionKind::LITERAL}}}},
-        Case{"func abc() 1; func cba() -1.1; func acb() 1 + 2;", {
-                                                                     common::Function{.name = ids.add("abc"), .body = common::Expression{.kind = common::ExpressionKind::LITERAL}},
-                                                                     common::Function{.name = ids.add("cba"), .body = common::Expression{.kind = common::ExpressionKind::UNARY}},
-                                                                     common::Function{.name = ids.add("acb"), .body = common::Expression{.kind = common::ExpressionKind::BINARY}},
-                                                                 }},
+        Case{"func abc() {1;}", {common::Function{.name = ids.add("abc"), .return_type = common::g_void_type, .body = common::Block{std::vector<common::Statement>(1)}}}},
+        Case{
+            "func abc() {} func cba() {-1.1; 1; 2;} func acb() {;;;;;1 + 2;;;;;1;} func aaa() u64 {1;;; return 2;; 1+ 3;}",
+            {
+                common::Function{.name = ids.add("abc"), .return_type = common::g_void_type},
+                common::Function{.name = ids.add("cba"), .return_type = common::g_void_type, .body = common::Block{std::vector<common::Statement>(3)}},
+                common::Function{.name = ids.add("acb"), .return_type = common::g_void_type, .body = common::Block{std::vector<common::Statement>(2)}},
+                common::Function{.name = ids.add("aaa"), .return_typename = ids.add("u64"), .body = common::Block{std::vector<common::Statement>(3)}},
+            }},
+        Case{"func a();", {common::Function{.name = ids.add("a"), .return_type = common::g_void_type, .decl_only = true}}},
         Case{.str = "func", .should_fail = true},
         Case{.str = "func () 1;", .should_fail = true},
+        Case{.str = "func a() 1;", .should_fail = true},
+        Case{.str = "func a() {1}", .should_fail = true},
         Case{.str = "func a(", .should_fail = true},
         Case{.str = "func a()", .should_fail = true},
-        Case{.str = "func a();", .expected = {common::Function{.name = ids.add("a")}}},
         Case{.str = "func a() 1", .should_fail = true},
     };
 
@@ -333,11 +339,17 @@ TEST_CASE("parser: functions", "[parser]") {
         }
 
         REQUIRE(p.get_error().empty());
-        auto file = p.reset();
-        REQUIRE(file.functions().size() == c.expected.size());
+        auto ast = p.reset();
+        REQUIRE(ast.functions().size() == c.expected.size());
         for (size_t i = 0; i < c.expected.size(); ++i) {
-            REQUIRE(*ids.get(c.expected[i].name) == *lexer_result.identifiers.get(common::IdentifierID{file.functions()[i].name}));
-            REQUIRE(c.expected[i].body.kind == file.functions()[i].body.kind);
+            REQUIRE(*ids.get(c.expected[i].name) == *lexer_result.identifiers.get(ast.functions()[i].name));
+            if (c.expected[i].return_typename != common::IdentifierID{}) {
+                REQUIRE(c.expected[i].return_typename != common::IdentifierID{});
+                REQUIRE(*ids.get(c.expected[i].return_typename) == *lexer_result.identifiers.get(ast.functions()[i].return_typename));
+            }
+            REQUIRE(c.expected[i].return_type == ast.functions()[i].return_type);
+
+            REQUIRE(c.expected[i].body.smts.size() == ast.functions()[i].body.smts.size());
         }
     }
 }

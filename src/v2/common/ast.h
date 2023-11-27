@@ -88,8 +88,18 @@ namespace common {
 
         FunctionID add(Function func) {
             func.id = FunctionID{functions_.size()};
-            functions_.push_back(func);
+            functions_.push_back(std::move(func));
             return func.id;
+        }
+
+        StatementID add(Expression expr) {
+            StatementID result{statements_.size()};
+            statements_.push_back(expr);
+            return result;
+        }
+
+        Expression get_expression(StatementID smt) {
+            return smt == StatementID{} || *smt >= statements_.size() ? Expression{} : statements_[*smt];
         }
 
         Function *get_function(FunctionID id) {
@@ -115,6 +125,8 @@ namespace common {
         std::vector<Cast> casts_;
         std::vector<FunctionCall> calls_;
         std::vector<Function> functions_;
+
+        std::vector<Expression> statements_;
     };
 } // namespace common
 #endif
