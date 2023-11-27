@@ -1,34 +1,36 @@
 #include "checker/checker.h"
 #include "common/declarations.h"
 #include "common/expression.h"
+#include "common/scope.h"
 #include "common/types.h"
 #include "common/util.h"
 
 namespace checker {
 
     void Checker::add_builtins() {
-        builtin_types_[common::BuiltinTypes::BOOL] = module_.add(common::BuiltinType{
+        module_.make_scope();
+        builtin_types_[common::BuiltinTypes::BOOL].id = common::TypeID{module_.global_scope()->add(common::BuiltinType{
             .name = identifiers_->add("bool"),
             .type = common::BuiltinTypes::BOOL,
             .traits = common::TypeTraits::BOOLEAN,
-        });
-        builtin_types_[common::BuiltinTypes::UINT] = module_.add(common::BuiltinType{
+        })};
+        builtin_types_[common::BuiltinTypes::UINT].id = common::TypeID{module_.global_scope()->add(common::BuiltinType{
             .name = identifiers_->add("u64"),
             .type = common::BuiltinTypes::UINT,
             .traits = common::TypeTraits::INTEGER,
-        });
-        builtin_types_[common::BuiltinTypes::FLOAT] = module_.add(common::BuiltinType{
+        })};
+        builtin_types_[common::BuiltinTypes::FLOAT].id = common::TypeID{module_.global_scope()->add(common::BuiltinType{
             .name = identifiers_->add("f64"),
             .type = common::BuiltinTypes::FLOAT,
             .traits = common::TypeTraits::FLOATING_POINT,
-        });
+        })};
     }
 
     void Checker::add_declarations() {
         add_builtins();
         const auto &functions = ast_->functions();
         for (const auto &func : functions) {
-            if (!module_.add(func)) {
+            if (module_.global_scope()->add(func.name, func.id) == common::SymbolID{common::g_invalid_id}) {
                 err_positions_.push(func.pos);
                 report_error("function redeclaration");
                 return;
@@ -104,7 +106,7 @@ namespace checker {
             return common::Type{};
         }
 
-        common::TypeTraits traits = module_.get_traits(type.id);
+        common::TypeTraits traits = module_.global_scope()->get_traits(common::SymbolID{type.id});
         switch (expr.op) {
         case common::UnaryOp::NOT:
             if (common::empty(traits & common::TypeTraits::BOOLEAN)) {
@@ -144,7 +146,7 @@ namespace checker {
             return common::Type{};
         }
 
-        common::TypeTraits traits = module_.get_traits(lhs.id);
+        common::TypeTraits traits = module_.global_scope()->get_traits(common::SymbolID{lhs.id});
 
         if (common::is_logic_op(expr.op)) {
             if (common::empty(traits & common::TypeTraits::BOOLEAN)) {
@@ -181,31 +183,31 @@ namespace checker {
     }
 
     common::Type Checker::check_cast(common::Cast &cast) {
-        common::Type dst = module_.get_type(cast.to);
-        if (dst.is_error()) {
+        common::SymbolID dst_sym = module_.global_scope()->find(cast.to);
+        std::optional<common::BuiltinType> dst = module_.global_scope()->get_type(dst_sym);
+        if (!dst) {
             report_error("can not cast to unknown type");
             return common::Type{};
         }
-        common::TypeTraits dst_traits = module_.get_traits(dst.id);
 
         common::Type src = check_expression(cast.from);
         if (src.is_error()) {
             return common::Type{};
         }
-        common::TypeTraits src_traits = module_.get_traits(src.id);
+        common::TypeTraits src_traits = module_.global_scope()->get_type(src.id)->traits;
 
         // TODO: empty traits
-        if (dst_traits == src_traits) {
-            return dst;
+        if (dst->traits == src_traits) {
+            return common::Type{common::TypeID{dst_sym}};
         }
 
-        if (!common::empty(dst_traits & common::TypeTraits::BOOLEAN) ||
+        if (!common::empty(dst->traits & common::TypeTraits::BOOLEAN) ||
             !common::empty(src_traits & common::TypeTraits::BOOLEAN)) {
             report_error("can not cast to bool");
             return common::Type{};
         }
 
-        return dst;
+        return common::Type{common::TypeID{dst_sym}};
     }
 
     common::Type Checker::get_type_for_literal(common::Literal lit) {
@@ -223,7 +225,7 @@ namespace checker {
     }
 
     common::Type Checker::check_function_call(common::FunctionCall &call, common::Expression &incoming_edge) {
-        if (!module_.get_type(call.name).is_error()) {
+        if (common::Scope::type(module_.global_scope()->find(call.name)) == common::SymbolType::BUILTIN_TYPE) {
             if (call.args.size() != 1) {
                 report_error("expected exactly 1 argument for a cast");
                 return common::Type{};
@@ -239,7 +241,7 @@ namespace checker {
             return result;
         }
 
-        common::FunctionID id = module_.get_function(call.name);
+        common::FunctionID id = module_.global_scope()->get_function(call.name);
         if (id == common::FunctionID{common::g_invalid_id}) {
             report_error("function not defined");
             return common::Type{};

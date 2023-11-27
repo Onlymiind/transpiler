@@ -55,7 +55,7 @@ namespace codegen {
 
     void Generator::codegen(common::Literal lit, common::Expression expr) {
         *out_ << '(';
-        codegen(mod_->get_builtin(expr.type)->type);
+        codegen(mod_->global_scope()->get_type(expr.type)->type);
         *out_ << ')';
 
         switch (lit.type) {
@@ -154,7 +154,7 @@ namespace codegen {
         }
 
         *out_ << '(';
-        codegen(mod_->get_builtin(mod_->get_type(cast.to).id)->type);
+        codegen(mod_->global_scope()->get_type(mod_->global_scope()->find(cast.to))->type);
         *out_ << ')';
         codegen(cast.from);
     }
@@ -170,7 +170,7 @@ namespace codegen {
                 continue;
             }
 
-            codegen(mod_->get_builtin(func.body.type)->type);
+            codegen(mod_->global_scope()->get_type(func.body.type)->type);
             *out_ << ' ';
             *out_ << name;
             *out_ << "(void);\n";
@@ -186,7 +186,7 @@ namespace codegen {
         if (name == "main") {
             *out_ << "int";
         } else {
-            codegen(mod_->get_builtin(func.body.type)->type);
+            codegen(mod_->global_scope()->get_type(func.body.type)->type);
         }
         *out_ << ' ';
         *out_ << name;
