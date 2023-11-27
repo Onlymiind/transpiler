@@ -8,9 +8,17 @@
 #include <iostream>
 
 TEST_CASE("functional tests") {
-    std::string name = GENERATE(as<std::string>{}, "function_calls", "function_def", "use_before_declaration", "function_call_converts_to_cast");
+    std::string name = GENERATE(as<std::string>{},
+                                "function_calls",
+                                "function_def",
+                                "use_before_declaration",
+                                "function_call_converts_to_cast",
+                                "wrong_return_type_fail",
+                                "missing_return_fail",
+                                "main_return_type_fail");
 
     std::filesystem::path data{"data/" + name};
+    INFO(data.c_str());
     std::ifstream in{data};
     REQUIRE(in.is_open());
     std::ifstream expected{"data/" + name + "_expected"};
@@ -40,6 +48,5 @@ TEST_CASE("functional tests") {
 
     REQUIRE(!expected_str.empty());
     std::string result = out.str();
-    INFO(result);
     REQUIRE(result == expected_str);
 }

@@ -283,6 +283,12 @@ namespace checker {
             }
         }
 
+        if (*identifiers_->get(func.name) == "main" && func.return_type != common::g_void_type) {
+            report_error("main() must return void");
+            return;
+        }
+
+        bool has_return = false;
         for (common::Statement smt : func.body.smts) {
             err_positions_.push(smt.pos);
             switch (smt.type) {
@@ -292,6 +298,7 @@ namespace checker {
                 }
                 break;
             case common::StatementType::RETURN: {
+                has_return = true;
                 common::Expression *expr = ast_->get_expression(smt.id);
                 common::SymbolID ret = check_expression(*expr);
                 if (ret == common::SymbolID{}) {
@@ -307,7 +314,12 @@ namespace checker {
                 report_error("statement type not implemented");
                 return;
             }
+
             err_positions_.pop();
+        }
+        if (!has_return && func.return_type != common::g_void_type) {
+            report_error("no return statement in non-void function");
+            return;
         }
     }
 } // namespace checker
