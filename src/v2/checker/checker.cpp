@@ -29,12 +29,20 @@ namespace checker {
 
     void Checker::add_declarations() {
         add_builtins();
-        const auto &functions = ast_->functions();
-        for (const auto &func : functions) {
+        auto &functions = ast_->functions();
+        for (auto &func : functions) {
             if (module_.global_scope()->add(func.name, func.id) == common::SymbolID{}) {
                 err_positions_.push(func.pos);
                 report_error("function redeclaration");
                 return;
+            }
+            if (func.return_typename != common::IdentifierID{}) {
+                func.return_type = module_.global_scope()->find(func.return_typename);
+                if (func.return_type == common::SymbolID{}) {
+                    err_positions_.push(func.pos);
+                    report_error("unknown return type");
+                    return;
+                }
             }
         }
     }
@@ -46,8 +54,9 @@ namespace checker {
         }
         auto &functions = ast_->functions();
         for (auto &func : functions) {
-            // TODO: check each function only once
+            err_positions_.push(func.pos);
             check_function(func);
+            err_positions_.pop();
             if (!err_.empty()) {
                 return;
             }
@@ -85,6 +94,9 @@ namespace checker {
             break;
         case common::ExpressionKind::FUNCTION_CALL:
             result = check_function_call(*ast_->get_call(expr.id), expr);
+            break;
+        case common::ExpressionKind::EMPTY:
+            result = common::g_void_type;
             break;
         default:
             report_error("unknown expression type");
@@ -258,12 +270,10 @@ namespace checker {
             return func.return_type;
         }
 
-        check_function(func);
         return func.return_type;
     }
 
     void Checker::check_function(common::Function &func) {
-
         if (func.return_typename != common::IdentifierID{}) {
             func.return_type = module_.global_scope()->find(func.return_typename);
             if (func.return_type == common::SymbolID{} ||
@@ -274,11 +284,30 @@ namespace checker {
         }
 
         for (common::Statement smt : func.body.smts) {
+            err_positions_.push(smt.pos);
             switch (smt.type) {
+            case common::StatementType::EXPRESSION:
+                if (check_expression(*ast_->get_expression(smt.id)) == common::SymbolID{}) {
+                    return;
+                }
+                break;
+            case common::StatementType::RETURN: {
+                common::Expression *expr = ast_->get_expression(smt.id);
+                common::SymbolID ret = check_expression(*expr);
+                if (ret == common::SymbolID{}) {
+                    return;
+                }
+                if (ret != func.return_type) {
+                    report_error("wrong return type");
+                    return;
+                }
+                break;
+            }
             default:
                 report_error("statement type not implemented");
                 return;
             }
+            err_positions_.pop();
         }
     }
 } // namespace checker

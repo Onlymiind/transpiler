@@ -313,6 +313,11 @@ TEST_CASE("parser: functions", "[parser]") {
                 common::Function{.name = ids.add("aaa"), .return_typename = ids.add("u64"), .body = common::Block{std::vector<common::Statement>(3)}},
             }},
         Case{"func a();", {common::Function{.name = ids.add("a"), .return_type = common::g_void_type, .decl_only = true}}},
+        Case{"func a() {return;}", {common::Function{
+                                       .name = ids.add("a"),
+                                       .return_type = common::g_void_type,
+                                       .body = common::Block{std::vector<common::Statement>(1)},
+                                   }}},
         Case{.str = "func", .should_fail = true},
         Case{.str = "func () 1;", .should_fail = true},
         Case{.str = "func a() 1;", .should_fail = true},
@@ -320,6 +325,7 @@ TEST_CASE("parser: functions", "[parser]") {
         Case{.str = "func a(", .should_fail = true},
         Case{.str = "func a()", .should_fail = true},
         Case{.str = "func a() 1", .should_fail = true},
+        Case{.str = "func a() {return}", .should_fail = true},
     };
 
     for (auto &c : cases) {

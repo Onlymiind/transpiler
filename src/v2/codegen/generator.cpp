@@ -180,7 +180,11 @@ namespace codegen {
         }
     }
 
-    void Generator::codegen(common::Function func) {
+    void Generator::codegen(const common::Function &func) {
+        if (func.decl_only) {
+            return;
+        }
+
         const std::string &name = *identifiers_->get(func.name);
         if (name == "main") {
             *out_ << "int";
@@ -192,20 +196,24 @@ namespace codegen {
 
         *out_ << ' ';
         *out_ << name;
-        *out_ << "(void) {\nreturn ";
-        if (name == "main") {
-            *out_ << "(int)";
-        }
+        *out_ << "(void) {\n";
         for (common::Statement smt : func.body.smts) {
             if (smt.type == common::StatementType::RETURN) {
                 *out_ << "return ";
+                if (name == "main") {
+                    *out_ << "(int)";
+                }
             }
-            codegen(ast_->get_expression(smt.id));
+            common::Expression *expr = ast_->get_expression(smt.id);
+            if (expr->kind == common::ExpressionKind::EMPTY) {
+                continue;
+            }
+            codegen(*expr);
         }
         *out_ << ";\n}\n";
     }
 
-    void Generator::codegen(common::FunctionCall call) {
+    void Generator::codegen(const common::FunctionCall &call) {
         *out_ << *identifiers_->get(call.name) << "()";
     }
 } // namespace codegen

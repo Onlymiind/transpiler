@@ -10,5 +10,5 @@ double b(void) {
 return -(double)1.1;
 }
 int main(void) {
-return (int)(b() == (double)a());
+(b() == (double)a());
 }

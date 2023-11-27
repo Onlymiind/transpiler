@@ -200,10 +200,16 @@ namespace parser {
                 consume();
                 continue;
             }
-            common::Statement smt{.type = common::StatementType::EXPRESSION};
+            common::Statement smt{.type = common::StatementType::EXPRESSION, .pos = next().pos};
             if (next().type == common::TokenType::RETURN) {
                 smt.type = common::StatementType::RETURN;
                 consume();
+                if (next().type == common::TokenType::SEMICOLON) {
+                    consume();
+                    smt.id = ast_.add(common::Expression{.kind = common::ExpressionKind::EMPTY, .pos = smt.pos});
+                    result.body.smts.push_back(smt);
+                    continue;
+                }
             }
             common::Expression expr = parse_expression();
             if (expr.is_error()) {

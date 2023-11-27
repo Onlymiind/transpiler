@@ -1,6 +1,7 @@
 // clang-format off
 #include <stdint.h>
 
+void a(void);
 uint64_t b(void);
 int c(void);
 double d(void);
@@ -14,5 +15,5 @@ double d(void) {
 return -(double)1.1;
 }
 int main(void) {
-return (int)(uint64_t)1;
+(uint64_t)1;
 }

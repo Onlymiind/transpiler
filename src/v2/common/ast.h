@@ -98,8 +98,8 @@ namespace common {
             return result;
         }
 
-        Expression get_expression(StatementID smt) {
-            return smt == StatementID{} || *smt >= statements_.size() ? Expression{} : statements_[*smt];
+        Expression *get_expression(StatementID smt) {
+            return smt == StatementID{} || *smt >= statements_.size() ? nullptr : &statements_[*smt];
         }
 
         Function *get_function(FunctionID id) {

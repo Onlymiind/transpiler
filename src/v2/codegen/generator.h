@@ -42,9 +42,9 @@ namespace codegen {
 
         void codegen(common::Cast cast, common::Expression expr);
 
-        void codegen(common::Function func);
+        void codegen(const common::Function &func);
 
-        void codegen(common::FunctionCall call);
+        void codegen(const common::FunctionCall &call);
 
         void codegen_forward_decls();
 

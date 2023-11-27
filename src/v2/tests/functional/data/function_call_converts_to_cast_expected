@@ -2,5 +2,5 @@
 #include <stdint.h>
 
 int main(void) {
-return (int)(uint64_t)(double)(uint64_t)((double)1.1 + (double)2.2);
+(uint64_t)(double)(uint64_t)((double)1.1 + (double)2.2);
 }

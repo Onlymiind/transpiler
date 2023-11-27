@@ -1,3 +1,3 @@
-func main() a();
+func main() {a();}
 
-func a() 1;
+func a() {1;}

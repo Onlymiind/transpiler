@@ -16,6 +16,7 @@ namespace common {
         LITERAL,
         CAST,
         FUNCTION_CALL,
+        EMPTY,
     };
 
     enum class BinaryOp {
