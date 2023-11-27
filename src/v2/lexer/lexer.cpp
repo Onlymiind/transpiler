@@ -80,7 +80,7 @@ namespace lexer {
     };
 
     common::Token Lexer::get_identifier() {
-        common::Token result{};
+        common::Token result{.pos = current_pos_};
         std::optional<char> c = get_char();
         if (!c || !std::isalpha(*c) && *c != '_') {
             report_error("exprected alphabetic character or _");
@@ -99,20 +99,20 @@ namespace lexer {
 
         auto it = g_keywords.find(buf);
         if (it != g_keywords.end()) {
+            size_t pos = result.pos;
             result = it->second;
-            result.pos = current_pos_;
+            result.pos = pos;
             return result;
         }
 
         result.type = common::TokenType::IDENTIFIER;
         result.data = common::GenericID{result_.identifiers.add(std::move(buf))};
-        result.pos = current_pos_;
 
         return result;
     }
 
     common::Token Lexer::get_numeric() {
-        common::Token result{};
+        common::Token result{.pos = current_pos_};
         std::optional<char> c = get_char();
         if (!c || !std::isdigit(*c)) {
             return result;
@@ -130,7 +130,6 @@ namespace lexer {
             }
             result.type = common::TokenType::INTEGER;
             result.data = common::GenericID{result_.literals.add(integer)};
-            result.pos = current_pos_;
             return result;
         } else if (*c != '.') {
             report_error("expected either . or a space after numeric literal");
@@ -158,17 +157,26 @@ namespace lexer {
         result.data = common::GenericID{result_.literals.add(static_cast<double>(integer) +
                                                              static_cast<double>(fraction) /
                                                                  static_cast<double>(exponent))};
-        result.pos = current_pos_;
 
         return result;
     }
 
     common::Token Lexer::get_op() {
-        std::optional<char> c = get_char();
         common::Token result{.pos = current_pos_};
+        std::optional<char> c = get_char();
         if (!c || !std::ispunct(*c)) {
             return result;
         }
+
+        auto handle_wide_op = [this, &result](common::TokenType default_type, char next, common::TokenType if_next) -> common::Token {
+            result.type = default_type;
+            if (file_->peek() == next) {
+                result.type = if_next;
+                get_char();
+            }
+            return result;
+        };
+
         using enum common::TokenType;
         switch (*c) {
         case '+': result.type = ADD; return result;
@@ -181,45 +189,24 @@ namespace lexer {
         case ';': result.type = SEMICOLON; return result;
         case '{': result.type = LEFT_BRACE; return result;
         case '}': result.type = RIGHT_BRACE; return result;
-        case '!':
-            if (file_->peek() == '=') {
-                result.type = NOT_EQUALS;
-                get_char();
-            } else {
-                result.type = NOT;
-            }
-            result.pos = current_pos_;
-            return result;
-        case '<':
-            if (file_->peek() == '=') {
-                result.type = LESS_EQUALS;
-                get_char();
-            } else {
-                result.type = LESS;
-            }
-            result.pos = current_pos_;
-            return result;
-        case '>':
-            if (file_->peek() == '=') {
-                result.type = GREATER_EQUALS;
-                get_char();
-            } else {
-                result.type = GREATER;
-            }
-            result.pos = current_pos_;
-            return result;
+        case '!': return handle_wide_op(NOT, '=', NOT_EQUALS);
+        case '<': return handle_wide_op(LESS, '=', LESS_EQUALS);
+        case '>': return handle_wide_op(GREATER, '=', GREATER_EQUALS);
+        case '=': return handle_wide_op(ASSIGN, '=', EQUALS);
         case '&': result.type = AND; break;
         case '|': result.type = OR; break;
-        case '=': result.type = EQUALS; break;
-        default: report_error("unknown symbol"); return result;
+        default:
+            put_back(*c);
+            report_error("unknown symbol");
+            return result;
         }
 
         // && || ==
-        if (c != get_char()) {
+        if (c != file_->peek()) {
             result.type = ERROR;
             report_error("invalid operator");
         }
-        result.pos = current_pos_;
+        get_char();
 
         return result;
     }

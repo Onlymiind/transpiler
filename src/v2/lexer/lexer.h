@@ -54,7 +54,7 @@ namespace lexer {
         std::istream *file_ = nullptr;
 
         common::Error err_;
-        size_t current_pos_ = 0;
+        size_t current_pos_ = 1;
     };
 } // namespace lexer
 

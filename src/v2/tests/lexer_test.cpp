@@ -139,6 +139,7 @@ TEST_CASE("lexer: operators", "[lexer]") {
         {LESS_EQUALS, "<="},
         {GREATER_EQUALS, ">="},
         {NOT, "!"},
+        {ASSIGN, "="},
     };
 
     for (auto c : cases) {

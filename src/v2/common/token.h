@@ -30,6 +30,7 @@ namespace common {
         LESS_EQUALS,
         GREATER_EQUALS,
         NOT,
+        ASSIGN,
 
         // keywords
         FUNC,
