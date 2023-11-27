@@ -49,7 +49,7 @@ void run_tests(const std::vector<CheckerTestCase> cases) {
         REQUIRE(ch.get_error().empty());
 
         auto mod = ch.reset();
-        REQUIRE(c.expected == mod.global_scope()->get_type(type.id)->type);
+        REQUIRE(c.expected == mod.global_scope()->get_type(type)->type);
     }
 }
 

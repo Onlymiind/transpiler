@@ -97,7 +97,7 @@ namespace common {
         ExpressionID id = ExpressionID{g_invalid_id};
         size_t pos = 0;
 
-        TypeID type = TypeID{g_invalid_id};
+        SymbolID type = SymbolID{g_invalid_id};
 
         constexpr bool is_error() const {
             return kind == ExpressionKind::ERROR;

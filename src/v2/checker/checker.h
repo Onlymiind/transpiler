@@ -22,11 +22,12 @@ namespace checker {
         void add_declarations();
         void check();
 
-        common::Type check_expression(common::Expression &expr);
-        common::Type check_unary_expression(common::UnaryExpression &expr);
-        common::Type check_binary_expression(common::BinaryExpression &expr);
-        common::Type check_cast(common::Cast &cast);
-        common::Type check_function_call(common::FunctionCall &call, common::Expression &incoming_edge);
+        common::SymbolID check_expression(common::Expression &expr);
+        common::SymbolID check_unary_expression(common::UnaryExpression &expr);
+        common::SymbolID check_binary_expression(common::BinaryExpression &expr);
+        common::SymbolID check_cast(common::Cast &cast);
+        common::SymbolID check_function_call(common::FunctionCall &call, common::Expression &incoming_edge);
+        common::SymbolID check_literal();
         void check_function(common::Function &func);
 
         common::Module reset() {
@@ -34,9 +35,7 @@ namespace checker {
             return result;
         }
 
-        common::Type get_type_for_literal(common::Literal lit);
-
-        common::Type check_literal();
+        common::SymbolID get_type_for_literal(common::Literal lit);
 
         void report_error(std::string_view err) {
             err_.msg = err;
@@ -48,7 +47,7 @@ namespace checker {
         common::Module module_;
         common::AST *ast_ = nullptr;
         common::Identifiers *identifiers_ = nullptr;
-        std::unordered_map<common::BuiltinTypes, common::Type> builtin_types_;
+        std::unordered_map<common::BuiltinTypes, common::SymbolID> builtin_types_;
         common::Error err_;
         std::stack<size_t> err_positions_;
     };

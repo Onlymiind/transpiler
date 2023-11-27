@@ -9,19 +9,19 @@
 #include <type_traits>
 
 namespace common {
-    template <typename T, size_t TAG>
+    template <typename T, size_t TAG, T DEFAULT>
     class Distinct {
       public:
         constexpr Distinct() = default;
         constexpr explicit Distinct(T val) : val_(val) {}
 
-        template <size_t TAG2>
-        constexpr explicit Distinct(Distinct<T, TAG2> other)
+        template <size_t TAG2, T DEFAULT2>
+        constexpr explicit Distinct(Distinct<T, TAG2, DEFAULT2> other)
             requires(TAG2 !=
                      TAG)
             : val_(*other) {}
 
-        Distinct<T, TAG> &operator=(const Distinct<T, TAG> &) = default;
+        Distinct<T, TAG, DEFAULT> &operator=(const Distinct<T, TAG, DEFAULT> &) = default;
 
         constexpr explicit operator T() const { return val_; }
 
@@ -32,10 +32,10 @@ namespace common {
         constexpr T *operator->() noexcept { return &val_; }
         constexpr const T *operator->() const noexcept { return &val_; }
 
-        constexpr bool operator==(const Distinct<T, TAG> &other) const { return val_ == other.val_; }
+        constexpr bool operator==(const Distinct<T, TAG, DEFAULT> &other) const { return val_ == other.val_; }
 
       private:
-        T val_{};
+        T val_ = DEFAULT;
     };
 
     template <typename T>
@@ -71,7 +71,7 @@ namespace common {
         };
     }
     template <size_t TAG>
-    using IDBase = Distinct<uint64_t, TAG>;
+    using IDBase = Distinct<uint64_t, TAG, static_cast<uint64_t>(-1)>;
     using GenericID = IDBase<IDType::GENERIC>;
     using LiteralID = IDBase<IDType::LITERAL>;
     using IdentifierID = IDBase<IDType::IDENTIFIER>;
@@ -103,10 +103,10 @@ namespace common {
 } // namespace common
 
 namespace std {
-    template <typename T, size_t TAG>
-    struct hash<common::Distinct<T, TAG>> {
+    template <typename T, size_t TAG, T DEFAULT>
+    struct hash<common::Distinct<T, TAG, DEFAULT>> {
 
-        constexpr size_t operator()(const common::Distinct<T, TAG> &val) const {
+        constexpr size_t operator()(const common::Distinct<T, TAG, DEFAULT> &val) const {
             return std::hash<T>{}(*val);
         }
     };

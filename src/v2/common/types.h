@@ -43,13 +43,6 @@ namespace common {
 
         constexpr bool is_error() const { return name == IdentifierID{g_invalid_id}; }
     };
-
-    struct Type {
-        TypeID id = TypeID{g_invalid_id};
-
-        constexpr bool is_error() const { return id == TypeID{g_invalid_id}; }
-        constexpr bool operator==(Type other) const { return id == other.id; }
-    };
 } // namespace common
 
 #endif

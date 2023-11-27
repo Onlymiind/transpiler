@@ -50,7 +50,6 @@ namespace common {
             return type != SymbolType::BUILTIN_TYPE || idx >= builtin_types_.size() ? std::optional<BuiltinType>{} : builtin_types_[idx];
         }
 
-        std::optional<BuiltinType> get_type(TypeID id) { return get_type(SymbolID{id}); }
         std::optional<BuiltinType> get_type(IdentifierID name) { return get_type(find(name)); }
 
         FunctionID get_function(SymbolID id) {
