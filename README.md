@@ -1,6 +1,6 @@
 ## About
 
-This is a work-in-progress implementation of custom compiled general-purpose language (some syntax sketches can be found in ```desing_doc.md```).
+This is a work-in-progress implementation of custom compiled general-purpose language (some syntax sketches can be found in ```desing_doc.md```). For up-to-date examples check files in ```src/v2/tests/functional/data``` directory.
 
 ## Current Status
 
@@ -12,6 +12,7 @@ Implemented:
 - Arbitrary arithmetic and logic expressions
 - Explicit type conversions
 - Basic functions and function calls
+- Statements and function return types
 
 ## Building
 
@@ -31,9 +32,10 @@ gcc <path-to-output-file>
 ```
 
 ## TODO next (roadmap):
-- scopes and statements
 - variables and parameterised functions
 - if statements
 - loops
 - record types
+- pointers, arrays and slices
+- all other features to make this usable :)
 
