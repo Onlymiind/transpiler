@@ -360,6 +360,114 @@ TEST_CASE("parser: functions", "[parser]") {
     }
 }
 
+TEST_CASE("parser: global variables", "[parser]") {
+    struct Case {
+        std::string data;
+        common::Variable expected;
+        bool should_fail = false;
+    };
+
+    common::Identifiers ids;
+    std::vector<Case> cases{
+        {"var a u64;", common::Variable{.name = ids.add("a"), .explicit_type = ids.add("u64")}},
+        {.data = "a u64;", .should_fail = true},
+        {.data = "var a", .should_fail = true},
+        {.data = "var a u64", .should_fail = true},
+        {.data = "var a u64 = 1;", .should_fail = true},
+        {.data = "var;", .should_fail = true},
+        {.data = "var", .should_fail = true},
+    };
+
+    for (auto &c : cases) {
+        INFO(c.data);
+        std::stringstream str(c.data);
+        lexer::Lexer l{str};
+        l.split();
+        REQUIRE(l.get_error().empty());
+        auto lexer_result = l.reset();
+
+        parser::Parser p{std::move(lexer_result.tokens)};
+        p.parse();
+        INFO(p.get_error().msg);
+        if (c.should_fail) {
+            REQUIRE(!p.get_error().empty());
+            continue;
+        }
+
+        REQUIRE(p.get_error().empty());
+        auto ast = p.reset();
+        REQUIRE(ast.global_variables().size() == 1);
+        auto &var = ast.global_variables()[0];
+        REQUIRE(*lexer_result.identifiers.get(var.name) == *ids.get(c.expected.name));
+        REQUIRE(*lexer_result.identifiers.get(var.explicit_type) == *ids.get(c.expected.explicit_type));
+        REQUIRE(var.initial_value == common::Expression{});
+    }
+}
+
+TEST_CASE("parser: local variables", "[parser]") {
+    struct Case {
+        std::string data;
+        common::Variable expected;
+        bool should_fail = false;
+    };
+
+    common::Identifiers ids;
+    std::vector<Case> cases{
+        {"func main(){var a u64;}", common::Variable{.name = ids.add("a"), .explicit_type = ids.add("u64")}},
+        {"func main(){var a u64 = 1;}", common::Variable{
+                                            .name = ids.add("a"),
+                                            .explicit_type = ids.add("u64"),
+                                            .initial_value = common::Expression{.kind = common::ExpressionKind::LITERAL},
+                                        }},
+        {"func main(){var a bool = true || false;}", common::Variable{
+                                                         .name = ids.add("a"),
+                                                         .explicit_type = ids.add("bool"),
+                                                         .initial_value = common::Expression{.kind = common::ExpressionKind::BINARY},
+                                                     }},
+        {"func main(){var a = 1.1 * 2.2;}", common::Variable{
+                                                .name = ids.add("a"),
+                                                .initial_value = common::Expression{.kind = common::ExpressionKind::BINARY},
+                                            }},
+        {.data = "func main(){a u64;}", .should_fail = true},
+        {.data = "func main(){var a}", .should_fail = true},
+        {.data = "func main(){var a u64}", .should_fail = true},
+        {.data = "func main(){var;}", .should_fail = true},
+        {.data = "func main{var}", .should_fail = true},
+    };
+
+    for (auto &c : cases) {
+        INFO(c.data);
+        std::stringstream str(c.data);
+        lexer::Lexer l{str};
+        l.split();
+        REQUIRE(l.get_error().empty());
+        auto lexer_result = l.reset();
+
+        parser::Parser p{std::move(lexer_result.tokens)};
+        p.parse();
+        INFO(p.get_error().msg);
+        if (c.should_fail) {
+            REQUIRE(!p.get_error().empty());
+            continue;
+        }
+
+        REQUIRE(p.get_error().empty());
+        auto ast = p.reset();
+        REQUIRE(ast.functions().size() == 1);
+        auto &main = ast.functions()[0];
+        REQUIRE(main.body.smts.size() == 1);
+        REQUIRE(main.body.smts[0].type == common::StatementType::VARIABLE);
+        auto &var = *ast.get_local_var(main.body.smts[0].id);
+        REQUIRE(*lexer_result.identifiers.get(var.name) == *ids.get(c.expected.name));
+        if (c.expected.explicit_type == common::IdentifierID{}) {
+            REQUIRE(var.explicit_type == common::IdentifierID{});
+        } else {
+            REQUIRE(*lexer_result.identifiers.get(var.explicit_type) == *ids.get(c.expected.explicit_type));
+        }
+        REQUIRE(var.initial_value.type == c.expected.initial_value.type);
+    }
+}
+
 TEST_CASE("parser: fails", "[parser]") {
     std::stringstream in{GENERATE(as<std::string>{}, "1 +", "-", "(1 + 3", "true && ==", "!*", "bool", "bool 1", "bool(1")};
     lexer::Lexer l{in};

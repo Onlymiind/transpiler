@@ -12,7 +12,12 @@
 namespace parser {
     void Parser::parse() {
         while (!next().is_eof()) {
-            parse_function();
+            switch (next().type) {
+            case common::TokenType::VAR: parse_global_variabe(); break;
+            case common::TokenType::FUNC: parse_function(); break;
+            case common::TokenType::SEMICOLON: consume(); break;
+            default: report_error("unexpected token in global scope"); break;
+            }
             if (!err_.empty()) {
                 break;
             }
@@ -62,11 +67,9 @@ namespace parser {
             if (result.is_error()) {
                 break;
             }
-            if (next().type != RIGHT_PARENTHESIS) {
-                report_error("expected ')'");
+            if (!match(RIGHT_PARENTHESIS, "expected ')'")) {
                 break;
             }
-            consume();
             return result;
         }
 
@@ -83,27 +86,26 @@ namespace parser {
     }
 
     common::Expression Parser::parse_function_call() {
-        if (next().type != common::TokenType::IDENTIFIER) {
-            report_error("function call: expected identifier");
+        size_t pos = next().pos;
+        common::FunctionCall result{
+            .name = common::IdentifierID{
+                get_expected(common::TokenType::IDENTIFIER, "function call: expected function name")},
+        };
+        if (result.name == common::IdentifierID{}) {
             return common::Expression{};
         }
 
-        common::FunctionCall result{.name = common::IdentifierID{next().data}};
-        size_t pos = next().pos;
-        consume();
-        if (next().type != common::TokenType::LEFT_PARENTHESIS) {
-            report_error("function call: expected '('");
+        if (!match(common::TokenType::LEFT_PARENTHESIS, "function call: expected '('")) {
             return common::Expression{};
         }
-        consume();
+
         if (next().type != common::TokenType::RIGHT_PARENTHESIS) {
             result.args.push_back(parse_expression());
         }
-        if (next().type != common::TokenType::RIGHT_PARENTHESIS) {
-            report_error("function call: expected ')'");
+        if (!match(common::TokenType::RIGHT_PARENTHESIS, "function call: expected ')'")) {
             return common::Expression{};
         }
-        consume();
+
         return common::Expression{.kind = common::ExpressionKind::FUNCTION_CALL, .id = ast_.add(result), .pos = pos};
     }
 
@@ -152,33 +154,25 @@ namespace parser {
 
     void Parser::parse_function() {
         common::Function result{.pos = next().pos};
-        if (next().type != common::TokenType::FUNC) {
-            report_error("exprected \"func\" keyword");
+        if (!match(common::TokenType::FUNC, "exprected 'func' keyword")) {
             return;
         }
-        consume();
 
-        if (next().type != common::TokenType::IDENTIFIER) {
-            report_error("expected function name");
+        result.name = common::IdentifierID{get_expected(common::TokenType::IDENTIFIER, "expected function name")};
+        if (result.name == common::IdentifierID{}) {
             return;
         }
-        result.name = common::IdentifierID{next().data};
-        consume();
-        if (next().type != common::TokenType::LEFT_PARENTHESIS) {
-            report_error("expected \"(\"");
+
+        if (!(match(common::TokenType::LEFT_PARENTHESIS, "expected '('") &&
+              match(common::TokenType::RIGHT_PARENTHESIS, "expected ')'"))) {
             return;
         }
-        consume();
-        if (next().type != common::TokenType::RIGHT_PARENTHESIS) {
-            report_error("expected \")\"");
-            return;
-        }
-        consume();
+
         if (next().type == common::TokenType::SEMICOLON) {
             consume();
             result.decl_only = true;
             result.return_type = common::g_void_type;
-            result.id = ast_.add(std::move(result));
+            ast_.add(std::move(result));
             return;
         }
 
@@ -189,47 +183,118 @@ namespace parser {
             consume();
         }
 
-        if (next().type != common::TokenType::LEFT_BRACE) {
-            report_error("expected '{' at the start of function definition");
+        if (!match(common::TokenType::LEFT_BRACE, "expected '{' at the start of function definition")) {
             return;
         }
-        consume();
 
         while (next().type != common::TokenType::RIGHT_BRACE && next().type != common::TokenType::END_OF_FILE) {
             if (next().type == common::TokenType::SEMICOLON) {
                 consume();
                 continue;
             }
-            common::Statement smt{.type = common::StatementType::EXPRESSION, .pos = next().pos};
-            if (next().type == common::TokenType::RETURN) {
-                smt.type = common::StatementType::RETURN;
-                consume();
-                if (next().type == common::TokenType::SEMICOLON) {
-                    consume();
-                    smt.id = ast_.add(common::Expression{.kind = common::ExpressionKind::EMPTY, .pos = smt.pos});
-                    result.body.smts.push_back(smt);
-                    continue;
-                }
-            }
-            common::Expression expr = parse_expression();
-            if (expr.is_error()) {
+            common::Statement smt = parse_statement();
+            if (smt.is_error()) {
                 return;
             }
-            smt.id = ast_.add(expr);
             result.body.smts.push_back(smt);
-
-            if (next().type != common::TokenType::SEMICOLON) {
-                report_error("expected ';' at the end of the statement");
-                return;
-            }
         }
-        if (next().type != common::TokenType::RIGHT_BRACE) {
-            report_error("expected '}' at the end of the function definition");
+
+        if (!match(common::TokenType::RIGHT_BRACE, "expected '}' at the end of the function definition")) {
             return;
         }
-        consume();
 
-        result.id = ast_.add(std::move(result));
+        ast_.add(std::move(result));
         return;
+    }
+
+    void Parser::parse_global_variabe() {
+        if (!match(common::TokenType::VAR, "expected 'var' at the start of global variable declaration")) {
+            return;
+        }
+
+        common::Variable result{.pos = next().pos};
+        result.name = common::IdentifierID{get_expected(common::TokenType::IDENTIFIER, "expected variable's name")};
+        if (result.name == common::IdentifierID{}) {
+            return;
+        }
+
+        result.explicit_type = common::IdentifierID{
+            get_expected(common::TokenType::IDENTIFIER, "global variables must be explicitly typed"),
+        };
+        if (result.explicit_type == common::IdentifierID{}) {
+            return;
+        }
+
+        if (!match(common::TokenType::SEMICOLON, "initializers for global variables are not supported yet")) {
+            return;
+        }
+
+        ast_.add_global(std::move(result));
+    }
+
+    common::Statement Parser::parse_statement() {
+        if (next().type == common::TokenType::VAR) {
+            common::Statement result = parse_local_variable();
+            if (result.is_error() ||
+                !match(common::TokenType::SEMICOLON, "expected ';' at the end of the statement")) {
+                return common::Statement{};
+            }
+            return result;
+        }
+
+        common::Statement smt{.type = common::StatementType::EXPRESSION, .pos = next().pos};
+        if (next().type == common::TokenType::RETURN) {
+            smt.type = common::StatementType::RETURN;
+            consume();
+            if (next().type == common::TokenType::SEMICOLON) {
+                consume();
+                smt.id = ast_.add(common::Expression{.kind = common::ExpressionKind::EMPTY, .pos = smt.pos});
+                return smt;
+            }
+        }
+        common::Expression expr = parse_expression();
+        if (expr.is_error()) {
+            return common::Statement{};
+        }
+        smt.id = ast_.add(expr);
+
+        if (!match(common::TokenType::SEMICOLON, "expected ';' at the end of the statement")) {
+            return common::Statement{};
+        }
+        return smt;
+    }
+
+    common::Statement Parser::parse_local_variable() {
+        common::Statement smt{.type = common::StatementType::VARIABLE, .pos = next().pos};
+        common::Variable result{.pos = next().pos};
+
+        if (!match(common::TokenType::VAR, "expected 'var' at the start of local variable declaration")) {
+            return common::Statement{};
+        }
+
+        result.name = common::IdentifierID{get_expected(common::TokenType::IDENTIFIER, "expected variable's name")};
+        if (result.name == common::IdentifierID{}) {
+            return common::Statement{};
+        }
+
+        if (next().type != common::TokenType::ASSIGN) {
+            result.explicit_type = common::IdentifierID{
+                get_expected(common::TokenType::IDENTIFIER, "expected variable's type"),
+            };
+            if (result.explicit_type == common::IdentifierID{}) {
+                return common::Statement{};
+            }
+        }
+
+        if (next().type == common::TokenType::ASSIGN) {
+            consume();
+            result.initial_value = parse_expression();
+            if (result.initial_value.is_error()) {
+                return common::Statement{};
+            }
+        }
+
+        smt.id = ast_.add_local(result);
+        return smt;
     }
 } // namespace parser

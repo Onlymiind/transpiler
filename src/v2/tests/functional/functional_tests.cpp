@@ -15,7 +15,8 @@ TEST_CASE("functional tests") {
                                 "function_call_converts_to_cast",
                                 "wrong_return_type_fail",
                                 "missing_return_fail",
-                                "main_return_type_fail");
+                                "main_return_type_fail",
+                                "semicolons_in_global_scope");
 
     std::filesystem::path data{"data/" + name};
     INFO(data.c_str());

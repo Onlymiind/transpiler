@@ -27,6 +27,8 @@ namespace common {
     };
 
     struct Variable {
+
+        VariableID id;
         IdentifierID name;
         IdentifierID explicit_type;
         SymbolID type;

@@ -7,6 +7,7 @@
 #include "common/token.h"
 #include "common/util.h"
 
+#include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -31,6 +32,10 @@ namespace parser {
         common::Expression parse_function_call();
 
         void parse_function();
+        void parse_global_variabe();
+
+        common::Statement parse_local_variable();
+        common::Statement parse_statement();
 
         common::AST reset() noexcept {
             common::AST ast{std::move(ast_)};
@@ -45,6 +50,25 @@ namespace parser {
 
         const common::Token &next() const { return remainder_.front(); }
         void consume() { remainder_ = remainder_.subspan(1); }
+
+        common::GenericID get_expected(common::TokenType expected, std::string_view err_msg) {
+            if (next().type != expected) {
+                report_error(err_msg);
+                return common::GenericID{};
+            }
+            common::GenericID result = next().data;
+            consume();
+            return result;
+        }
+
+        bool match(common::TokenType expected, std::string_view err_msg) {
+            if (next().type != expected) {
+                report_error(err_msg);
+                return false;
+            }
+            consume();
+            return true;
+        }
 
       private:
         common::Expression parse_binary_expression(common::Expression lhs, uint8_t precedence);

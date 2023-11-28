@@ -68,8 +68,13 @@ namespace common {
             STATEMENT,
             SCOPE,
             SYMBOL,
+            VARIABLE,
+
+            COUNT,
         };
-    }
+        static_assert(COUNT <= 255, "too many IDs");
+    } // namespace IDType
+
     template <size_t TAG>
     using IDBase = Distinct<uint64_t, TAG, static_cast<uint64_t>(-1)>;
     using GenericID = IDBase<IDType::GENERIC>;
@@ -81,6 +86,7 @@ namespace common {
     using StatementID = IDBase<IDType::STATEMENT>;
     using ScopeID = IDBase<IDType::SCOPE>;
     using SymbolID = IDBase<IDType::SYMBOL>;
+    using VariableID = IDBase<IDType::VARIABLE>;
 
     constexpr inline GenericID g_invalid_id{static_cast<uint64_t>(-1)};
     constexpr inline LiteralID g_false_id{2};

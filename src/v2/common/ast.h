@@ -3,6 +3,7 @@
 #include "common/declarations.h"
 #include "common/expression.h"
 #include "common/literals.h"
+#include "common/statement.h"
 #include "common/util.h"
 
 #include <cstdint>
@@ -86,20 +87,40 @@ namespace common {
             return result;
         }
 
-        FunctionID add(Function func) {
+        void add(Function func) {
             func.id = FunctionID{functions_.size()};
             functions_.push_back(std::move(func));
-            return func.id;
+        }
+
+        void add_global(Variable var) {
+            var.id = VariableID{global_vars_.size()};
+            global_vars_.push_back(std::move(var));
         }
 
         StatementID add(Expression expr) {
-            StatementID result{statements_.size()};
+            StatementID result{make_id<StatementID>(StatementType::EXPRESSION, statements_.size())};
             statements_.push_back(expr);
             return result;
         }
 
+        StatementID add_local(Variable var) {
+            StatementID result{make_id<StatementID>(StatementType::VARIABLE, local_vars_.size())};
+            local_vars_.push_back(std::move(var));
+            return result;
+        }
+
         Expression *get_expression(StatementID smt) {
-            return smt == StatementID{} || *smt >= statements_.size() ? nullptr : &statements_[*smt];
+            auto [type, idx] = decompose<StatementType>(smt);
+            return type != StatementType::EXPRESSION || idx >= statements_.size() ? nullptr : &statements_[idx];
+        }
+
+        Variable *get_local_var(StatementID smt) {
+            auto [type, idx] = decompose<StatementType>(smt);
+            return type != StatementType::VARIABLE || idx >= local_vars_.size() ? nullptr : &local_vars_[idx];
+        }
+
+        Variable *get_global_var(VariableID id) {
+            return *id >= global_vars_.size() ? nullptr : &global_vars_[*id];
         }
 
         Function *get_function(FunctionID id) {
@@ -111,6 +132,9 @@ namespace common {
 
         std::vector<Function> &functions() { return functions_; }
         const std::vector<Function> &functions() const { return functions_; }
+
+        std::vector<Variable> &global_variables() { return global_vars_; }
+        const std::vector<Variable> &global_variables() const { return global_vars_; }
 
         bool operator==(const AST &other) const {
             return unary_exprs_ == other.unary_exprs_ &&
@@ -125,8 +149,10 @@ namespace common {
         std::vector<Cast> casts_;
         std::vector<FunctionCall> calls_;
         std::vector<Function> functions_;
+        std::vector<Variable> global_vars_;
 
         std::vector<Expression> statements_;
+        std::vector<Variable> local_vars_;
     };
 } // namespace common
 #endif

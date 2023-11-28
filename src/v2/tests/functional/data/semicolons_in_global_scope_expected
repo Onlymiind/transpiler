@@ -1,0 +1,19 @@
+// clang-format off
+#include <stdint.h>
+
+void a(void);
+uint64_t b(void);
+int c(void);
+double d(void);
+uint64_t b(void) {
+return ((uint64_t)1 + (uint64_t)2);
+}
+int c(void) {
+return (int)((double)1 == (double)2);
+}
+double d(void) {
+return -(double)1.1;
+}
+int main(void) {
+(uint64_t)1;
+}

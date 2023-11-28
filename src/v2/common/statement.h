@@ -11,12 +11,13 @@ namespace common {
     // NOTE: since return and expression statements are internally just expressions
     // there is no separate struct for them, just get ExpressionID from AST
 
-    enum class StatementType {
+    enum class StatementType : uint8_t {
         ERROR,
 
         EXPRESSION,
         BLOCK,
         RETURN,
+        VARIABLE,
     };
 
     struct Statement {

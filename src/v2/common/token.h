@@ -46,6 +46,7 @@ namespace common {
         SEMICOLON,
         LEFT_BRACE,
         RIGHT_BRACE,
+        COLON,
 
         END_OF_FILE
     };

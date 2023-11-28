@@ -201,7 +201,7 @@ namespace lexer {
             return result;
         }
 
-        // && || ==
+        // && ||
         if (c != file_->peek()) {
             result.type = ERROR;
             report_error("invalid operator");
