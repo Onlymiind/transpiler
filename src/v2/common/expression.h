@@ -17,6 +17,7 @@ namespace common {
         LITERAL,
         CAST,
         FUNCTION_CALL,
+        VARIABLE_REF,
         EMPTY,
     };
 
@@ -34,6 +35,7 @@ namespace common {
         GREATER,
         LESS_EQUALS,
         GREATER_EQUALS,
+        ASSIGN,
     };
 
     constexpr inline bool is_logic_op(BinaryOp op) {
@@ -52,7 +54,7 @@ namespace common {
         if (!is_binary_op(type)) {
             return {};
         }
-        return static_cast<BinaryOp>(to_underlying(BinaryOp::ADD) + (to_underlying(type) - to_underlying(TokenType::ADD)));
+        return static_cast<BinaryOp>(to_underlying(BinaryOp::ADD) + (to_underlying(type) - to_underlying(TokenType::BINARY_OP_START)));
     }
 
     constexpr uint8_t g_invalid_precedence = 0;
@@ -61,7 +63,7 @@ namespace common {
         using enum BinaryOp;
         switch (op) {
         case ADD: [[fallthrough]];
-        case SUB: return 4;
+        case SUB: return 5;
 
         case MUL: [[fallthrough]];
         case DIV: [[fallthrough]];
@@ -72,10 +74,11 @@ namespace common {
         case LESS_EQUALS: [[fallthrough]];
         case GREATER_EQUALS: [[fallthrough]];
         case NOT_EQUALS: [[fallthrough]];
-        case EQUALS: return 3;
+        case EQUALS: return 4;
 
-        case AND: return 2;
-        case OR: return 1;
+        case AND: return 3;
+        case OR: return 2;
+        case ASSIGN: return 1;
         }
 
         return g_invalid_precedence;

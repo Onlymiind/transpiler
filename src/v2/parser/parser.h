@@ -29,7 +29,7 @@ namespace parser {
         common::Expression parse_expression();
         common::Expression parse_unary_expression();
         common::Expression parse_primary_expression();
-        common::Expression parse_function_call();
+        common::Expression parse_identifier_ref();
 
         void parse_function();
         void parse_global_variabe();

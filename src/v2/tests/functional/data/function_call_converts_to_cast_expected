@@ -1,6 +1,10 @@
 // clang-format off
 #include <stdint.h>
 
+typedef uint64_t u64;
+typedef uint8_t bool;
+typedef double f64;
+
 int main(void) {
-(uint64_t)(double)(uint64_t)((double)1.1 + (double)2.2);
+(u64)(f64)(u64)((f64)1.1 + (f64)2.2);
 }

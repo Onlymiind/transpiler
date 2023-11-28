@@ -28,7 +28,10 @@ namespace checker {
         common::Symbol check_cast(common::Cast &cast);
         common::Symbol check_function_call(common::FunctionCall &call, common::Expression &incoming_edge);
         common::Symbol check_literal();
+        common::Symbol check_variable_ref(common::IdentifierID name);
         void check_function(common::Function &func);
+
+        bool is_assignable(common::Expression expr);
 
         common::Module reset() {
             common::Module result{std::move(module_)};

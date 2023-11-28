@@ -1,19 +1,23 @@
 // clang-format off
 #include <stdint.h>
 
+typedef uint64_t u64;
+typedef uint8_t bool;
+typedef double f64;
+
 void a(void);
-uint64_t b(void);
-int c(void);
-double d(void);
-uint64_t b(void) {
-return ((uint64_t)1 + (uint64_t)2);
+u64 b(void);
+bool c(void);
+f64 d(void);
+u64 b(void) {
+return ((u64)1 + (u64)2);
 }
-int c(void) {
-return (int)((double)1 == (double)2);
+bool c(void) {
+return (bool)((f64)1 == (f64)2);
 }
-double d(void) {
-return -(double)1.1;
+f64 d(void) {
+return -(f64)1.1;
 }
 int main(void) {
-(uint64_t)1;
+(u64)1;
 }

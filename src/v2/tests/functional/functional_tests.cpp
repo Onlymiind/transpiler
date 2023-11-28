@@ -16,7 +16,10 @@ TEST_CASE("functional tests") {
                                 "wrong_return_type_fail",
                                 "missing_return_fail",
                                 "main_return_type_fail",
-                                "semicolons_in_global_scope");
+                                "semicolons_in_global_scope",
+                                "variables",
+                                "variables_redeclaration_fail",
+                                "variables_wrong_init_type_fail");
 
     std::filesystem::path data{"data/" + name};
     INFO(data.c_str());

@@ -268,6 +268,7 @@ TEST_CASE("parser: binary operators", "[parser]") {
         ParserTestCase{"1234 > 5678", "> 1234 5678"},
         ParserTestCase{"1234 <= 5678", "<= 1234 5678"},
         ParserTestCase{"1234 >= 5678", ">= 1234 5678"},
+        ParserTestCase{"1234 = 5678", "= 1234 5678"},
     };
 
     run_tests(cases);
@@ -288,7 +289,7 @@ TEST_CASE("parser: precedence", "[parser]") {
     std::vector<ParserTestCase> cases = {
         ParserTestCase{"1234 + 5678 * true + 9012", "+ 1234 + * 5678 true 9012"},
         ParserTestCase{"1 || 2 && 3 == 4 + 5 * 6", "|| 1 && 2 == 3 + 4 * 5 6"},
-        ParserTestCase{"1 || (2 && 3.0) == (4 + 5) * 6", "|| 1 == && 2 3.0 * + 4 5 6"},
+        ParserTestCase{"1 || (2 && 3.0) == (4 + 5) * 6 = 7", "= || 1 == && 2 3.0 * + 4 5 6 7"},
     };
 
     run_tests(cases);
@@ -467,8 +468,39 @@ TEST_CASE("parser: local variables", "[parser]") {
     }
 }
 
+TEST_CASE("parser: function call and variable ref distinction", "[parser]") {
+    SECTION("variable reference") {
+        std::stringstream str{"x"};
+        lexer::Lexer l{str};
+        l.split();
+        REQUIRE(l.get_error().empty());
+        auto lexer_result = l.reset();
+
+        parser::Parser p{std::move(lexer_result.tokens)};
+        auto expr = p.parse_expression();
+        REQUIRE(p.get_error().empty());
+        REQUIRE(expr.kind == common::ExpressionKind::VARIABLE_REF);
+        auto ast = p.reset();
+        REQUIRE(ast.get_variable_ref(expr.id) != common::IdentifierID{});
+    }
+    SECTION("function call") {
+        std::stringstream str{"x()"};
+        lexer::Lexer l{str};
+        l.split();
+        REQUIRE(l.get_error().empty());
+        auto lexer_result = l.reset();
+
+        parser::Parser p{std::move(lexer_result.tokens)};
+        auto expr = p.parse_expression();
+        REQUIRE(p.get_error().empty());
+        REQUIRE(expr.kind == common::ExpressionKind::FUNCTION_CALL);
+        auto ast = p.reset();
+        REQUIRE(ast.get_call(expr.id)->name != common::IdentifierID{});
+    }
+}
+
 TEST_CASE("parser: fails", "[parser]") {
-    std::stringstream in{GENERATE(as<std::string>{}, "1 +", "-", "(1 + 3", "true && ==", "!*", "bool", "bool 1", "bool(1")};
+    std::stringstream in{GENERATE(as<std::string>{}, "1 +", "-", "(1 + 3", "true && ==", "!*", "bool(1")};
     lexer::Lexer l{in};
     l.split();
     REQUIRE(l.get_error().empty());

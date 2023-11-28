@@ -13,6 +13,7 @@ namespace common {
         VOID = 0,
         BUILTIN_TYPE,
         FUNCTION,
+        VARIABLE,
     };
 
     class Scope {
@@ -37,6 +38,15 @@ namespace common {
             return result;
         }
 
+        SymbolID add(IdentifierID name, VariableID var) {
+            SymbolID result{make_id<SymbolID>(SymbolType::VARIABLE, variables_.size())};
+            if (!name_to_symbol_.try_emplace(name, result).second) {
+                return SymbolID{g_invalid_id};
+            }
+            variables_.push_back(var);
+            return result;
+        }
+
         TypeTraits get_traits(SymbolID id) {
             auto [type, idx] = decompose<SymbolType>(id);
             return type != SymbolType::BUILTIN_TYPE || idx >= builtin_types_.size() ? TypeTraits::NONE : builtin_types_[idx].traits;
@@ -56,6 +66,13 @@ namespace common {
 
         FunctionID get_function(IdentifierID name) { return get_function(find(name)); }
 
+        VariableID get_variable(SymbolID id) {
+            auto [type, idx] = decompose<SymbolType>(id);
+            return type != SymbolType::VARIABLE || idx >= variables_.size() ? VariableID{} : variables_[idx];
+        }
+
+        VariableID get_variable(IdentifierID name) { return get_variable(find(name)); }
+
         ScopeID parent() const noexcept { return parent_; }
         ScopeID id() const noexcept { return self_; }
         bool is_global() const noexcept { return parent_ == ScopeID{g_invalid_id}; }
@@ -73,6 +90,7 @@ namespace common {
 
         std::vector<BuiltinType> builtin_types_;
         std::vector<FunctionID> functions_;
+        std::vector<VariableID> variables_;
 
         std::unordered_map<IdentifierID, SymbolID> name_to_symbol_;
     };

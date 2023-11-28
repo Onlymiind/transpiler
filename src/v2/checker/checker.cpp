@@ -40,7 +40,7 @@ namespace checker {
         for (auto &func : functions) {
             ErrorGuard eg{*this, func.pos};
             if (common::Symbol sym = module_.find(func.name); !sym.is_error()) {
-                report_error("function redeclaration");
+                report_error("can not declare a function: name " + *identifiers_->get(func.name) + " already used");
                 return;
             }
 
@@ -59,14 +59,31 @@ namespace checker {
                     return;
                 }
             } else {
-                func.return_type = common::Symbol{
-                    .scope = module_.global_scope()->id(),
-                    .id = common::g_void_type,
-                };
+                func.return_type = common::g_void;
             }
 
             func.scope = module_.make_scope(module_.global_scope()->id());
             module_.global_scope()->add(func.name, func.id);
+        }
+
+        auto &variables = ast_->global_variables();
+        for (auto &var : variables) {
+            ErrorGuard{*this, var.pos};
+            if (common::Symbol sym = module_.find(var.name); !sym.is_error()) {
+                report_error("can not declare a variable: name " + *identifiers_->get(var.name) + " already used");
+                return;
+            }
+
+            var.type = module_.find(var.explicit_type);
+            if (var.type.is_error()) {
+                report_error("variable type not declared");
+                return;
+            }
+            if (common::Scope::type(var.type.id) != common::SymbolType::BUILTIN_TYPE) {
+                report_error("invalid variable type");
+                return;
+            }
+            module_.global_scope()->add(var.name, var.id);
         }
     }
 
@@ -118,9 +135,11 @@ namespace checker {
         case common::ExpressionKind::FUNCTION_CALL:
             result = check_function_call(*ast_->get_call(expr.id), expr);
             break;
+        case common::ExpressionKind::VARIABLE_REF:
+            result = check_variable_ref(ast_->get_variable_ref(expr.id));
+            break;
         case common::ExpressionKind::EMPTY:
-            result.scope = module_.global_scope()->id();
-            result.id = common::g_void_type;
+            result = common::g_void;
             break;
         default:
             report_error("unknown expression type");
@@ -181,6 +200,14 @@ namespace checker {
         if (lhs != rhs) {
             report_error("type mismatch: can not convert types");
             return common::Symbol{};
+        }
+
+        if (expr.op == common::BinaryOp::ASSIGN) {
+            if (!is_assignable(expr.lhs)) {
+                report_error("can not assing to rvalue");
+                return common::Symbol{};
+            }
+            return common::g_void;
         }
 
         common::TypeTraits traits = module_.get_scope(lhs.scope)->get_traits(lhs.id);
@@ -317,14 +344,60 @@ namespace checker {
                 }
                 break;
             }
+            case common::StatementType::VARIABLE: {
+                common::Variable &var = *ast_->get_local_var(smt.id);
+                if (!module_.find(var.name, scope_stack_.top()).is_error()) {
+                    report_error("local variable declaration: name already used");
+                    return;
+                }
+
+                if (var.explicit_type != common::IdentifierID{}) {
+                    var.type = module_.find(var.explicit_type, scope_stack_.top());
+                    if (var.type.is_error() || common::Scope::type(var.type.id) != common::SymbolType::BUILTIN_TYPE) {
+                        report_error("invalid local variable type");
+                        return;
+                    }
+                }
+
+                common::Symbol expected_type = var.type;
+                if (!var.initial_value.is_error()) {
+                    expected_type = check_expression(var.initial_value);
+                }
+                if (var.explicit_type != common::IdentifierID{}) {
+                    if (var.type != expected_type) {
+                        report_error("type mismatch: can not initialize local variabe with expression of wrong type");
+                        return;
+                    }
+                } else {
+                    var.type = expected_type;
+                }
+
+                module_.get_scope(scope_stack_.top())->add(var.name, var.id);
+                break;
+            }
             default:
                 report_error("statement type not implemented");
                 return;
             }
         }
-        if (!has_return && func.return_type.id != common::g_void_type) {
+        if (!has_return && !func.return_type.is_void()) {
             report_error("no return statement in non-void function");
             return;
         }
+    }
+
+    bool Checker::is_assignable(common::Expression expr) {
+        return expr.kind == common::ExpressionKind::VARIABLE_REF;
+    }
+
+    common::Symbol Checker::check_variable_ref(common::IdentifierID name) {
+        common::Symbol sym = module_.find(name, scope_stack_.top());
+        if (sym.is_error() || common::Scope::type(sym.id) != common::SymbolType::VARIABLE) {
+            report_error("identifier does not name a variable");
+            return common::Symbol{};
+        }
+
+        common::Variable &var = *ast_->get_local_var(module_.get_scope(sym.scope)->get_variable(sym.id));
+        return var.type;
     }
 } // namespace checker

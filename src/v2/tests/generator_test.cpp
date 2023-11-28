@@ -51,12 +51,12 @@ void run_tests(const std::vector<GeneratorTestCase> cases) {
 
 TEST_CASE("generator: literals", "[generator]") {
     std::vector<GeneratorTestCase> cases{
-        {"true", "(int)1"},
-        {"false", "(int)0"},
-        {"1234", "(uint64_t)1234"},
+        {"true", "(bool)1"},
+        {"false", "(bool)0"},
+        {"1234", "(u64)1234"},
         // TODO: probably should store floating-point values as string
         // to avoid floating-point error occurring due to compilation
-        {"1234.1234", "(double)1234.1234"},
+        {"1234.1234", "(f64)1234.1234"},
     };
 
     run_tests(cases);
@@ -64,9 +64,9 @@ TEST_CASE("generator: literals", "[generator]") {
 
 TEST_CASE("generator: unary expressions", "[generator]") {
     std::vector<GeneratorTestCase> cases{
-        {"!true", "!(int)1"},
-        {"!false", "!(int)0"},
-        {"-1234.1234", "-(double)1234.1234"},
+        {"!true", "!(bool)1"},
+        {"!false", "!(bool)0"},
+        {"-1234.1234", "-(f64)1234.1234"},
     };
 
     run_tests(cases);
@@ -74,19 +74,19 @@ TEST_CASE("generator: unary expressions", "[generator]") {
 
 TEST_CASE("generator: binary expressions", "[generator]") {
     std::vector<GeneratorTestCase> cases{
-        {"false && true", "((int)0 && (int)1)"},
-        {"true || false", "((int)1 || (int)0)"},
-        {"1 + 2", "((uint64_t)1 + (uint64_t)2)"},
-        {"1 - 2", "((uint64_t)1 - (uint64_t)2)"},
-        {"1 * 2", "((uint64_t)1 * (uint64_t)2)"},
-        {"1 / 2", "((uint64_t)1 / (uint64_t)2)"},
-        {"1 % 2", "((uint64_t)1 % (uint64_t)2)"},
-        {"1 == 2", "((uint64_t)1 == (uint64_t)2)"},
-        {"1 != 2", "((uint64_t)1 != (uint64_t)2)"},
-        {"1 <= 2", "((uint64_t)1 <= (uint64_t)2)"},
-        {"1 < 2", "((uint64_t)1 < (uint64_t)2)"},
-        {"1 > 2", "((uint64_t)1 > (uint64_t)2)"},
-        {"1 >= 2", "((uint64_t)1 >= (uint64_t)2)"},
+        {"false && true", "((bool)0 && (bool)1)"},
+        {"true || false", "((bool)1 || (bool)0)"},
+        {"1 + 2", "((u64)1 + (u64)2)"},
+        {"1 - 2", "((u64)1 - (u64)2)"},
+        {"1 * 2", "((u64)1 * (u64)2)"},
+        {"1 / 2", "((u64)1 / (u64)2)"},
+        {"1 % 2", "((u64)1 % (u64)2)"},
+        {"1 == 2", "((u64)1 == (u64)2)"},
+        {"1 != 2", "((u64)1 != (u64)2)"},
+        {"1 <= 2", "((u64)1 <= (u64)2)"},
+        {"1 < 2", "((u64)1 < (u64)2)"},
+        {"1 > 2", "((u64)1 > (u64)2)"},
+        {"1 >= 2", "((u64)1 >= (u64)2)"},
     };
 
     run_tests(cases);
@@ -94,14 +94,14 @@ TEST_CASE("generator: binary expressions", "[generator]") {
 
 TEST_CASE("generator: casts", "[generator]") {
     std::vector<GeneratorTestCase> cases{
-        {"bool(true)", "(int)1"},
-        {"u64(1.1)", "(uint64_t)1.1"},
-        {"f64(1)", "(double)1"},
-        {"u64(-1.1)", "(uint64_t)-(double)1.1"},
-        {"bool(!false)", "(int)!(int)0"},
-        {"f64(1 / 2)", "(double)((uint64_t)1 / (uint64_t)2)"},
-        {"u64(1.1 * 2.2)", "(uint64_t)((double)1.1 * (double)2.2)"},
-        {"bool(true == false)", "(int)((int)1 == (int)0)"},
+        {"bool(true)", "(bool)1"},
+        {"u64(1.1)", "(u64)1.1"},
+        {"f64(1)", "(f64)1"},
+        {"u64(-1.1)", "(u64)-(f64)1.1"},
+        {"bool(!false)", "(bool)!(bool)0"},
+        {"f64(1 / 2)", "(f64)((u64)1 / (u64)2)"},
+        {"u64(1.1 * 2.2)", "(u64)((f64)1.1 * (f64)2.2)"},
+        {"bool(true == false)", "(bool)((bool)1 == (bool)0)"},
     };
 
     run_tests(cases);
@@ -109,10 +109,10 @@ TEST_CASE("generator: casts", "[generator]") {
 
 TEST_CASE("generator: expressions", "[generator]") {
     std::vector<GeneratorTestCase> cases{
-        {"false && true || false && 1 != 2 * 3", "(((int)0 && (int)1) || ((int)0 && ((uint64_t)1 != ((uint64_t)2 * (uint64_t)3))))"},
-        {"1 + 2 * (3 + 5) / 4", "((uint64_t)1 + (((uint64_t)2 * ((uint64_t)3 + (uint64_t)5)) / (uint64_t)4))"},
+        {"false && true || false && 1 != 2 * 3", "(((bool)0 && (bool)1) || ((bool)0 && ((u64)1 != ((u64)2 * (u64)3))))"},
+        {"1 + 2 * (3 + 5) / 4", "((u64)1 + (((u64)2 * ((u64)3 + (u64)5)) / (u64)4))"},
         {"f64(1 + 2 * u64(1.3 - 11.02 * f64(12)) /1000)",
-         "(double)((uint64_t)1 + (((uint64_t)2 * (uint64_t)((double)1.3 - ((double)11.02 * (double)12))) / (uint64_t)1000))"},
+         "(f64)((u64)1 + (((u64)2 * (u64)((f64)1.3 - ((f64)11.02 * (f64)12))) / (u64)1000))"},
     };
 
     run_tests(cases);

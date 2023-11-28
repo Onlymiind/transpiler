@@ -73,7 +73,7 @@ namespace parser {
             return result;
         }
 
-        case IDENTIFIER: return parse_function_call();
+        case IDENTIFIER: return parse_identifier_ref();
         case BOOL: return make_literal_expr(common::LiteralType::BOOL);
         case INTEGER: return make_literal_expr(common::LiteralType::UINT);
         case FLOAT: return make_literal_expr(common::LiteralType::FLOAT);
@@ -85,16 +85,20 @@ namespace parser {
         return common::Expression{};
     }
 
-    common::Expression Parser::parse_function_call() {
+    common::Expression Parser::parse_identifier_ref() {
         size_t pos = next().pos;
-        common::FunctionCall result{
-            .name = common::IdentifierID{
-                get_expected(common::TokenType::IDENTIFIER, "function call: expected function name")},
-        };
-        if (result.name == common::IdentifierID{}) {
+        common::IdentifierID name = common::IdentifierID{get_expected(common::TokenType::IDENTIFIER, "function call: expected function name")};
+        if (name == common::IdentifierID{}) {
             return common::Expression{};
         }
 
+        if (next().type != common::TokenType::LEFT_PARENTHESIS) {
+            return common::Expression{.kind = common::ExpressionKind::VARIABLE_REF, .id = ast_.add_variable_ref(name), .pos = pos};
+        }
+
+        common::FunctionCall result{
+            .name = name,
+        };
         if (!match(common::TokenType::LEFT_PARENTHESIS, "function call: expected '('")) {
             return common::Expression{};
         }

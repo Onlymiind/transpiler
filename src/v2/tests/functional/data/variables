@@ -1,0 +1,16 @@
+var a bool;
+
+var b u64;
+
+var c f64;
+
+func foo() {
+    var e u64;
+    var d f64 = 1.0;
+}
+
+func main() {
+    var e f64;
+    var d bool = true;
+    var f = 1.0;
+}

@@ -18,7 +18,7 @@ namespace codegen {
         }
 
         *out_ << g_prelude;
-        codegen_forward_decls();
+        codegen_decls();
         const auto &functions = ast_->functions();
         for (const common::Function &func : functions) {
             codegen(func);
@@ -49,6 +49,8 @@ namespace codegen {
         case common::ExpressionKind::FUNCTION_CALL:
             codegen(*ast_->get_call(expr.id));
             break;
+        case common::ExpressionKind::VARIABLE_REF:
+            *out_ << *identifiers_->get(ast_->get_variable_ref(expr.id));
         default:
             report_error("unknown expression type");
             break;
@@ -57,7 +59,7 @@ namespace codegen {
 
     void Generator::codegen(common::Literal lit, common::Expression expr) {
         *out_ << '(';
-        codegen(mod_->get_scope(expr.type.scope)->get_type(expr.type.id)->type);
+        *out_ << *identifiers_->get(mod_->get_scope(expr.type.scope)->get_type(expr.type.id)->name);
         *out_ << ')';
 
         switch (lit.type) {
@@ -120,6 +122,7 @@ namespace codegen {
         case GREATER: *out_ << '>'; break;
         case LESS_EQUALS: *out_ << "<="; break;
         case GREATER_EQUALS: *out_ << ">="; break;
+        case ASSIGN: *out_ << '='; break;
         default:
             report_error("unlnown binary operator");
             return;
@@ -130,24 +133,6 @@ namespace codegen {
         *out_ << ')';
     }
 
-    void Generator::codegen(common::BuiltinTypes type) {
-        using enum common::BuiltinTypes;
-        switch (type) {
-        case BOOL:
-            *out_ << "int";
-            break;
-        case UINT:
-            *out_ << "uint64_t";
-            break;
-        case FLOAT:
-            *out_ << "double";
-            break;
-        default:
-            report_error("unknown builtin type");
-            break;
-        }
-    }
-
     void Generator::codegen(common::Cast cast, common::Expression expr) {
         if (cast.from.kind == common::ExpressionKind::LITERAL) {
             // avoid unnecessary casts
@@ -156,12 +141,12 @@ namespace codegen {
         }
 
         *out_ << '(';
-        codegen(mod_->global_scope()->get_type(mod_->global_scope()->find(cast.to))->type);
+        *out_ << *identifiers_->get(cast.to);
         *out_ << ')';
         codegen(cast.from);
     }
 
-    void Generator::codegen_forward_decls() {
+    void Generator::codegen_decls() {
         const auto &functions = ast_->functions();
         for (const common::Function &func : functions) {
             const std::string &name = *identifiers_->get(func.name);
@@ -172,11 +157,17 @@ namespace codegen {
             if (func.return_type.is_void()) {
                 *out_ << "void";
             } else {
-                codegen(mod_->get_scope(func.return_type.scope)->get_type(func.return_type.id)->type);
+                *out_ << *identifiers_->get(func.return_typename);
             }
             *out_ << ' ';
             *out_ << name;
             *out_ << "(void);\n";
+        }
+
+        const auto &variables = ast_->global_variables();
+        for (const auto &var : variables) {
+            codegen(var);
+            *out_ << '\n';
         }
     }
 
@@ -191,29 +182,53 @@ namespace codegen {
         } else if (func.return_type.is_void()) {
             *out_ << "void";
         } else {
-            codegen(mod_->get_scope(func.return_type.scope)->get_type(func.return_type.id)->type);
+            *out_ << *identifiers_->get(func.return_typename);
         }
 
         *out_ << ' ';
         *out_ << name;
-        *out_ << "(void) {\n";
+        *out_ << "(void) {";
         for (common::Statement smt : func.body.smts) {
-            if (smt.type == common::StatementType::RETURN) {
+            *out_ << '\n';
+            switch (smt.type) {
+            case common::StatementType::RETURN:
                 *out_ << "return ";
                 if (name == "main") {
                     *out_ << "(int)";
                 }
+                [[fallthrough]];
+            case common::StatementType::EXPRESSION: {
+                common::Expression *expr = ast_->get_expression(smt.id);
+                if (expr->kind == common::ExpressionKind::EMPTY) {
+                    continue;
+                }
+                codegen(*expr);
+                *out_ << ';';
+                break;
             }
-            common::Expression *expr = ast_->get_expression(smt.id);
-            if (expr->kind == common::ExpressionKind::EMPTY) {
-                continue;
+            case common::StatementType::VARIABLE:
+                codegen(*ast_->get_local_var(smt.id));
             }
-            codegen(*expr);
         }
-        *out_ << ";\n}\n";
+        if (!func.body.smts.empty()) {
+            *out_ << '\n';
+        }
+        *out_ << "}\n";
     }
 
     void Generator::codegen(const common::FunctionCall &call) {
         *out_ << *identifiers_->get(call.name) << "()";
+    }
+
+    void Generator::codegen(const common::Variable &var) {
+        *out_ << *identifiers_->get(mod_->get_scope(var.type.scope)->get_type(var.type.id)->name)
+              << ' ' << *identifiers_->get(var.name) << " = ";
+        if (var.initial_value.is_error()) {
+            // TODO: proper zero-initialization
+            *out_ << '(' << *identifiers_->get(mod_->get_scope(var.type.scope)->get_type(var.type.id)->name) << ")0;";
+            return;
+        }
+        codegen(var.initial_value);
+        *out_ << ';';
     }
 } // namespace codegen

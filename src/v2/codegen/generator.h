@@ -11,8 +11,11 @@
 #include <string_view>
 
 namespace codegen {
-    constexpr std::string_view g_prelude = "#include <stdint.h>\n\n";
-    constexpr std::string_view g_postlude = "\n}";
+    constexpr std::string_view g_prelude =
+        "#include <stdint.h>\n\n"
+        "typedef uint64_t u64;\n"
+        "typedef uint8_t bool;\n"
+        "typedef double f64;\n\n";
 
     class Generator {
       public:
@@ -38,15 +41,15 @@ namespace codegen {
 
         void codegen(common::BinaryExpression expr);
 
-        void codegen(common::BuiltinTypes type);
-
         void codegen(common::Cast cast, common::Expression expr);
 
         void codegen(const common::Function &func);
 
         void codegen(const common::FunctionCall &call);
 
-        void codegen_forward_decls();
+        void codegen(const common::Variable &var);
+
+        void codegen_decls();
 
         void report_error(std::string_view err) { err_ = err; }
         std::string_view get_error() const { return err_; }

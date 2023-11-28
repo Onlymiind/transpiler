@@ -16,7 +16,10 @@ namespace common {
         BOOL,
 
         // operators
-        ADD,
+        OP_START,
+        BINARY_OP_START = OP_START,
+
+        ADD = BINARY_OP_START,
         SUB,
         MUL,
         DIV,
@@ -29,8 +32,12 @@ namespace common {
         GREATER,
         LESS_EQUALS,
         GREATER_EQUALS,
-        NOT,
         ASSIGN,
+
+        BINARY_OP_END,
+
+        NOT,
+        OP_END,
 
         // keywords
         FUNC,
@@ -52,11 +59,11 @@ namespace common {
     };
 
     constexpr inline bool is_op(TokenType type) noexcept {
-        return type >= TokenType::ADD && type <= TokenType::NOT;
+        return type >= TokenType::OP_START && type < TokenType::OP_END;
     }
 
     constexpr inline bool is_binary_op(TokenType type) noexcept {
-        return type >= TokenType::ADD && type <= TokenType::GREATER_EQUALS;
+        return type >= TokenType::BINARY_OP_START && type < TokenType::BINARY_OP_END;
     }
 
     constexpr inline bool is_unary_op(TokenType type) noexcept {

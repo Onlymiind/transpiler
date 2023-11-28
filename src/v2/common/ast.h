@@ -57,6 +57,11 @@ namespace common {
             return &calls_[idx];
         }
 
+        IdentifierID get_variable_ref(ExpressionID id) {
+            auto [type, idx] = decompose<ExpressionKind>(id);
+            return type != ExpressionKind::VARIABLE_REF || idx >= variable_refs_.size() ? IdentifierID{} : variable_refs_[idx];
+        }
+
         ExpressionID add(BinaryExpression expr) {
             ExpressionID result{make_id<ExpressionID>(ExpressionKind::BINARY, binary_exprs_.size())};
             binary_exprs_.push_back(expr);
@@ -84,6 +89,12 @@ namespace common {
         ExpressionID add(FunctionCall cast) {
             ExpressionID result{make_id<ExpressionID>(ExpressionKind::FUNCTION_CALL, calls_.size())};
             calls_.push_back(cast);
+            return result;
+        }
+
+        ExpressionID add_variable_ref(IdentifierID name) {
+            ExpressionID result{make_id<ExpressionID>(ExpressionKind::VARIABLE_REF, variable_refs_.size())};
+            variable_refs_.push_back(name);
             return result;
         }
 
@@ -119,6 +130,8 @@ namespace common {
             return type != StatementType::VARIABLE || idx >= local_vars_.size() ? nullptr : &local_vars_[idx];
         }
 
+        Variable *get_local_var(VariableID id) { return get_local_var(StatementID{id}); }
+
         Variable *get_global_var(VariableID id) {
             return *id >= global_vars_.size() ? nullptr : &global_vars_[*id];
         }
@@ -148,11 +161,13 @@ namespace common {
         std::vector<Literal> literal_exprs_;
         std::vector<Cast> casts_;
         std::vector<FunctionCall> calls_;
+        std::vector<IdentifierID> variable_refs_;
+
         std::vector<Function> functions_;
         std::vector<Variable> global_vars_;
+        std::vector<Variable> local_vars_;
 
         std::vector<Expression> statements_;
-        std::vector<Variable> local_vars_;
     };
 } // namespace common
 #endif

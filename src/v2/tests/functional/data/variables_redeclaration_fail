@@ -1,0 +1,5 @@
+var a 64;
+
+func main() {
+    var a f64;
+}

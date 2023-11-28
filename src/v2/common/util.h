@@ -92,7 +92,6 @@ namespace common {
     constexpr inline GenericID g_invalid_id{static_cast<uint64_t>(-1)};
     constexpr inline LiteralID g_false_id{2};
     constexpr inline LiteralID g_true_id{1};
-    constexpr inline SymbolID g_void_type{0};
 
     template <typename ID, typename Type>
     constexpr inline ID make_id(Type tag, uint64_t idx)
