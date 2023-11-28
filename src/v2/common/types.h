@@ -48,17 +48,8 @@ namespace common {
         SymbolID id;
 
         constexpr bool is_error() const noexcept { return scope == ScopeID{} || id == SymbolID{}; }
+        constexpr bool is_void() const noexcept { return id == common::g_void_type; }
         constexpr bool operator==(Symbol rhs) const noexcept { return scope == rhs.scope && id == rhs.id; }
-    };
-
-    struct FunctionSymbol {
-        FunctionID function;
-        Symbol return_type;
-        ScopeID scope;
-    };
-
-    struct VariableSymbol {
-        Symbol type;
     };
 } // namespace common
 

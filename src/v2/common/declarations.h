@@ -21,6 +21,9 @@ namespace common {
         size_t pos = 0;
         bool decl_only = false;
 
+        Symbol return_type;
+        ScopeID scope;
+
         constexpr bool is_error() const { return id == FunctionID{}; }
         constexpr bool operator==(Function other) const { return id == other.id && name == other.name; }
     };
@@ -31,8 +34,8 @@ namespace common {
         IdentifierID name;
         IdentifierID explicit_type;
         Expression initial_value;
-
         size_t pos = 0;
+        Symbol type;
     };
 } // namespace common
 

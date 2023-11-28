@@ -28,7 +28,7 @@ namespace common {
             return result;
         }
 
-        SymbolID add(IdentifierID name, FunctionSymbol function) {
+        SymbolID add(IdentifierID name, FunctionID function) {
             SymbolID result{make_id<SymbolID>(SymbolType::FUNCTION, functions_.size())};
             if (!name_to_symbol_.try_emplace(name, result).second) {
                 return SymbolID{g_invalid_id};
@@ -49,12 +49,12 @@ namespace common {
 
         std::optional<BuiltinType> get_type(IdentifierID name) { return get_type(find(name)); }
 
-        FunctionSymbol get_function(SymbolID id) {
+        FunctionID get_function(SymbolID id) {
             auto [type, idx] = decompose<SymbolType>(id);
-            return type != SymbolType::FUNCTION || idx >= functions_.size() ? FunctionSymbol{} : functions_[idx];
+            return type != SymbolType::FUNCTION || idx >= functions_.size() ? FunctionID{} : functions_[idx];
         }
 
-        FunctionSymbol get_function(IdentifierID name) { return get_function(find(name)); }
+        FunctionID get_function(IdentifierID name) { return get_function(find(name)); }
 
         ScopeID parent() const noexcept { return parent_; }
         ScopeID id() const noexcept { return self_; }
@@ -72,7 +72,7 @@ namespace common {
         ScopeID self_;
 
         std::vector<BuiltinType> builtin_types_;
-        std::vector<FunctionSymbol> functions_;
+        std::vector<FunctionID> functions_;
 
         std::unordered_map<IdentifierID, SymbolID> name_to_symbol_;
     };

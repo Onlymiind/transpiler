@@ -164,16 +164,15 @@ namespace codegen {
     void Generator::codegen_forward_decls() {
         const auto &functions = ast_->functions();
         for (const common::Function &func : functions) {
-            common::FunctionSymbol func_sym = mod_->global_scope()->get_function(mod_->find(func.name).id);
             const std::string &name = *identifiers_->get(func.name);
             if (name == "main") {
                 continue;
             }
 
-            if (func_sym.return_type.id == common::g_void_type) {
+            if (func.return_type.is_void()) {
                 *out_ << "void";
             } else {
-                codegen(mod_->get_scope(func_sym.return_type.scope)->get_type(func_sym.return_type.id)->type);
+                codegen(mod_->get_scope(func.return_type.scope)->get_type(func.return_type.id)->type);
             }
             *out_ << ' ';
             *out_ << name;
@@ -186,14 +185,13 @@ namespace codegen {
             return;
         }
 
-        common::FunctionSymbol func_sym = mod_->global_scope()->get_function(mod_->find(func.name).id);
         const std::string &name = *identifiers_->get(func.name);
         if (name == "main") {
             *out_ << "int";
-        } else if (func_sym.return_type.id == common::g_void_type) {
+        } else if (func.return_type.is_void()) {
             *out_ << "void";
         } else {
-            codegen(mod_->get_scope(func_sym.return_type.scope)->get_type(func_sym.return_type.id)->type);
+            codegen(mod_->get_scope(func.return_type.scope)->get_type(func.return_type.id)->type);
         }
 
         *out_ << ' ';

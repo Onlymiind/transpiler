@@ -44,31 +44,29 @@ namespace checker {
                 return;
             }
 
-            common::FunctionSymbol sym{.function = func.id};
-
             if (func.return_typename != common::IdentifierID{}) {
                 if (*identifiers_->get(func.name) == "main") {
                     report_error("main() must return void");
                     return;
                 }
-                sym.return_type = module_.find(func.return_typename);
-                if (sym.return_type.is_error()) {
+                func.return_type = module_.find(func.return_typename);
+                if (func.return_type.is_error()) {
                     report_error("unknown return type");
                     return;
                 }
-                if (common::Scope::type(sym.return_type.id) != common::SymbolType::BUILTIN_TYPE) {
+                if (common::Scope::type(func.return_type.id) != common::SymbolType::BUILTIN_TYPE) {
                     report_error("function's return type must be a typename");
                     return;
                 }
             } else {
-                sym.return_type = common::Symbol{
+                func.return_type = common::Symbol{
                     .scope = module_.global_scope()->id(),
                     .id = common::g_void_type,
                 };
             }
 
-            sym.scope = module_.make_scope(module_.global_scope()->id());
-            module_.global_scope()->add(func.name, sym);
+            func.scope = module_.make_scope(module_.global_scope()->id());
+            module_.global_scope()->add(func.name, func.id);
         }
     }
 
@@ -280,24 +278,24 @@ namespace checker {
             return result;
         }
 
-        common::FunctionSymbol sym = module_.global_scope()->get_function(call.name);
-        if (sym.function == common::FunctionID{}) {
+        common::FunctionID func_id = module_.global_scope()->get_function(call.name);
+        if (func_id == common::FunctionID{}) {
             report_error("function not defined");
             return common::Symbol{};
         }
-        if (ast_->get_function(sym.function)->decl_only) {
+        common::Function &func = *ast_->get_function(func_id);
+        if (func.decl_only) {
             // function declared, but not defined
             report_error("function not defined");
             return common::Symbol{};
         }
-        return sym.return_type;
+        return func.return_type;
     }
 
     void Checker::check_function(common::Function &func) {
-        common::FunctionSymbol func_sym = module_.global_scope()->get_function(module_.find(func.name).id);
         bool has_return = false;
 
-        ScopeGuard g{*this, func_sym.scope};
+        ScopeGuard g{*this, func.scope};
         for (common::Statement smt : func.body.smts) {
             ErrorGuard eg{*this, smt.pos};
             switch (smt.type) {
@@ -313,7 +311,7 @@ namespace checker {
                 if (ret.is_error()) {
                     return;
                 }
-                if (ret != func_sym.return_type) {
+                if (ret != func.return_type) {
                     report_error("wrong return type");
                     return;
                 }
@@ -324,7 +322,7 @@ namespace checker {
                 return;
             }
         }
-        if (!has_return && func_sym.return_type.id != common::g_void_type) {
+        if (!has_return && func.return_type.id != common::g_void_type) {
             report_error("no return statement in non-void function");
             return;
         }
