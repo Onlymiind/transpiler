@@ -13,6 +13,8 @@ Implemented:
 - Explicit type conversions
 - Basic functions and function calls
 - Statements and function return types
+- Global and local variables
+- Basic type inference for local variables
 
 ## Building
 
@@ -32,7 +34,7 @@ gcc <path-to-output-file>
 ```
 
 ## TODO next (roadmap):
-- variables and parameterised functions
+- parameterised functions
 - if statements
 - loops
 - record types
