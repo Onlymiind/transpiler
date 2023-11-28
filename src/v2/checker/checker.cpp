@@ -38,7 +38,7 @@ namespace checker {
         add_builtins();
         auto &functions = ast_->functions();
         for (auto &func : functions) {
-            err_positions_.push(func.pos);
+            ErrorGuard eg{*this, func.pos};
             if (common::Symbol sym = module_.find(func.name); !sym.is_error()) {
                 report_error("function redeclaration");
                 return;
@@ -69,7 +69,6 @@ namespace checker {
 
             sym.scope = module_.make_scope(module_.global_scope()->id());
             module_.global_scope()->add(func.name, sym);
-            err_positions_.pop();
         }
     }
 
@@ -78,11 +77,11 @@ namespace checker {
         if (!err_.empty()) {
             return;
         }
+        ScopeGuard g{*this, module_.global_scope()->id()};
         auto &functions = ast_->functions();
         for (auto &func : functions) {
-            err_positions_.push(func.pos);
+            ErrorGuard eg{*this, func.pos};
             check_function(func);
-            err_positions_.pop();
             if (!err_.empty()) {
                 return;
             }
@@ -93,7 +92,7 @@ namespace checker {
         }
 
         if (module_.entrypoint() == common::FunctionID{}) {
-            err_positions_.push(1);
+            ErrorGuard eg1{*this, 1};
             report_error("entrypoint not declared");
         }
     }
@@ -104,7 +103,7 @@ namespace checker {
         }
 
         common::Symbol result{};
-        err_positions_.push(expr.pos);
+        ErrorGuard g{*this, expr.pos};
         switch (expr.kind) {
         case common::ExpressionKind::LITERAL:
             result = get_type_for_literal(*ast_->get_literal(expr.id));
@@ -134,7 +133,6 @@ namespace checker {
             return result;
         }
         expr.type = result;
-        err_positions_.pop();
         return result;
     }
 
@@ -298,8 +296,10 @@ namespace checker {
     void Checker::check_function(common::Function &func) {
         common::FunctionSymbol func_sym = module_.global_scope()->get_function(module_.find(func.name).id);
         bool has_return = false;
+
+        ScopeGuard g{*this, func_sym.scope};
         for (common::Statement smt : func.body.smts) {
-            err_positions_.push(smt.pos);
+            ErrorGuard eg{*this, smt.pos};
             switch (smt.type) {
             case common::StatementType::EXPRESSION:
                 if (check_expression(*ast_->get_expression(smt.id)).is_error()) {
@@ -323,8 +323,6 @@ namespace checker {
                 report_error("statement type not implemented");
                 return;
             }
-
-            err_positions_.pop();
         }
         if (!has_return && func_sym.return_type.id != common::g_void_type) {
             report_error("no return statement in non-void function");

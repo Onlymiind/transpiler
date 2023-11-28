@@ -44,12 +44,39 @@ namespace checker {
         const common::Error &get_error() const { return err_; }
 
       private:
+        class ScopeGuard {
+          public:
+            ScopeGuard(Checker &checker, common::ScopeID scope) : checker_(checker) {
+                checker_.scope_stack_.push(scope);
+            }
+            ~ScopeGuard() {
+                checker_.scope_stack_.pop();
+            }
+
+          private:
+            Checker &checker_;
+        };
+
+        class ErrorGuard {
+          public:
+            ErrorGuard(Checker &checker, size_t err_pos) : checker_(checker) {
+                checker_.err_positions_.push(err_pos);
+            }
+            ~ErrorGuard() {
+                checker_.err_positions_.pop();
+            }
+
+          private:
+            Checker &checker_;
+        };
+
         common::Module module_;
         common::AST *ast_ = nullptr;
         common::Identifiers *identifiers_ = nullptr;
         std::unordered_map<common::BuiltinTypes, common::Symbol> builtin_types_;
         common::Error err_;
         std::stack<size_t> err_positions_;
+        std::stack<common::ScopeID> scope_stack_;
     };
 
 } // namespace checker
