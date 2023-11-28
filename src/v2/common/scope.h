@@ -5,6 +5,7 @@
 #include "common/util.h"
 
 #include <cstdint>
+#include <optional>
 
 namespace common {
 
@@ -14,14 +15,9 @@ namespace common {
         FUNCTION,
     };
 
-    struct Symbol {
-        ScopeID scope = ScopeID{g_invalid_id};
-        SymbolID id = SymbolID{g_invalid_id};
-    };
-
     class Scope {
       public:
-        Scope() = default;
+        Scope(ScopeID self, ScopeID parent = ScopeID{}) : parent_(parent), self_(self) {}
 
         SymbolID add(BuiltinType type) {
             SymbolID result{make_id<SymbolID>(SymbolType::BUILTIN_TYPE, builtin_types_.size())};
@@ -32,7 +28,7 @@ namespace common {
             return result;
         }
 
-        SymbolID add(IdentifierID name, FunctionID function) {
+        SymbolID add(IdentifierID name, FunctionSymbol function) {
             SymbolID result{make_id<SymbolID>(SymbolType::FUNCTION, functions_.size())};
             if (!name_to_symbol_.try_emplace(name, result).second) {
                 return SymbolID{g_invalid_id};
@@ -53,14 +49,15 @@ namespace common {
 
         std::optional<BuiltinType> get_type(IdentifierID name) { return get_type(find(name)); }
 
-        FunctionID get_function(SymbolID id) {
+        FunctionSymbol get_function(SymbolID id) {
             auto [type, idx] = decompose<SymbolType>(id);
-            return type != SymbolType::FUNCTION || idx >= functions_.size() ? FunctionID{g_invalid_id} : functions_[idx];
+            return type != SymbolType::FUNCTION || idx >= functions_.size() ? FunctionSymbol{} : functions_[idx];
         }
 
-        FunctionID get_function(IdentifierID name) { return get_function(find(name)); }
+        FunctionSymbol get_function(IdentifierID name) { return get_function(find(name)); }
 
         ScopeID parent() const noexcept { return parent_; }
+        ScopeID id() const noexcept { return self_; }
         bool is_global() const noexcept { return parent_ == ScopeID{g_invalid_id}; }
 
         constexpr static SymbolType type(SymbolID id) noexcept { return decompose<SymbolType>(id).first; }
@@ -71,10 +68,11 @@ namespace common {
         }
 
       private:
-        ScopeID parent_ = ScopeID{g_invalid_id};
+        ScopeID parent_;
+        ScopeID self_;
 
         std::vector<BuiltinType> builtin_types_;
-        std::vector<FunctionID> functions_;
+        std::vector<FunctionSymbol> functions_;
 
         std::unordered_map<IdentifierID, SymbolID> name_to_symbol_;
     };

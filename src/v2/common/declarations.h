@@ -4,6 +4,7 @@
 #include "common/expression.h"
 #include "common/literals.h"
 #include "common/statement.h"
+#include "common/types.h"
 #include "common/util.h"
 
 #include <cstddef>
@@ -15,8 +16,6 @@ namespace common {
         FunctionID id;
         IdentifierID name;
         IdentifierID return_typename;
-
-        SymbolID return_type;
         Block body{};
 
         size_t pos = 0;
@@ -31,7 +30,6 @@ namespace common {
         VariableID id;
         IdentifierID name;
         IdentifierID explicit_type;
-        SymbolID type;
         Expression initial_value;
 
         size_t pos = 0;

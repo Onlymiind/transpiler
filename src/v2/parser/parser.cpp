@@ -168,19 +168,15 @@ namespace parser {
             return;
         }
 
+        if (next().type == common::TokenType::IDENTIFIER) {
+            result.return_typename = common::IdentifierID{next().data};
+            consume();
+        }
         if (next().type == common::TokenType::SEMICOLON) {
             consume();
             result.decl_only = true;
-            result.return_type = common::g_void_type;
             ast_.add(std::move(result));
             return;
-        }
-
-        if (next().type == common::TokenType::LEFT_BRACE) {
-            result.return_type = common::g_void_type;
-        } else if (next().type == common::TokenType::IDENTIFIER) {
-            result.return_typename = common::IdentifierID{next().data};
-            consume();
         }
 
         if (!match(common::TokenType::LEFT_BRACE, "expected '{' at the start of function definition")) {

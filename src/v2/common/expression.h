@@ -2,6 +2,7 @@
 #define COMPILER_V2_COMMON_EXPRESSION_HDR_
 
 #include "common/token.h"
+#include "common/types.h"
 #include "common/util.h"
 
 #include <cstddef>
@@ -98,7 +99,7 @@ namespace common {
         ExpressionID id = ExpressionID{g_invalid_id};
         size_t pos = 0;
 
-        SymbolID type = SymbolID{g_invalid_id};
+        Symbol type;
 
         constexpr bool is_error() const {
             return kind == ExpressionKind::ERROR;

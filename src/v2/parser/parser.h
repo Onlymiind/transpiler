@@ -46,7 +46,7 @@ namespace parser {
             err_.msg = error;
             err_.pos = next().pos;
         }
-        common::Error get_error() const noexcept { return err_; }
+        const common::Error &get_error() const noexcept { return err_; }
 
         const common::Token &next() const { return remainder_.front(); }
         void consume() { remainder_ = remainder_.subspan(1); }

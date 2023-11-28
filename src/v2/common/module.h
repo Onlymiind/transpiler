@@ -22,16 +22,31 @@ namespace common {
         common::FunctionID entrypoint() const { return entrypoint_; }
         void set_entrypoint(common::FunctionID id) { entrypoint_ = id; }
 
-        ScopeID make_scope() {
+        ScopeID make_scope(ScopeID parent = ScopeID{}) {
             ScopeID result{scopes_.size()};
-            scopes_.push_back(Scope{});
+            scopes_.push_back(Scope{result, parent});
             return result;
         }
 
         Scope *get_scope(ScopeID scope) noexcept { return *scope >= scopes_.size() ? nullptr : &scopes_[*scope]; }
+        const Scope *get_scope(ScopeID scope) const noexcept { return *scope >= scopes_.size() ? nullptr : &scopes_[*scope]; }
 
         Scope *global_scope() noexcept { return scopes_.empty() ? nullptr : &scopes_[0]; }
         const Scope *global_scope() const noexcept { return scopes_.empty() ? nullptr : &scopes_[0]; }
+
+        Symbol find(IdentifierID sym, ScopeID start = ScopeID{}) const {
+            if (start == ScopeID{}) {
+                start = global_scope()->id();
+            }
+
+            for (const Scope *s = get_scope(start); s; start = s->parent(), s = get_scope(s->parent())) {
+                SymbolID id = s->find(sym);
+                if (id != SymbolID{}) {
+                    return Symbol{.scope = start, .id = id};
+                }
+            }
+            return Symbol{};
+        }
 
       private:
         FunctionID entrypoint_ = FunctionID{g_invalid_id};

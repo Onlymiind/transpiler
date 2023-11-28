@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <string>
 #include <string_view>
 #include <type_traits>
 
@@ -51,7 +52,7 @@ namespace common {
     }
 
     struct Error {
-        std::string_view msg{};
+        std::string msg;
         size_t pos = 0;
 
         constexpr bool empty() const { return msg.empty(); }

@@ -47,7 +47,7 @@ namespace lexer {
             err_.pos = current_pos_;
         }
 
-        common::Error get_error() const { return err_; }
+        const common::Error &get_error() const { return err_; }
 
       private:
         LexerResult result_;

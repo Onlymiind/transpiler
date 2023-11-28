@@ -1,7 +1,6 @@
 #ifndef COMPILER_V2_COMMON_TYPES_HDR_
 #define COMPILER_V2_COMMON_TYPES_HDR_
 
-#include "common/literals.h"
 #include "common/util.h"
 
 #include <cstdint>
@@ -42,6 +41,24 @@ namespace common {
         TypeTraits traits{};
 
         constexpr bool is_error() const { return name == IdentifierID{g_invalid_id}; }
+    };
+
+    struct Symbol {
+        ScopeID scope;
+        SymbolID id;
+
+        constexpr bool is_error() const noexcept { return scope == ScopeID{} || id == SymbolID{}; }
+        constexpr bool operator==(Symbol rhs) const noexcept { return scope == rhs.scope && id == rhs.id; }
+    };
+
+    struct FunctionSymbol {
+        FunctionID function;
+        Symbol return_type;
+        ScopeID scope;
+    };
+
+    struct VariableSymbol {
+        Symbol type;
     };
 } // namespace common
 
