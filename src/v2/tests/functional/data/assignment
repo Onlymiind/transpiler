@@ -1,0 +1,6 @@
+var b f64;
+func main() {
+    var a u64;
+    a = 1;
+    b = 1.1;
+}

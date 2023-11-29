@@ -67,8 +67,9 @@ namespace checker {
         }
 
         auto &variables = ast_->global_variables();
-        for (auto &var : variables) {
-            ErrorGuard{*this, var.pos};
+        for (common::VariableID var_id : variables) {
+            common::Variable &var = *ast_->get_var(var_id);
+            ErrorGuard eg{*this, var.pos};
             if (common::Symbol sym = module_.find(var.name); !sym.is_error()) {
                 report_error("can not declare a variable: name " + *identifiers_->get(var.name) + " already used");
                 return;
@@ -345,7 +346,7 @@ namespace checker {
                 break;
             }
             case common::StatementType::VARIABLE: {
-                common::Variable &var = *ast_->get_local_var(smt.id);
+                common::Variable &var = *ast_->get_var(smt.id);
                 if (!module_.find(var.name, scope_stack_.top()).is_error()) {
                     report_error("local variable declaration: name already used");
                     return;
@@ -397,7 +398,7 @@ namespace checker {
             return common::Symbol{};
         }
 
-        common::Variable &var = *ast_->get_local_var(module_.get_scope(sym.scope)->get_variable(sym.id));
+        common::Variable &var = *ast_->get_var(module_.get_scope(sym.scope)->get_variable(sym.id));
         return var.type;
     }
 } // namespace checker

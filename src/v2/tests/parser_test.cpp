@@ -396,8 +396,8 @@ TEST_CASE("parser: global variables", "[parser]") {
 
         REQUIRE(p.get_error().empty());
         auto ast = p.reset();
-        REQUIRE(ast.global_variables().size() == 1);
-        auto &var = ast.global_variables()[0];
+        REQUIRE(ast.variables().size() == 1);
+        auto &var = ast.variables()[0];
         REQUIRE(*lexer_result.identifiers.get(var.name) == *ids.get(c.expected.name));
         REQUIRE(*lexer_result.identifiers.get(var.explicit_type) == *ids.get(c.expected.explicit_type));
         REQUIRE(var.initial_value == common::Expression{});
@@ -457,7 +457,7 @@ TEST_CASE("parser: local variables", "[parser]") {
         auto &main = ast.functions()[0];
         REQUIRE(main.body.smts.size() == 1);
         REQUIRE(main.body.smts[0].type == common::StatementType::VARIABLE);
-        auto &var = *ast.get_local_var(main.body.smts[0].id);
+        auto &var = *ast.get_var(main.body.smts[0].id);
         REQUIRE(*lexer_result.identifiers.get(var.name) == *ids.get(c.expected.name));
         if (c.expected.explicit_type == common::IdentifierID{}) {
             REQUIRE(var.explicit_type == common::IdentifierID{});

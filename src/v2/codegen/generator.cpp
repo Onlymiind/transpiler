@@ -51,6 +51,7 @@ namespace codegen {
             break;
         case common::ExpressionKind::VARIABLE_REF:
             *out_ << *identifiers_->get(ast_->get_variable_ref(expr.id));
+            break;
         default:
             report_error("unknown expression type");
             break;
@@ -147,8 +148,9 @@ namespace codegen {
     }
 
     void Generator::codegen_decls() {
-        const auto &functions = ast_->functions();
-        for (const common::Function &func : functions) {
+        const auto &functions = mod_->global_scope()->functions();
+        for (const common::FunctionID &func_id : functions) {
+            const common::Function &func = *ast_->get_function(func_id);
             const std::string &name = *identifiers_->get(func.name);
             if (name == "main") {
                 continue;
@@ -164,9 +166,9 @@ namespace codegen {
             *out_ << "(void);\n";
         }
 
-        const auto &variables = ast_->global_variables();
+        const auto &variables = mod_->global_scope()->variables();
         for (const auto &var : variables) {
-            codegen(var);
+            codegen(*ast_->get_var(var));
             *out_ << '\n';
         }
     }
@@ -207,7 +209,7 @@ namespace codegen {
                 break;
             }
             case common::StatementType::VARIABLE:
-                codegen(*ast_->get_local_var(smt.id));
+                codegen(*ast_->get_var(smt.id));
             }
         }
         if (!func.body.smts.empty()) {

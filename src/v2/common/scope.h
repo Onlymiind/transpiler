@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <vector>
 
 namespace common {
 
@@ -83,6 +84,9 @@ namespace common {
             auto it = name_to_symbol_.find(id);
             return it == name_to_symbol_.end() ? SymbolID{g_invalid_id} : it->second;
         }
+
+        const std::vector<FunctionID> &functions() const { return functions_; }
+        const std::vector<VariableID> &variables() const { return variables_; }
 
       private:
         ScopeID parent_;

@@ -19,7 +19,10 @@ TEST_CASE("functional tests") {
                                 "semicolons_in_global_scope",
                                 "variables",
                                 "variables_redeclaration_fail",
-                                "variables_wrong_init_type_fail");
+                                "variables_wrong_init_type_fail",
+                                "assignment",
+                                "assign_to_rvalue_fail",
+                                "assign_to_undeclared_fail");
 
     std::filesystem::path data{"data/" + name};
     INFO(data.c_str());
