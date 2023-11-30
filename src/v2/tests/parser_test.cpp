@@ -303,6 +303,15 @@ TEST_CASE("parser: functions", "[parser]") {
     };
 
     common::Identifiers ids;
+    common::AST expected_ast;
+    auto make_var = [&](std::string name, std::string type) {
+        common::Variable var;
+        if (!name.empty()) {
+            var.name = ids.add(std::move(name));
+        }
+        var.explicit_type = ids.add(std::move(type));
+        return expected_ast.add_func_param(var);
+    };
     std::vector<Case> cases = {
         Case{"func abc() {1;}", {common::Function{.name = ids.add("abc"), .body = common::Block{std::vector<common::Statement>(1)}}}},
         Case{
@@ -327,7 +336,10 @@ TEST_CASE("parser: functions", "[parser]") {
         Case{.str = "func a()", .should_fail = true},
         Case{.str = "func a() 1", .should_fail = true},
         Case{.str = "func a() {return}", .should_fail = true},
-    };
+        Case{"func a(a u64, f64, b bool);", {common::Function{
+                                                .name = ids.add("a"),
+                                                .params = {make_var("a", "u64"), make_var("", "f64"), make_var("b", "bool")},
+                                            }}}};
 
     for (auto &c : cases) {
         INFO(c.str);
@@ -349,13 +361,25 @@ TEST_CASE("parser: functions", "[parser]") {
         auto ast = p.reset();
         REQUIRE(ast.functions().size() == c.expected.size());
         for (size_t i = 0; i < c.expected.size(); ++i) {
-            REQUIRE(*ids.get(c.expected[i].name) == *lexer_result.identifiers.get(ast.functions()[i].name));
-            if (c.expected[i].return_typename != common::IdentifierID{}) {
-                REQUIRE(c.expected[i].return_typename != common::IdentifierID{});
-                REQUIRE(*ids.get(c.expected[i].return_typename) == *lexer_result.identifiers.get(ast.functions()[i].return_typename));
+            auto &func = ast.functions()[i];
+            auto &expected = c.expected[i];
+
+            REQUIRE(*ids.get(expected.name) == *lexer_result.identifiers.get(func.name));
+            if (expected.return_typename != common::IdentifierID{}) {
+                REQUIRE(func.return_typename != common::IdentifierID{});
+                REQUIRE(*ids.get(expected.return_typename) == *lexer_result.identifiers.get(func.return_typename));
             }
 
-            REQUIRE(c.expected[i].body.smts.size() == ast.functions()[i].body.smts.size());
+            REQUIRE(expected.body.smts.size() == func.body.smts.size());
+            REQUIRE(expected.params.size() == func.params.size());
+            for (size_t j = 0; j < expected.params.size(); ++j) {
+                auto &param = *ast.get_var(func.params[j]);
+                auto &param_expected = *expected_ast.get_var(expected.params[j]);
+                REQUIRE(*ids.get(param_expected.explicit_type) == *lexer_result.identifiers.get(param.explicit_type));
+                if (param_expected.name != common::IdentifierID{}) {
+                    REQUIRE(*ids.get(param_expected.name) == *lexer_result.identifiers.get(param.name));
+                }
+            }
         }
     }
 }
@@ -496,6 +520,44 @@ TEST_CASE("parser: function call and variable ref distinction", "[parser]") {
         REQUIRE(expr.kind == common::ExpressionKind::FUNCTION_CALL);
         auto ast = p.reset();
         REQUIRE(ast.get_call(expr.id)->name != common::IdentifierID{});
+    }
+}
+
+TEST_CASE("parser: function calls", "[parser]") {
+    struct Case {
+        std::string str;
+        common::FunctionCall call;
+    };
+
+    common::Identifiers ids;
+    std::vector<Case> cases{
+        {"a()", common::FunctionCall{.name = ids.add("a")}},
+        {"a(1)", common::FunctionCall{.name = ids.add("a"), .args = {common::Expression{.kind = common::ExpressionKind::LITERAL}}}},
+        {"a(1, 1 + 2, f(1.1))", common::FunctionCall{.name = ids.add("a"), .args = {
+                                                                               common::Expression{.kind = common::ExpressionKind::LITERAL},
+                                                                               common::Expression{.kind = common::ExpressionKind::BINARY},
+                                                                               common::Expression{.kind = common::ExpressionKind::FUNCTION_CALL},
+                                                                           }}},
+    };
+
+    for (const auto &c : cases) {
+        std::stringstream str{c.str};
+        lexer::Lexer l{str};
+        l.split();
+        REQUIRE(l.get_error().empty());
+        auto lexer_result = l.reset();
+
+        parser::Parser p{std::move(lexer_result.tokens)};
+        auto expr = p.parse_expression();
+        REQUIRE(p.get_error().empty());
+        REQUIRE(expr.kind == common::ExpressionKind::FUNCTION_CALL);
+        auto ast = p.reset();
+        auto &call = *ast.get_call(expr.id);
+        REQUIRE(*ids.get(c.call.name) == *lexer_result.identifiers.get(call.name));
+        REQUIRE(c.call.args.size() == call.args.size());
+        for (size_t i = 0; i < c.call.args.size(); ++i) {
+            REQUIRE(c.call.args[i].kind == call.args[i].kind);
+        }
     }
 }
 

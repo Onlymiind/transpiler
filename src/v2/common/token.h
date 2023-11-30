@@ -54,6 +54,7 @@ namespace common {
         LEFT_BRACE,
         RIGHT_BRACE,
         COLON,
+        COMMA,
 
         END_OF_FILE
     };

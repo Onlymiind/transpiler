@@ -49,6 +49,8 @@ namespace codegen {
 
         void codegen(const common::Variable &var);
 
+        void codegen_function_decl(const common::Function &func);
+
         void codegen_decls();
 
         void report_error(std::string_view err) { err_ = err; }

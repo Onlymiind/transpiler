@@ -5,6 +5,8 @@
 #include "common/statement.h"
 #include "common/types.h"
 #include "common/util.h"
+#include <cstddef>
+#include <string>
 
 namespace checker {
 
@@ -38,32 +40,10 @@ namespace checker {
         add_builtins();
         auto &functions = ast_->functions();
         for (auto &func : functions) {
-            ErrorGuard eg{*this, func.pos};
-            if (common::Symbol sym = module_.find(func.name); !sym.is_error()) {
-                report_error("can not declare a function: name " + *identifiers_->get(func.name) + " already used");
+            check_function_decl(func);
+            if (!err_.empty()) {
                 return;
             }
-
-            if (func.return_typename != common::IdentifierID{}) {
-                if (*identifiers_->get(func.name) == "main") {
-                    report_error("main() must return void");
-                    return;
-                }
-                func.return_type = module_.find(func.return_typename);
-                if (func.return_type.is_error()) {
-                    report_error("unknown return type");
-                    return;
-                }
-                if (common::Scope::type(func.return_type.id) != common::SymbolType::BUILTIN_TYPE) {
-                    report_error("function's return type must be a typename");
-                    return;
-                }
-            } else {
-                func.return_type = common::g_void;
-            }
-
-            func.scope = module_.make_scope(module_.global_scope()->id());
-            module_.global_scope()->add(func.name, func.id);
         }
 
         auto &variables = ast_->global_variables();
@@ -317,6 +297,30 @@ namespace checker {
             report_error("function not defined");
             return common::Symbol{};
         }
+        if (*identifiers_->get(func.name) == "main") {
+            report_error("main() must not be called");
+            return common::Symbol{};
+        }
+
+        if (call.args.size() != func.params.size()) {
+            report_error("function call argument count mismatch, expected " +
+                         std::to_string(func.params.size()) + ", got " + std::to_string(call.args.size()));
+            return common::Symbol{};
+        }
+        for (size_t i = 0; i < func.params.size(); ++i) {
+            ErrorGuard eg{*this, call.args[i].pos};
+            common::Variable &param = *ast_->get_var(func.params[i]);
+
+            common::Symbol type = check_expression(call.args[i]);
+            if (type.is_error()) {
+                return common::Symbol{};
+            }
+            if (type != param.type) {
+                report_error("function call argument's type mismatch");
+                return common::Symbol{};
+            }
+        }
+
         return func.return_type;
     }
 
@@ -400,5 +404,62 @@ namespace checker {
 
         common::Variable &var = *ast_->get_var(module_.get_scope(sym.scope)->get_variable(sym.id));
         return var.type;
+    }
+
+    void Checker::check_function_decl(common::Function &func) {
+        ErrorGuard eg{*this, func.pos};
+        if (common::Symbol sym = module_.find(func.name); !sym.is_error()) {
+            report_error("can not declare a function: name " + *identifiers_->get(func.name) + " already used");
+            return;
+        }
+        const std::string &name = *identifiers_->get(func.name);
+        if (name == "main") {
+            if (func.return_typename != common::IdentifierID{}) {
+                report_error("main() must return void");
+                return;
+            } else if (!func.params.empty()) {
+                report_error("main() must not accept arguments");
+                return;
+            }
+        }
+        if (func.return_typename != common::IdentifierID{}) {
+            func.return_type = module_.find(func.return_typename);
+            if (func.return_type.is_error()) {
+                report_error("unknown return type");
+                return;
+            }
+            if (common::Scope::type(func.return_type.id) != common::SymbolType::BUILTIN_TYPE) {
+                report_error("function's return type must be a typename");
+                return;
+            }
+        } else {
+            func.return_type = common::g_void;
+        }
+
+        func.scope = module_.make_scope(module_.global_scope()->id());
+        for (common::VariableID param_id : func.params) {
+            common::Variable &param = *ast_->get_var(param_id);
+            ErrorGuard eg_inner{*this, param.pos};
+            if (!module_.find(param.name).is_error()) {
+                report_error("can't declare function parameter: name already declared");
+                return;
+            }
+            if (param.explicit_type == common::IdentifierID{}) {
+                report_error("function parameters must be explicitly typed");
+                return;
+            }
+            param.type = module_.find(param.explicit_type);
+            if (param.type.is_error()) {
+                report_error("invalid function parameter type");
+                return;
+            }
+            if (!param.initial_value.is_error()) {
+                report_error("default values for function parameters are not supported");
+                return;
+            }
+            module_.get_scope(func.scope)->add(param.name, param.id);
+        }
+
+        module_.global_scope()->add(func.name, func.id);
     }
 } // namespace checker

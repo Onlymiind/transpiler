@@ -6,6 +6,7 @@
 #include "common/expression.h"
 #include "common/literals.h"
 #include "common/module.h"
+#include "common/statement.h"
 #include "common/types.h"
 #include "common/util.h"
 
@@ -30,6 +31,10 @@ namespace checker {
         common::Symbol check_literal();
         common::Symbol check_variable_ref(common::IdentifierID name);
         void check_function(common::Function &func);
+        void check_function_decl(common::Function &func);
+
+        // TODO
+        void check_statement(common::Statement &smt);
 
         bool is_assignable(common::Expression expr);
 

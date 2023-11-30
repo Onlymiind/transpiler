@@ -7,6 +7,7 @@
 #include "common/token.h"
 #include "common/types.h"
 #include "common/util.h"
+#include <cstddef>
 #include <iomanip>
 #include <ios>
 #include <limits>
@@ -163,7 +164,21 @@ namespace codegen {
             }
             *out_ << ' ';
             *out_ << name;
-            *out_ << "(void);\n";
+            *out_ << '(';
+            for (size_t i = 0; i < func.params.size(); ++i) {
+                common::Variable &param = *ast_->get_var(func.params[i]);
+                if (i != 0) {
+                    *out_ << ", ";
+                }
+                *out_ << *identifiers_->get(param.explicit_type);
+                if (param.name != common::IdentifierID{}) {
+                    *out_ << ' ' << *identifiers_->get(param.name);
+                }
+            }
+            if (func.params.empty()) {
+                *out_ << "void";
+            }
+            *out_ << ");\n";
         }
 
         const auto &variables = mod_->global_scope()->variables();
@@ -180,16 +195,11 @@ namespace codegen {
 
         const std::string &name = *identifiers_->get(func.name);
         if (name == "main") {
-            *out_ << "int";
-        } else if (func.return_type.is_void()) {
-            *out_ << "void";
+            *out_ << "int main(void)";
         } else {
-            *out_ << *identifiers_->get(func.return_typename);
+            codegen_function_decl(func);
         }
-
-        *out_ << ' ';
-        *out_ << name;
-        *out_ << "(void) {";
+        *out_ << " {";
         for (common::Statement smt : func.body.smts) {
             *out_ << '\n';
             switch (smt.type) {
@@ -219,7 +229,14 @@ namespace codegen {
     }
 
     void Generator::codegen(const common::FunctionCall &call) {
-        *out_ << *identifiers_->get(call.name) << "()";
+        *out_ << *identifiers_->get(call.name) << '(';
+        for (size_t i = 0; i < call.args.size(); ++i) {
+            if (i != 0) {
+                *out_ << ", ";
+            }
+            codegen(call.args[i]);
+        }
+        *out_ << ')';
     }
 
     void Generator::codegen(const common::Variable &var) {
@@ -232,5 +249,30 @@ namespace codegen {
         }
         codegen(var.initial_value);
         *out_ << ';';
+    }
+
+    void Generator::codegen_function_decl(const common::Function &func) {
+        if (func.return_type.is_void()) {
+            *out_ << "void";
+        } else {
+            *out_ << *identifiers_->get(func.return_typename);
+        }
+        *out_ << ' ';
+        *out_ << *identifiers_->get(func.name);
+        *out_ << '(';
+        for (size_t i = 0; i < func.params.size(); ++i) {
+            common::Variable &param = *ast_->get_var(func.params[i]);
+            if (i != 0) {
+                *out_ << ", ";
+            }
+            *out_ << *identifiers_->get(param.explicit_type);
+            if (param.name != common::IdentifierID{}) {
+                *out_ << ' ' << *identifiers_->get(param.name);
+            }
+        }
+        if (func.params.empty()) {
+            *out_ << "void";
+        }
+        *out_ << ')';
     }
 } // namespace codegen

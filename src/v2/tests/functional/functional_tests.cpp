@@ -22,7 +22,8 @@ TEST_CASE("functional tests") {
                                 "variables_wrong_init_type_fail",
                                 "assignment",
                                 "assign_to_rvalue_fail",
-                                "assign_to_undeclared_fail");
+                                "assign_to_undeclared_fail",
+                                "parameterized_functions");
 
     std::filesystem::path data{"data/" + name};
     INFO(data.c_str());

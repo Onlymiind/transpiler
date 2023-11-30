@@ -6,6 +6,7 @@
 #include "common/token.h"
 #include "common/util.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 
@@ -102,9 +103,17 @@ namespace parser {
         if (!match(common::TokenType::LEFT_PARENTHESIS, "function call: expected '('")) {
             return common::Expression{};
         }
-
-        if (next().type != common::TokenType::RIGHT_PARENTHESIS) {
+        while (next().type != common::TokenType::RIGHT_PARENTHESIS && next().type != common::TokenType::END_OF_FILE) {
             result.args.push_back(parse_expression());
+            if (result.args.back().is_error()) {
+                return common::Expression{};
+            }
+            if (next().type == common::TokenType::RIGHT_PARENTHESIS) {
+                break;
+            }
+            if (!match(common::TokenType::COMMA, "expected comma-separated list of arguments")) {
+                return common::Expression{};
+            }
         }
         if (!match(common::TokenType::RIGHT_PARENTHESIS, "function call: expected ')'")) {
             return common::Expression{};
@@ -167,8 +176,22 @@ namespace parser {
             return;
         }
 
-        if (!(match(common::TokenType::LEFT_PARENTHESIS, "expected '('") &&
-              match(common::TokenType::RIGHT_PARENTHESIS, "expected ')'"))) {
+        if (!match(common::TokenType::LEFT_PARENTHESIS, "expected '('")) {
+            return;
+        }
+        while (next().type != common::TokenType::RIGHT_PARENTHESIS && next().type != common::TokenType::END_OF_FILE) {
+            result.params.push_back(parse_func_param());
+            if (result.params.back() == common::VariableID{}) {
+                return;
+            }
+            if (next().type == common::TokenType::RIGHT_PARENTHESIS) {
+                break;
+            }
+            if (!match(common::TokenType::COMMA, "expected comma-separated list of function parameter declarations")) {
+                return;
+            }
+        }
+        if (!match(common::TokenType::RIGHT_PARENTHESIS, "expected ')'")) {
             return;
         }
 
@@ -296,5 +319,29 @@ namespace parser {
 
         smt.id = ast_.add_local(result);
         return smt;
+    }
+
+    common::VariableID Parser::parse_func_param() {
+        size_t pos = next().pos;
+        common::IdentifierID name = common::IdentifierID{
+            get_expected(common::TokenType::IDENTIFIER, "function parameter declaration: expected identifier")};
+        if (name == common::IdentifierID{}) {
+            return common::VariableID{};
+        }
+
+        common::Variable param{.pos = pos};
+        // unnamed parameter
+        if (next().type != common::TokenType::IDENTIFIER) {
+            param.explicit_type = name;
+            return ast_.add_func_param(param);
+        }
+
+        param.name = name;
+        // can't fail
+        param.explicit_type = common::IdentifierID{get_expected(common::TokenType::IDENTIFIER, "parse_fun_param: unreachable")};
+        if (param.explicit_type == common::IdentifierID{}) {
+            return common::VariableID{};
+        }
+        return ast_.add_func_param(param);
     }
 } // namespace parser

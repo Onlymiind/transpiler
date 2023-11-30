@@ -1,0 +1,17 @@
+// clang-format off
+#include <stdint.h>
+
+typedef uint64_t u64;
+typedef uint8_t bool;
+typedef double f64;
+
+f64 foo(u64 b, f64 c, bool);
+f64 x = (f64)0;
+f64 foo(u64 b, f64 c, bool) {
+return (((f64)b * c) - (f64)1.1);
+}
+int main(void) {
+(x = (f64)1.1);
+(x = foo((u64)1000, x, (bool)1));
+(x = foo((u64)10, foo((u64)1, (f64)2, (bool)0), (bool)0));
+}

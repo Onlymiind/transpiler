@@ -1,0 +1,11 @@
+func foo(b u64, c f64, bool) f64 {
+    return f64(b) * c - 1.1;
+}
+
+var x f64;
+
+func main() {
+    x = 1.1;
+    x = foo(1000, x, true);
+    x = foo(10, foo(1, 2., false), false);
+}

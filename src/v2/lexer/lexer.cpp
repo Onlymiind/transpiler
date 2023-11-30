@@ -189,6 +189,7 @@ namespace lexer {
         case ';': result.type = SEMICOLON; return result;
         case '{': result.type = LEFT_BRACE; return result;
         case '}': result.type = RIGHT_BRACE; return result;
+        case ',': result.type = COMMA; return result;
         case '!': return handle_wide_op(NOT, '=', NOT_EQUALS);
         case '<': return handle_wide_op(LESS, '=', LESS_EQUALS);
         case '>': return handle_wide_op(GREATER, '=', GREATER_EQUALS);

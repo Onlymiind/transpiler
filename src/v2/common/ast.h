@@ -122,6 +122,13 @@ namespace common {
             return result;
         }
 
+        VariableID add_func_param(Variable param) {
+            param.id = VariableID{vars_.size()};
+            VariableID result = param.id;
+            vars_.push_back(std::move(param));
+            return result;
+        }
+
         Expression *get_expression(StatementID smt) {
             auto [type, idx] = decompose<StatementType>(smt);
             return type != StatementType::EXPRESSION || idx >= statements_.size() ? nullptr : &statements_[idx];

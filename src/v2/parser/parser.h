@@ -37,6 +37,8 @@ namespace parser {
         common::Statement parse_local_variable();
         common::Statement parse_statement();
 
+        common::VariableID parse_func_param();
+
         common::AST reset() noexcept {
             common::AST ast{std::move(ast_)};
             return ast;

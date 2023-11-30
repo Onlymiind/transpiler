@@ -34,6 +34,8 @@ namespace common {
         Scope *global_scope() noexcept { return scopes_.empty() ? nullptr : &scopes_[0]; }
         const Scope *global_scope() const noexcept { return scopes_.empty() ? nullptr : &scopes_[0]; }
 
+        // FIXME: this has complexity of O(nested scope level)
+        // in the future should use better algorithm for symbol lookup
         Symbol find(IdentifierID sym, ScopeID start = ScopeID{}) const {
             if (start == ScopeID{}) {
                 start = global_scope()->id();

@@ -24,6 +24,8 @@ namespace common {
         Symbol return_type;
         ScopeID scope;
 
+        std::vector<VariableID> params;
+
         constexpr bool is_error() const { return id == FunctionID{}; }
         constexpr bool operator==(Function other) const { return id == other.id && name == other.name; }
     };
