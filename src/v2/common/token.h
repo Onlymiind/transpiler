@@ -43,6 +43,8 @@ namespace common {
         FUNC,
         RETURN,
         VAR,
+        IF,
+        ELSE,
 
         // identifier
         IDENTIFIER,

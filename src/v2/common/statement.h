@@ -1,6 +1,7 @@
 #ifndef COMPILER_V2_COMMON_STATEMENT_HDR_
 #define COMPILER_V2_COMMON_STATEMENT_HDR_
 
+#include "common/expression.h"
 #include "common/util.h"
 
 #include <cstddef>
@@ -18,6 +19,7 @@ namespace common {
         BLOCK,
         RETURN,
         VARIABLE,
+        BRANCH,
     };
 
     struct Statement {
@@ -30,6 +32,12 @@ namespace common {
 
     struct Block {
         std::vector<Statement> smts;
+    };
+
+    struct Branch {
+        Expression predicate;
+        Block then;
+        Block otherwise;
     };
 
 } // namespace common

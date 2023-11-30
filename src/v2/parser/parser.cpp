@@ -206,23 +206,8 @@ namespace parser {
             return;
         }
 
-        if (!match(common::TokenType::LEFT_BRACE, "expected '{' at the start of function definition")) {
-            return;
-        }
-
-        while (next().type != common::TokenType::RIGHT_BRACE && next().type != common::TokenType::END_OF_FILE) {
-            if (next().type == common::TokenType::SEMICOLON) {
-                consume();
-                continue;
-            }
-            common::Statement smt = parse_statement();
-            if (smt.is_error()) {
-                return;
-            }
-            result.body.smts.push_back(smt);
-        }
-
-        if (!match(common::TokenType::RIGHT_BRACE, "expected '}' at the end of the function definition")) {
+        result.body = parse_block();
+        if (!err_.empty()) {
             return;
         }
 
@@ -263,6 +248,10 @@ namespace parser {
                 return common::Statement{};
             }
             return result;
+        }
+
+        if (next().type == common::TokenType::IF) {
+            return parse_branch();
         }
 
         common::Statement smt{.type = common::StatementType::EXPRESSION, .pos = next().pos};
@@ -343,5 +332,69 @@ namespace parser {
             return common::VariableID{};
         }
         return ast_.add_func_param(param);
+    }
+
+    common::Block Parser::parse_block() {
+        if (!match(common::TokenType::LEFT_BRACE, "expected '{'")) {
+            return common::Block{};
+        }
+
+        common::Block result;
+        while (next().type != common::TokenType::RIGHT_BRACE && next().type != common::TokenType::END_OF_FILE) {
+            if (next().type == common::TokenType::SEMICOLON) {
+                consume();
+                continue;
+            }
+            common::Statement smt = parse_statement();
+            if (smt.is_error()) {
+                return common::Block{};
+            }
+            result.smts.push_back(smt);
+        }
+
+        if (!match(common::TokenType::RIGHT_BRACE, "expected '}' at the end of the function definition")) {
+            return common::Block{};
+        }
+
+        return result;
+    }
+
+    common::Statement Parser::parse_branch() {
+        common::Statement smt_result{.type = common::StatementType::BRANCH, .pos = next().pos};
+        if (!match(common::TokenType::IF, "expected 'if' keyword")) {
+            return common::Statement{};
+        }
+
+        common::Branch result;
+        result.predicate = parse_expression();
+        if (result.predicate.is_error()) {
+            return common::Statement{};
+        }
+        result.then = parse_block();
+        if (!err_.empty()) {
+            return common::Statement{};
+        }
+        if (next().type != common::TokenType::ELSE) {
+            smt_result.id = ast_.add(std::move(result));
+            return smt_result;
+        }
+
+        // has "else"/"else if" branch
+        consume();
+        if (next().type == common::TokenType::IF) {
+            result.otherwise.smts.push_back(parse_branch());
+            if (result.otherwise.smts.back().is_error()) {
+                return common::Statement{};
+            }
+            smt_result.id = ast_.add(std::move(result));
+            return smt_result;
+        }
+
+        result.otherwise = parse_block();
+        if (!err_.empty()) {
+            return common::Statement{};
+        }
+        smt_result.id = ast_.add(std::move(result));
+        return smt_result;
     }
 } // namespace parser

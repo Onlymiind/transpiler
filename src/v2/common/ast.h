@@ -115,6 +115,17 @@ namespace common {
             return result;
         }
 
+        StatementID add(Branch branch) {
+            StatementID result{make_id<StatementID>(StatementType::BRANCH, branches_.size())};
+            branches_.push_back(std::move(branch));
+            return result;
+        }
+
+        Branch *get_branch(StatementID smt) {
+            auto [type, idx] = decompose<StatementType>(smt);
+            return type != StatementType::BRANCH || idx >= branches_.size() ? nullptr : &branches_[idx];
+        }
+
         StatementID add_local(Variable var) {
             var.id = VariableID{vars_.size()};
             StatementID result{make_id<StatementID>(StatementType::VARIABLE, *var.id)};
@@ -179,6 +190,8 @@ namespace common {
         std::vector<Expression> statements_;
 
         std::vector<VariableID> global_variables_;
+
+        std::vector<Branch> branches_;
     };
 } // namespace common
 #endif

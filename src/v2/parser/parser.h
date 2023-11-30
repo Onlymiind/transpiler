@@ -4,6 +4,7 @@
 #include "common/ast.h"
 #include "common/declarations.h"
 #include "common/expression.h"
+#include "common/statement.h"
 #include "common/token.h"
 #include "common/util.h"
 
@@ -36,6 +37,9 @@ namespace parser {
 
         common::Statement parse_local_variable();
         common::Statement parse_statement();
+        common::Block parse_block();
+
+        common::Statement parse_branch();
 
         common::VariableID parse_func_param();
 

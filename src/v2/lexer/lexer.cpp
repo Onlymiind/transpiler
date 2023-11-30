@@ -77,6 +77,8 @@ namespace lexer {
         {"func", common::Token{.type = common::TokenType::FUNC}},
         {"return", common::Token{.type = common::TokenType::RETURN}},
         {"var", common::Token{.type = common::TokenType::VAR}},
+        {"if", common::Token{.type = common::TokenType::IF}},
+        {"else", common::Token{.type = common::TokenType::ELSE}},
     };
 
     common::Token Lexer::get_identifier() {

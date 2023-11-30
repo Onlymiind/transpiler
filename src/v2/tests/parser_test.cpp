@@ -561,6 +561,107 @@ TEST_CASE("parser: function calls", "[parser]") {
     }
 }
 
+TEST_CASE("parser: if statements", "[parser]") {
+    struct Case {
+        std::string str;
+        common::Branch expected;
+        bool should_fail = false;
+    };
+    auto make_block = [](std::vector<common::StatementType> smts) {
+        std::vector<common::Statement> result;
+        result.reserve(smts.size());
+        for (auto smt : smts) {
+            result.push_back(common::Statement{.type = smt});
+        }
+        return common::Block{std::move(result)};
+    };
+    std::vector<Case> cases{
+        {.str = "if", .should_fail = true},
+        {.str = "if () {}", .should_fail = true},
+        {.str = "if 1", .should_fail = true},
+        {.str = "if {}", .should_fail = true},
+        {.str = "if 1 {} else 1", .should_fail = true},
+        {.str = "if 1; {} else {}", .should_fail = true},
+        {.str = "if 1 {} else 1; {}", .should_fail = true},
+        {"if 1 { 1; } 10;",
+         common::Branch{
+             .predicate = common::Expression{.kind = common::ExpressionKind::LITERAL},
+             .then = make_block({common::StatementType::EXPRESSION}),
+         }},
+        {"if 1 { 1; } else { return; }",
+         common::Branch{
+             .predicate = common::Expression{.kind = common::ExpressionKind::LITERAL},
+             .then = make_block({common::StatementType::EXPRESSION}),
+             .otherwise = make_block({common::StatementType::RETURN}),
+         }},
+        {"if 1 { 1; } else if 0 {return;}",
+         common::Branch{
+             .predicate = common::Expression{.kind = common::ExpressionKind::LITERAL},
+             .then = make_block({common::StatementType::EXPRESSION}),
+             .otherwise = make_block({common::StatementType::BRANCH}),
+         }},
+        {"if 1 { 1; } else if 0 {return; 10;} else {1;}",
+         common::Branch{
+             .predicate = common::Expression{.kind = common::ExpressionKind::LITERAL},
+             .then = make_block({common::StatementType::EXPRESSION}),
+             .otherwise = make_block({common::StatementType::BRANCH}),
+         }},
+        {"if 1 { 1; } else {if 0 {return;} else {1;} 10;}",
+         common::Branch{
+             .predicate = common::Expression{.kind = common::ExpressionKind::LITERAL},
+             .then = make_block({common::StatementType::EXPRESSION}),
+             .otherwise = make_block({common::StatementType::BRANCH, common::StatementType::EXPRESSION}),
+         }},
+        {"if 1 {} else if 9 {return;} else {1;} 10;",
+         common::Branch{
+             .predicate = common::Expression{.kind = common::ExpressionKind::LITERAL},
+             .otherwise = make_block({common::StatementType::BRANCH}),
+         }},
+        {"if 1 { if (1) {} 10;} else {1;}",
+         common::Branch{
+             .predicate = common::Expression{.kind = common::ExpressionKind::LITERAL},
+             .then = make_block({common::StatementType::BRANCH, common::StatementType::EXPRESSION}),
+             .otherwise = make_block({common::StatementType::EXPRESSION}),
+         }},
+        {"if 1 + 2 {}",
+         common::Branch{
+             .predicate = common::Expression{.kind = common::ExpressionKind::BINARY},
+         }},
+    };
+
+    for (const auto &c : cases) {
+        INFO(c.str);
+        std::stringstream str{c.str};
+        lexer::Lexer l{str};
+        l.split();
+        REQUIRE(l.get_error().empty());
+        auto lexer_result = l.reset();
+
+        parser::Parser p{std::move(lexer_result.tokens)};
+        auto br_smt = p.parse_branch();
+        INFO(p.get_error().msg);
+        if (c.should_fail) {
+            REQUIRE(br_smt.is_error());
+            REQUIRE(!p.get_error().empty());
+            continue;
+        }
+        REQUIRE(p.get_error().empty());
+        REQUIRE(br_smt.type == common::StatementType::BRANCH);
+        auto ast = p.reset();
+        auto &br = *ast.get_branch(br_smt.id);
+        REQUIRE(!br.predicate.is_error());
+        REQUIRE(br.predicate.kind == c.expected.predicate.kind);
+        REQUIRE(br.then.smts.size() == c.expected.then.smts.size());
+        REQUIRE(br.otherwise.smts.size() == c.expected.otherwise.smts.size());
+        for (size_t i = 0; i < br.then.smts.size(); ++i) {
+            REQUIRE(br.then.smts[i].type == c.expected.then.smts[i].type);
+        }
+        for (size_t i = 0; i < br.otherwise.smts.size(); ++i) {
+            REQUIRE(br.otherwise.smts[i].type == c.expected.otherwise.smts[i].type);
+        }
+    }
+}
+
 TEST_CASE("parser: fails", "[parser]") {
     std::stringstream in{GENERATE(as<std::string>{}, "1 +", "-", "(1 + 3", "true && ==", "!*", "bool(1")};
     lexer::Lexer l{in};
