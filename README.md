@@ -34,7 +34,6 @@ gcc <path-to-output-file>
 ```
 
 ## TODO next (roadmap):
-- parameterised functions
 - if statements
 - loops
 - record types
