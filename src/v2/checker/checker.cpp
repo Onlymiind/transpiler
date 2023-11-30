@@ -412,6 +412,7 @@ namespace checker {
             report_error("can not declare a function: name " + *identifiers_->get(func.name) + " already used");
             return;
         }
+        module_.global_scope()->add(func.name, func.id);
         const std::string &name = *identifiers_->get(func.name);
         if (name == "main") {
             if (func.return_typename != common::IdentifierID{}) {
@@ -459,7 +460,5 @@ namespace checker {
             }
             module_.get_scope(func.scope)->add(param.name, param.id);
         }
-
-        module_.global_scope()->add(func.name, func.id);
     }
 } // namespace checker
