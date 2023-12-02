@@ -15,6 +15,7 @@ Implemented:
 - Statements and function return types
 - Global and local variables
 - Basic type inference for local variables
+- If statements
 
 ## Building
 
@@ -34,7 +35,6 @@ gcc <path-to-output-file>
 ```
 
 ## TODO next (roadmap):
-- if statements
 - loops
 - record types
 - pointers, arrays and slices
