@@ -1,6 +1,6 @@
 ## About
 
-This is a work-in-progress implementation of custom compiled general-purpose language (some syntax sketches can be found in ```desing_doc.md```). For up-to-date examples check files in ```src/v2/tests/functional/data``` directory.
+This is a work-in-progress implementation of custom compiled general-purpose language (some syntax sketches can be found in ```desing_doc.md```). For up-to-date examples check files in ```src/v2/tests/functional/data``` directory (files with ```_fail``` postfix are examples of invalid programs, files with ```_expected``` postfix contain expected C output).
 
 ## Current Status
 
@@ -16,6 +16,7 @@ Implemented:
 - Global and local variables
 - Basic type inference for local variables
 - If statements
+- Loops
 
 ## Building
 
@@ -35,8 +36,9 @@ gcc <path-to-output-file>
 ```
 
 ## TODO next (roadmap):
-- loops
+- pointers
+- arrays and slices
 - record types
-- pointers, arrays and slices
+- temporary basic built-in IO
 - all other features to make this usable :)
 
