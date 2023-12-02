@@ -48,6 +48,7 @@ namespace checker {
 
         auto &variables = ast_->global_variables();
         for (common::VariableID var_id : variables) {
+            // TODO: this should be handled by check_variable()
             common::Variable &var = *ast_->get_var(var_id);
             ErrorGuard eg{*this, var.pos};
             if (common::Symbol sym = module_.find(var.name); !sym.is_error()) {
@@ -73,7 +74,7 @@ namespace checker {
         if (!err_.empty()) {
             return;
         }
-        ScopeGuard g{*this, module_.global_scope()->id()};
+        ScopeGuard g{*this, module_.global_scope()->id(), true};
         auto &functions = ast_->functions();
         for (auto &func : functions) {
             ErrorGuard eg{*this, func.pos};
@@ -325,67 +326,10 @@ namespace checker {
     }
 
     void Checker::check_function(common::Function &func) {
-        bool has_return = false;
-
-        ScopeGuard g{*this, func.scope};
-        for (common::Statement smt : func.body.smts) {
-            ErrorGuard eg{*this, smt.pos};
-            switch (smt.type) {
-            case common::StatementType::EXPRESSION:
-                if (check_expression(*ast_->get_expression(smt.id)).is_error()) {
-                    return;
-                }
-                break;
-            case common::StatementType::RETURN: {
-                has_return = true;
-                common::Expression *expr = ast_->get_expression(smt.id);
-                common::Symbol ret = check_expression(*expr);
-                if (ret.is_error()) {
-                    return;
-                }
-                if (ret != func.return_type) {
-                    report_error("wrong return type");
-                    return;
-                }
-                break;
-            }
-            case common::StatementType::VARIABLE: {
-                common::Variable &var = *ast_->get_var(smt.id);
-                if (!module_.find(var.name, scope_stack_.top()).is_error()) {
-                    report_error("local variable declaration: name already used");
-                    return;
-                }
-
-                if (var.explicit_type != common::IdentifierID{}) {
-                    var.type = module_.find(var.explicit_type, scope_stack_.top());
-                    if (var.type.is_error() || common::Scope::type(var.type.id) != common::SymbolType::BUILTIN_TYPE) {
-                        report_error("invalid local variable type");
-                        return;
-                    }
-                }
-
-                common::Symbol expected_type = var.type;
-                if (!var.initial_value.is_error()) {
-                    expected_type = check_expression(var.initial_value);
-                }
-                if (var.explicit_type != common::IdentifierID{}) {
-                    if (var.type != expected_type) {
-                        report_error("type mismatch: can not initialize local variabe with expression of wrong type");
-                        return;
-                    }
-                } else {
-                    var.type = expected_type;
-                }
-
-                module_.get_scope(scope_stack_.top())->add(var.name, var.id);
-                break;
-            }
-            default:
-                report_error("statement type not implemented");
-                return;
-            }
-        }
-        if (!has_return && !func.return_type.is_void()) {
+        ScopeGuard g{*this, func.scope, true};
+        current_function_ = func.id;
+        check_block(func.body);
+        if (reachability_stack_.top() && !func.return_type.is_void()) {
             report_error("no return statement in non-void function");
             return;
         }
@@ -461,4 +405,113 @@ namespace checker {
             module_.get_scope(func.scope)->add(param.name, param.id);
         }
     }
+
+    void Checker::check_branch(common::Branch &branch) {
+        common::Symbol type = check_expression(branch.predicate);
+        if (type.is_error()) {
+            return;
+        }
+        if (common::empty(module_.get_scope(type.scope)->get_traits(type.id) & common::TypeTraits::BOOLEAN)) {
+            ErrorGuard eg{*this, branch.predicate.pos};
+            report_error("expected boolean expression in an if statement");
+            return;
+        }
+        bool is_next_reachable = reachability_stack_.top();
+        {
+            ScopeGuard g{*this, module_.make_scope(scope_stack_.top()), reachability_stack_.top()};
+            check_block(branch.then);
+            if (!err_.empty()) {
+                return;
+            }
+            is_next_reachable = reachability_stack_.top();
+        }
+        if (branch.otherwise.smts.empty()) {
+            return;
+        }
+
+        // else if: do not push unneded scope
+        if (branch.otherwise.smts.size() == 1 && branch.otherwise.smts[0].type == common::StatementType::BRANCH) {
+            check_branch(*ast_->get_branch(branch.otherwise.smts[0].id));
+            if (!err_.empty()) {
+                return;
+            }
+            is_next_reachable |= reachability_stack_.top();
+        } else {
+            ScopeGuard g{*this, module_.make_scope(scope_stack_.top()), reachability_stack_.top()};
+            check_block(branch.otherwise);
+            if (!err_.empty()) {
+                return;
+            }
+            is_next_reachable |= reachability_stack_.top();
+        }
+        reachability_stack_.top() = is_next_reachable;
+    }
+
+    void Checker::check_statement(common::Statement &smt) {
+        ErrorGuard g{*this, smt.pos};
+        switch (smt.type) {
+        case common::StatementType::EXPRESSION:
+            check_expression(*ast_->get_expression(smt.id));
+            break;
+        case common::StatementType::BRANCH:
+            check_branch(*ast_->get_branch(smt.id));
+            break;
+        case common::StatementType::RETURN: {
+            reachability_stack_.top() = false;
+            common::Function &func = *ast_->get_function(current_function_);
+            common::Symbol ret = check_expression(*ast_->get_expression(smt.id));
+            if (!ret.is_error() && func.return_type != ret) {
+                report_error("wrong return type");
+            }
+            break;
+        }
+        case common::StatementType::VARIABLE:
+            check_variable(*ast_->get_var(smt.id));
+            break;
+        default:
+            report_error("unknown statement type");
+            break;
+        }
+    }
+
+    void Checker::check_block(common::Block &block) {
+        for (common::Statement &smt : block.smts) {
+            smt.is_reachable = reachability_stack_.top();
+            check_statement(smt);
+            if (!err_.empty()) {
+                return;
+            }
+        }
+    }
+
+    void Checker::check_variable(common::Variable &var) {
+        if (!module_.find(var.name, scope_stack_.top()).is_error()) {
+            report_error("variable declaration: name already used");
+            return;
+        }
+
+        if (var.explicit_type != common::IdentifierID{}) {
+            var.type = module_.find(var.explicit_type, scope_stack_.top());
+            if (var.type.is_error() || common::Scope::type(var.type.id) != common::SymbolType::BUILTIN_TYPE) {
+                report_error("invalid variable type");
+                return;
+            }
+        }
+
+        common::Symbol expected_type = var.type;
+        if (!var.initial_value.is_error()) {
+            expected_type = check_expression(var.initial_value);
+        }
+        if (var.explicit_type != common::IdentifierID{}) {
+            if (var.type != expected_type) {
+                report_error("type mismatch: can not initialize variabe with expression of wrong type");
+                return;
+            }
+        } else {
+            var.type = expected_type;
+        }
+
+        module_.get_scope(scope_stack_.top())->add(var.name, var.id);
+    }
+
 } // namespace checker

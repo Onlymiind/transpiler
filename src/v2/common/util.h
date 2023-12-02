@@ -70,6 +70,7 @@ namespace common {
             SCOPE,
             SYMBOL,
             VARIABLE,
+            BASIC_BLOCK,
 
             COUNT,
         };
@@ -88,6 +89,7 @@ namespace common {
     using ScopeID = IDBase<IDType::SCOPE>;
     using SymbolID = IDBase<IDType::SYMBOL>;
     using VariableID = IDBase<IDType::VARIABLE>;
+    using BasicBlockID = IDBase<IDType::BASIC_BLOCK>;
 
     constexpr inline GenericID g_invalid_id{static_cast<uint64_t>(-1)};
     constexpr inline LiteralID g_false_id{2};

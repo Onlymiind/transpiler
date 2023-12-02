@@ -103,7 +103,11 @@ namespace parser {
         if (!match(common::TokenType::LEFT_PARENTHESIS, "function call: expected '('")) {
             return common::Expression{};
         }
+        bool first = true;
         while (next().type != common::TokenType::RIGHT_PARENTHESIS && next().type != common::TokenType::END_OF_FILE) {
+            if (!first && !match(common::TokenType::COMMA, "expected comma-separated list of arguments")) {
+                return common::Expression{};
+            }
             result.args.push_back(parse_expression());
             if (result.args.back().is_error()) {
                 return common::Expression{};
@@ -111,9 +115,7 @@ namespace parser {
             if (next().type == common::TokenType::RIGHT_PARENTHESIS) {
                 break;
             }
-            if (!match(common::TokenType::COMMA, "expected comma-separated list of arguments")) {
-                return common::Expression{};
-            }
+            first = false;
         }
         if (!match(common::TokenType::RIGHT_PARENTHESIS, "function call: expected ')'")) {
             return common::Expression{};
@@ -179,7 +181,11 @@ namespace parser {
         if (!match(common::TokenType::LEFT_PARENTHESIS, "expected '('")) {
             return;
         }
+        bool first = true;
         while (next().type != common::TokenType::RIGHT_PARENTHESIS && next().type != common::TokenType::END_OF_FILE) {
+            if (!first && !match(common::TokenType::COMMA, "expected comma-separated list of function parameter declarations")) {
+                return;
+            }
             result.params.push_back(parse_func_param());
             if (result.params.back() == common::VariableID{}) {
                 return;
@@ -187,9 +193,7 @@ namespace parser {
             if (next().type == common::TokenType::RIGHT_PARENTHESIS) {
                 break;
             }
-            if (!match(common::TokenType::COMMA, "expected comma-separated list of function parameter declarations")) {
-                return;
-            }
+            first = false;
         }
         if (!match(common::TokenType::RIGHT_PARENTHESIS, "expected ')'")) {
             return;

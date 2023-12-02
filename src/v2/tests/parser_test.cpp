@@ -339,7 +339,11 @@ TEST_CASE("parser: functions", "[parser]") {
         Case{"func a(a u64, f64, b bool);", {common::Function{
                                                 .name = ids.add("a"),
                                                 .params = {make_var("a", "u64"), make_var("", "f64"), make_var("b", "bool")},
-                                            }}}};
+                                            }}},
+        Case{.str = "func a(,) {}", .should_fail = true},
+        Case{.str = "func a(u64,) {}", .should_fail = true},
+        Case{.str = "func a(x u64,) {}", .should_fail = true},
+    };
 
     for (auto &c : cases) {
         INFO(c.str);
@@ -527,6 +531,7 @@ TEST_CASE("parser: function calls", "[parser]") {
     struct Case {
         std::string str;
         common::FunctionCall call;
+        bool should_fail = false;
     };
 
     common::Identifiers ids;
@@ -538,6 +543,9 @@ TEST_CASE("parser: function calls", "[parser]") {
                                                                                common::Expression{.kind = common::ExpressionKind::BINARY},
                                                                                common::Expression{.kind = common::ExpressionKind::FUNCTION_CALL},
                                                                            }}},
+        {.str = "a(", .should_fail = true},
+        {.str = "a(,)", .should_fail = true},
+        {.str = "a(x,)", .should_fail = true},
     };
 
     for (const auto &c : cases) {
@@ -549,6 +557,13 @@ TEST_CASE("parser: function calls", "[parser]") {
 
         parser::Parser p{std::move(lexer_result.tokens)};
         auto expr = p.parse_expression();
+        INFO(p.get_error().msg);
+
+        if (c.should_fail) {
+            REQUIRE(!p.get_error().empty());
+            continue;
+        }
+
         REQUIRE(p.get_error().empty());
         REQUIRE(expr.kind == common::ExpressionKind::FUNCTION_CALL);
         auto ast = p.reset();

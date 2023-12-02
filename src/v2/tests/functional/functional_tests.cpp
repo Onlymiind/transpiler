@@ -24,7 +24,9 @@ TEST_CASE("functional tests") {
                                 "assign_to_rvalue_fail",
                                 "assign_to_undeclared_fail",
                                 "parameterized_functions",
-                                "func_param_shadowing_fail");
+                                "func_param_shadowing_fail",
+                                "if_no_return_statement_fail",
+                                "if_no_return_statement2_fail");
 
     std::filesystem::path data{"data/" + name};
     INFO(data.c_str());

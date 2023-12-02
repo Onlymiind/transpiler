@@ -32,9 +32,10 @@ namespace checker {
         common::Symbol check_variable_ref(common::IdentifierID name);
         void check_function(common::Function &func);
         void check_function_decl(common::Function &func);
-
-        // TODO
+        void check_branch(common::Branch &branch);
+        void check_variable(common::Variable &var);
         void check_statement(common::Statement &smt);
+        void check_block(common::Block &block);
 
         bool is_assignable(common::Expression expr);
 
@@ -54,11 +55,13 @@ namespace checker {
       private:
         class ScopeGuard {
           public:
-            ScopeGuard(Checker &checker, common::ScopeID scope) : checker_(checker) {
+            ScopeGuard(Checker &checker, common::ScopeID scope, bool reachable) : checker_(checker) {
                 checker_.scope_stack_.push(scope);
+                checker_.reachability_stack_.push(reachable);
             }
             ~ScopeGuard() {
                 checker_.scope_stack_.pop();
+                checker_.reachability_stack_.pop();
             }
 
           private:
@@ -85,6 +88,8 @@ namespace checker {
         common::Error err_;
         std::stack<size_t> err_positions_;
         std::stack<common::ScopeID> scope_stack_;
+        std::stack<bool> reachability_stack_;
+        common::FunctionID current_function_;
     };
 
 } // namespace checker

@@ -26,6 +26,7 @@ namespace common {
         StatementType type = StatementType::ERROR;
         StatementID id = StatementID{g_invalid_id};
         size_t pos = 0;
+        bool is_reachable = true;
 
         constexpr bool is_error() const noexcept { return type == StatementType::ERROR; }
     };

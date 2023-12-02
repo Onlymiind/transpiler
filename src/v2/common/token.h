@@ -58,6 +58,7 @@ namespace common {
         COLON,
         COMMA,
 
+        // eof
         END_OF_FILE
     };
 
