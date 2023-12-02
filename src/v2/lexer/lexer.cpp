@@ -79,6 +79,7 @@ namespace lexer {
         {"var", common::Token{.type = common::TokenType::VAR}},
         {"if", common::Token{.type = common::TokenType::IF}},
         {"else", common::Token{.type = common::TokenType::ELSE}},
+        {"for", common::Token{.type = common::TokenType::FOR}},
     };
 
     common::Token Lexer::get_identifier() {

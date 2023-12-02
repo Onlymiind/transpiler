@@ -45,6 +45,7 @@ namespace common {
         VAR,
         IF,
         ELSE,
+        FOR,
 
         // identifier
         IDENTIFIER,
