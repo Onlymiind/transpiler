@@ -74,7 +74,7 @@ namespace checker {
         if (!err_.empty()) {
             return;
         }
-        ScopeGuard g{*this, module_.global_scope()->id(), true};
+        ScopeGuard g{*this, module_.global_scope()->id(), Reachability::REACHABLE};
         auto &functions = ast_->functions();
         for (auto &func : functions) {
             ErrorGuard eg{*this, func.pos};
@@ -326,11 +326,11 @@ namespace checker {
     }
 
     void Checker::check_function(common::Function &func) {
-        ScopeGuard g{*this, func.scope, true};
+        ScopeGuard g{*this, func.scope, Reachability::REACHABLE};
         current_function_ = func.id;
         check_block(func.body);
-        if (reachability_stack_.top() && !func.return_type.is_void()) {
-            report_error("no return statement in non-void function");
+        if (!func.return_type.is_void() && reachability_stack_.top() != Reachability::RETURNS) {
+            report_error("missing return statement in non-void function");
             return;
         }
     }
@@ -408,6 +408,7 @@ namespace checker {
 
     void Checker::check_branch(common::Branch &branch) {
         common::Symbol type = check_expression(branch.predicate);
+        branch.predicate.type = type;
         if (type.is_error()) {
             return;
         }
@@ -416,14 +417,15 @@ namespace checker {
             report_error("expected boolean expression in an if statement");
             return;
         }
-        bool is_next_reachable = reachability_stack_.top();
+
+        Reachability reachability = reachability_stack_.top();
         {
             ScopeGuard g{*this, module_.make_scope(scope_stack_.top()), reachability_stack_.top()};
             check_block(branch.then);
             if (!err_.empty()) {
                 return;
             }
-            is_next_reachable = reachability_stack_.top();
+            reachability = reachability_stack_.top();
         }
         if (branch.otherwise.smts.empty()) {
             return;
@@ -435,16 +437,16 @@ namespace checker {
             if (!err_.empty()) {
                 return;
             }
-            is_next_reachable |= reachability_stack_.top();
+            reachability = unite_reachability(reachability, reachability_stack_.top());
         } else {
             ScopeGuard g{*this, module_.make_scope(scope_stack_.top()), reachability_stack_.top()};
             check_block(branch.otherwise);
             if (!err_.empty()) {
                 return;
             }
-            is_next_reachable |= reachability_stack_.top();
+            reachability = unite_reachability(reachability, reachability_stack_.top());
         }
-        reachability_stack_.top() = is_next_reachable;
+        reachability_stack_.top() = reachability;
     }
 
     void Checker::check_statement(common::Statement &smt) {
@@ -457,7 +459,9 @@ namespace checker {
             check_branch(*ast_->get_branch(smt.id));
             break;
         case common::StatementType::RETURN: {
-            reachability_stack_.top() = false;
+            if (is_reachable()) {
+                reachability_stack_.top() = Reachability::RETURNS;
+            }
             common::Function &func = *ast_->get_function(current_function_);
             common::Symbol ret = check_expression(*ast_->get_expression(smt.id));
             if (!ret.is_error() && func.return_type != ret) {
@@ -468,6 +472,14 @@ namespace checker {
         case common::StatementType::VARIABLE:
             check_variable(*ast_->get_var(smt.id));
             break;
+        case common::StatementType::BREAK: [[fallthrough]];
+        case common::StatementType::CONTINUE:
+            reachability_stack_.top() = Reachability::UNREACHABLE;
+            if (loop_cout_ == 0) {
+                report_error("'break' and 'continue' must be used only inside loops");
+            }
+            break;
+        case common::StatementType::EMPTY: break;
         default:
             report_error("unknown statement type");
             break;
@@ -476,7 +488,7 @@ namespace checker {
 
     void Checker::check_block(common::Block &block) {
         for (common::Statement &smt : block.smts) {
-            smt.is_reachable = reachability_stack_.top();
+            smt.is_reachable = is_reachable();
             check_statement(smt);
             if (!err_.empty()) {
                 return;
@@ -500,7 +512,8 @@ namespace checker {
 
         common::Symbol expected_type = var.type;
         if (!var.initial_value.is_error()) {
-            expected_type = check_expression(var.initial_value);
+            var.initial_value.type = check_expression(var.initial_value);
+            expected_type = var.initial_value.type;
         }
         if (var.explicit_type != common::IdentifierID{}) {
             if (var.type != expected_type) {
@@ -512,6 +525,41 @@ namespace checker {
         }
 
         module_.get_scope(scope_stack_.top())->add(var.name, var.id);
+    }
+
+    void Checker::check_loop(common::Loop &loop) {
+        Reachability result = reachability_stack_.top();
+        {
+            ScopeGuard g{*this, module_.make_scope(scope_stack_.top()), reachability_stack_.top()};
+            check_statement(loop.init);
+            if (!err_.empty()) {
+                return;
+            }
+            loop.condition.type = check_expression(loop.condition);
+            if (loop.condition.type.is_error()) {
+                return;
+            }
+            loop.iteration.type = check_expression(loop.iteration);
+            if (loop.iteration.type.is_error()) {
+                return;
+            }
+            ++loop_cout_;
+            check_block(loop.body);
+            --loop_cout_;
+            if (result == Reachability::REACHABLE && reachability_stack_.top() == Reachability::RETURNS) {
+                result = Reachability::RETURNS;
+            }
+        }
+        reachability_stack_.top() = result;
+    }
+
+    Reachability Checker::unite_reachability(Reachability lhs, Reachability rhs) {
+        if (lhs == rhs) {
+            return lhs;
+        } else if (lhs == Reachability::REACHABLE || rhs == Reachability::REACHABLE) {
+            return Reachability::REACHABLE;
+        }
+        return Reachability::UNREACHABLE;
     }
 
 } // namespace checker

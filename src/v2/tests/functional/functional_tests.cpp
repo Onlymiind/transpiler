@@ -29,7 +29,12 @@ TEST_CASE("functional tests") {
                                 "if_no_return_statement2_fail",
                                 "if_statement_simple",
                                 "if_statement_nested",
-                                "if_statement_return");
+                                "if_statement_return",
+                                "loop_reachability_fail",
+                                "loop_reachability2_fail",
+                                "return_after_break_fail",
+                                "return_after_continue_fail",
+                                "loop_reachability_nested_fail");
 
     std::filesystem::path data{"data/" + name};
     INFO(data.c_str());

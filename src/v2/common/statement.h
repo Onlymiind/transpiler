@@ -23,6 +23,7 @@ namespace common {
         BREAK,
         CONTINUE,
         LOOP,
+        EMPTY,
     };
 
     struct Statement {
@@ -45,9 +46,9 @@ namespace common {
     };
 
     struct Loop {
-        Statement init;
-        Expression condition;
-        Expression iteration;
+        Statement init{.type = common::StatementType::EMPTY};
+        Expression condition{.kind = common::ExpressionKind::EMPTY};
+        Expression iteration{.kind = common::ExpressionKind::EMPTY};
         Block body;
     };
 

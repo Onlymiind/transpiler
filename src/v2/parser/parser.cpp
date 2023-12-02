@@ -261,7 +261,7 @@ namespace parser {
             needs_semicolon = false;
             break;
         case common::TokenType::FOR:
-            smt = parse_statement();
+            smt = parse_loop();
             needs_semicolon = false;
             break;
         case common::TokenType::BREAK: smt = make_single_keyword(common::StatementType::BREAK); break;
@@ -432,7 +432,7 @@ namespace parser {
             return make_result();
         } else if (next().type == common::TokenType::VAR) {
             result.init = parse_local_variable();
-        } else {
+        } else if (next().type != common::TokenType::SEMICOLON) {
             common::Expression expr = parse_expression();
             if (expr.is_error()) {
                 return common::Statement{};

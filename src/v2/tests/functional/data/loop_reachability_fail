@@ -1,0 +1,9 @@
+func foo() u64 {
+    for {
+        break;
+    }
+}
+
+func main() {
+    foo();
+}

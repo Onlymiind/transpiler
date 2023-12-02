@@ -654,7 +654,7 @@ TEST_CASE("parser: if statements", "[parser]") {
         auto lexer_result = l.reset();
 
         parser::Parser p{std::move(lexer_result.tokens)};
-        auto br_smt = p.parse_branch();
+        auto br_smt = p.parse_statement();
         INFO(p.get_error().msg);
         if (c.should_fail) {
             REQUIRE(br_smt.is_error());
@@ -790,7 +790,7 @@ TEST_CASE("parser: loops", "[parser]") {
         auto lexer_result = l.reset();
 
         parser::Parser p{std::move(lexer_result.tokens)};
-        auto loop_smt = p.parse_loop();
+        auto loop_smt = p.parse_statement();
         INFO(p.get_error().msg);
         if (c.should_fail) {
             REQUIRE(loop_smt.is_error());
@@ -801,8 +801,11 @@ TEST_CASE("parser: loops", "[parser]") {
         REQUIRE(loop_smt.type == common::StatementType::LOOP);
         auto ast = p.reset();
         auto &loop = *ast.get_loop(loop_smt.id);
+        REQUIRE(!loop.init.is_error());
         REQUIRE(c.expected.init.type == loop.init.type);
+        REQUIRE(!loop.condition.is_error());
         REQUIRE(c.expected.condition.kind == loop.condition.kind);
+        REQUIRE(!loop.iteration.is_error());
         REQUIRE(c.expected.iteration.kind == loop.iteration.kind);
         REQUIRE(c.expected.body.smts.size() == loop.body.smts.size());
     }

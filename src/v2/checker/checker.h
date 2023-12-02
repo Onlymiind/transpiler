@@ -15,6 +15,14 @@
 #include <string_view>
 
 namespace checker {
+    enum class Reachability {
+        REACHABLE,
+        RETURNS,
+
+        // used by "break" and "continue"
+        UNREACHABLE,
+    };
+
     class Checker {
       public:
         Checker(common::AST &ast, common::Identifiers &identifiers) : ast_(&ast), identifiers_(&identifiers) {}
@@ -36,8 +44,11 @@ namespace checker {
         void check_variable(common::Variable &var);
         void check_statement(common::Statement &smt);
         void check_block(common::Block &block);
+        void check_loop(common::Loop &loop);
 
         bool is_assignable(common::Expression expr);
+        bool is_reachable() const { return reachability_stack_.top() == Reachability::REACHABLE; }
+        static Reachability unite_reachability(Reachability lhs, Reachability rhs);
 
         common::Module reset() {
             common::Module result{std::move(module_)};
@@ -55,9 +66,9 @@ namespace checker {
       private:
         class ScopeGuard {
           public:
-            ScopeGuard(Checker &checker, common::ScopeID scope, bool reachable) : checker_(checker) {
+            ScopeGuard(Checker &checker, common::ScopeID scope, Reachability reachability) : checker_(checker) {
                 checker_.scope_stack_.push(scope);
-                checker_.reachability_stack_.push(reachable);
+                checker_.reachability_stack_.push(reachability);
             }
             ~ScopeGuard() {
                 checker_.scope_stack_.pop();
@@ -88,8 +99,9 @@ namespace checker {
         common::Error err_;
         std::stack<size_t> err_positions_;
         std::stack<common::ScopeID> scope_stack_;
-        std::stack<bool> reachability_stack_;
+        std::stack<Reachability> reachability_stack_;
         common::FunctionID current_function_;
+        uint64_t loop_cout_ = 0;
     };
 
 } // namespace checker

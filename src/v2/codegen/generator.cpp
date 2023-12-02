@@ -53,6 +53,7 @@ namespace codegen {
         case common::ExpressionKind::VARIABLE_REF:
             *out_ << *identifiers_->get(ast_->get_variable_ref(expr.id));
             break;
+        case common::ExpressionKind::EMPTY: break;
         default:
             report_error("unknown expression type");
             break;
@@ -290,6 +291,7 @@ namespace codegen {
             case common::StatementType::BRANCH:
                 codegen(*ast_->get_branch(smt.id));
                 break;
+            case common::StatementType::EMPTY: break;
             default:
                 report_error("statement type not supported");
                 return;
