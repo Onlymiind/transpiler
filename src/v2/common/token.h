@@ -46,6 +46,8 @@ namespace common {
         IF,
         ELSE,
         FOR,
+        BREAK,
+        CONTINUE,
 
         // identifier
         IDENTIFIER,

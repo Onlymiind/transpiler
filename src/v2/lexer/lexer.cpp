@@ -80,6 +80,8 @@ namespace lexer {
         {"if", common::Token{.type = common::TokenType::IF}},
         {"else", common::Token{.type = common::TokenType::ELSE}},
         {"for", common::Token{.type = common::TokenType::FOR}},
+        {"break", common::Token{.type = common::TokenType::BREAK}},
+        {"continue", common::Token{.type = common::TokenType::CONTINUE}},
     };
 
     common::Token Lexer::get_identifier() {

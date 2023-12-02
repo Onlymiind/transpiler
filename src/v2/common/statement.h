@@ -41,6 +41,13 @@ namespace common {
         Block otherwise;
     };
 
+    struct Loop {
+        Statement init;
+        Expression condition;
+        Expression iteration;
+        Block body;
+    };
+
 } // namespace common
 
 #endif
