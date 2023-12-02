@@ -329,6 +329,9 @@ namespace checker {
         ScopeGuard g{*this, func.scope, Reachability::REACHABLE};
         current_function_ = func.id;
         check_block(func.body);
+        if (!err_.empty()) {
+            return;
+        }
         if (!func.return_type.is_void() && reachability_stack_.top() != Reachability::RETURNS) {
             report_error("missing return statement in non-void function");
             return;
@@ -472,6 +475,9 @@ namespace checker {
         case common::StatementType::VARIABLE:
             check_variable(*ast_->get_var(smt.id));
             break;
+        case common::StatementType::LOOP:
+            check_loop(*ast_->get_loop(smt.id));
+            break;
         case common::StatementType::BREAK: [[fallthrough]];
         case common::StatementType::CONTINUE:
             reachability_stack_.top() = Reachability::UNREACHABLE;
@@ -528,29 +534,29 @@ namespace checker {
     }
 
     void Checker::check_loop(common::Loop &loop) {
-        Reachability result = reachability_stack_.top();
-        {
-            ScopeGuard g{*this, module_.make_scope(scope_stack_.top()), reachability_stack_.top()};
-            check_statement(loop.init);
-            if (!err_.empty()) {
+        ScopeGuard g{*this, module_.make_scope(scope_stack_.top()), reachability_stack_.top()};
+        check_statement(loop.init);
+        if (!err_.empty()) {
+            return;
+        }
+        loop.condition.type = check_expression(loop.condition);
+        if (loop.condition.type.is_error()) {
+            return;
+        } else if (!loop.condition.type.is_void()) {
+            ErrorGuard eg{*this, loop.condition.pos};
+            common::Scope &scope = *module_.get_scope(loop.condition.type.scope);
+            if (common::empty(scope.get_traits(loop.condition.type.id) & common::TypeTraits::BOOLEAN)) {
+                report_error("loop's condition must have boolean type");
                 return;
-            }
-            loop.condition.type = check_expression(loop.condition);
-            if (loop.condition.type.is_error()) {
-                return;
-            }
-            loop.iteration.type = check_expression(loop.iteration);
-            if (loop.iteration.type.is_error()) {
-                return;
-            }
-            ++loop_cout_;
-            check_block(loop.body);
-            --loop_cout_;
-            if (result == Reachability::REACHABLE && reachability_stack_.top() == Reachability::RETURNS) {
-                result = Reachability::RETURNS;
             }
         }
-        reachability_stack_.top() = result;
+        loop.iteration.type = check_expression(loop.iteration);
+        if (loop.iteration.type.is_error()) {
+            return;
+        }
+        ++loop_cout_;
+        check_block(loop.body);
+        --loop_cout_;
     }
 
     Reachability Checker::unite_reachability(Reachability lhs, Reachability rhs) {

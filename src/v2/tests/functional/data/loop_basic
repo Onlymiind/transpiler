@@ -1,0 +1,28 @@
+func main() {
+    for {
+        var x = 1;
+        break;
+    }
+
+    for var y = 2 {
+        var x = 2;
+        if(x == 2) {
+            break;
+        }
+    }
+
+    for var y = 3; true {
+        var x = 3;
+        if(y == x) {
+            break;
+        }
+    }
+
+    var x u64;
+    for var i = 0; i < 100; i = i + 1 {
+        if i % 2 == 0 {
+            continue;
+        }
+        x = x + 1;
+    }
+}

@@ -34,7 +34,10 @@ TEST_CASE("functional tests") {
                                 "loop_reachability2_fail",
                                 "return_after_break_fail",
                                 "return_after_continue_fail",
-                                "loop_reachability_nested_fail");
+                                "loop_reachability_nested_fail",
+                                "always_reachable_after_loop_fail",
+                                "loop_invalid_condition_type_fail",
+                                "loop_basic");
 
     std::filesystem::path data{"data/" + name};
     INFO(data.c_str());

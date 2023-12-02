@@ -54,6 +54,10 @@ namespace codegen {
 
         void codegen(const common::Block &block);
 
+        void codegen(common::Statement smt);
+
+        void codegen(const common::Loop &loop);
+
         void codegen_function_decl(const common::Function &func);
 
         void codegen_decls();
