@@ -6,6 +6,7 @@
 #include "common/expression.h"
 #include "common/literals.h"
 #include "common/module.h"
+#include "common/statement.h"
 #include "common/types.h"
 #include <ostream>
 #include <string_view>
@@ -48,6 +49,10 @@ namespace codegen {
         void codegen(const common::FunctionCall &call);
 
         void codegen(const common::Variable &var);
+
+        void codegen(const common::Branch &branch);
+
+        void codegen(const common::Block &block);
 
         void codegen_function_decl(const common::Function &func);
 

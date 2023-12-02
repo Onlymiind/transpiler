@@ -26,7 +26,10 @@ TEST_CASE("functional tests") {
                                 "parameterized_functions",
                                 "func_param_shadowing_fail",
                                 "if_no_return_statement_fail",
-                                "if_no_return_statement2_fail");
+                                "if_no_return_statement2_fail",
+                                "if_statement_simple",
+                                "if_statement_nested",
+                                "if_statement_return");
 
     std::filesystem::path data{"data/" + name};
     INFO(data.c_str());

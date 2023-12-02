@@ -1,0 +1,45 @@
+func main() {
+    var a bool;
+    if a {
+        1 + 2;
+    }
+
+    if a && !true {
+        1 + 2 * 3;
+    } else {
+        1;
+    }
+
+    if a && !true {
+        1 + 2 * 3;
+    } else {}
+
+    if a && !true {
+        1 + 2 * 3;
+    } else if 10 == 11{
+        10;
+    } else {
+        11;
+    }
+
+    if a && !true {
+        1 + 2 * 3;
+    } else {
+        if 10 == 11{
+            10;
+        } else {
+            11;
+        }
+    }
+
+    if a && !true {
+        1 + 2 * 3;
+    } else {
+        if 10 == 11{
+            10;
+        } else {
+            11;
+        }
+        1;
+    }
+}

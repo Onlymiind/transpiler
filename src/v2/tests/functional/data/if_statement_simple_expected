@@ -1,0 +1,45 @@
+// clang-format off
+#include <stdint.h>
+
+typedef uint64_t u64;
+typedef uint8_t bool;
+typedef double f64;
+
+int main(void) {
+bool a = (bool)0;
+if(a) {
+((u64)1 + (u64)2);
+}
+if((a && !(bool)1)) {
+((u64)1 + ((u64)2 * (u64)3));
+}else {
+(u64)1;
+}
+if((a && !(bool)1)) {
+((u64)1 + ((u64)2 * (u64)3));
+}
+if((a && !(bool)1)) {
+((u64)1 + ((u64)2 * (u64)3));
+}else if(((u64)10 == (u64)11)) {
+(u64)10;
+}else {
+(u64)11;
+}
+if((a && !(bool)1)) {
+((u64)1 + ((u64)2 * (u64)3));
+}else if(((u64)10 == (u64)11)) {
+(u64)10;
+}else {
+(u64)11;
+}
+if((a && !(bool)1)) {
+((u64)1 + ((u64)2 * (u64)3));
+}else {
+if(((u64)10 == (u64)11)) {
+(u64)10;
+}else {
+(u64)11;
+}
+(u64)1;
+}
+}

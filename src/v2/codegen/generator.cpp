@@ -199,33 +199,9 @@ namespace codegen {
         } else {
             codegen_function_decl(func);
         }
-        *out_ << " {";
-        for (common::Statement smt : func.body.smts) {
-            *out_ << '\n';
-            switch (smt.type) {
-            case common::StatementType::RETURN:
-                *out_ << "return ";
-                if (name == "main") {
-                    *out_ << "(int)";
-                }
-                [[fallthrough]];
-            case common::StatementType::EXPRESSION: {
-                common::Expression *expr = ast_->get_expression(smt.id);
-                if (expr->kind == common::ExpressionKind::EMPTY) {
-                    continue;
-                }
-                codegen(*expr);
-                *out_ << ';';
-                break;
-            }
-            case common::StatementType::VARIABLE:
-                codegen(*ast_->get_var(smt.id));
-            }
-        }
-        if (!func.body.smts.empty()) {
-            *out_ << '\n';
-        }
-        *out_ << "}\n";
+        *out_ << ' ';
+        codegen(func.body);
+        *out_ << '\n';
     }
 
     void Generator::codegen(const common::FunctionCall &call) {
@@ -274,5 +250,57 @@ namespace codegen {
             *out_ << "void";
         }
         *out_ << ')';
+    }
+
+    void Generator::codegen(const common::Branch &branch) {
+        *out_ << "if(";
+        codegen(branch.predicate);
+        *out_ << ") ";
+        codegen(branch.then);
+        if (branch.otherwise.smts.empty()) {
+            return;
+        }
+        *out_ << "else ";
+        if (branch.otherwise.smts.size() == 1 && branch.otherwise.smts[0].type == common::StatementType::BRANCH) {
+            codegen(*ast_->get_branch(branch.otherwise.smts[0].id));
+        } else {
+            codegen(branch.otherwise);
+        }
+    }
+
+    void Generator::codegen(const common::Block &block) {
+        *out_ << '{';
+        for (common::Statement smt : block.smts) {
+            *out_ << '\n';
+            switch (smt.type) {
+            case common::StatementType::RETURN:
+                *out_ << "return ";
+                [[fallthrough]];
+            case common::StatementType::EXPRESSION: {
+                common::Expression *expr = ast_->get_expression(smt.id);
+                if (expr->kind != common::ExpressionKind::EMPTY) {
+                    codegen(*expr);
+                }
+                *out_ << ';';
+                break;
+            }
+            case common::StatementType::VARIABLE:
+                codegen(*ast_->get_var(smt.id));
+                break;
+            case common::StatementType::BRANCH:
+                codegen(*ast_->get_branch(smt.id));
+                break;
+            default:
+                report_error("statement type not supported");
+                return;
+            }
+            if (!err_.empty()) {
+                return;
+            }
+        }
+        if (!block.smts.empty()) {
+            *out_ << '\n';
+        }
+        *out_ << '}';
     }
 } // namespace codegen
