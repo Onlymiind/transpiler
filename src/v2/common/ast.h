@@ -121,9 +121,20 @@ namespace common {
             return result;
         }
 
+        StatementID add(Loop loop) {
+            StatementID result{make_id<StatementID>(StatementType::LOOP, loops_.size())};
+            loops_.push_back(loop);
+            return result;
+        }
+
         Branch *get_branch(StatementID smt) {
             auto [type, idx] = decompose<StatementType>(smt);
             return type != StatementType::BRANCH || idx >= branches_.size() ? nullptr : &branches_[idx];
+        }
+
+        Loop *get_loop(StatementID smt) {
+            auto [type, idx] = decompose<StatementType>(smt);
+            return type != StatementType::LOOP || idx >= loops_.size() ? nullptr : &loops_[idx];
         }
 
         StatementID add_local(Variable var) {
@@ -192,6 +203,7 @@ namespace common {
         std::vector<VariableID> global_variables_;
 
         std::vector<Branch> branches_;
+        std::vector<Loop> loops_;
     };
 } // namespace common
 #endif

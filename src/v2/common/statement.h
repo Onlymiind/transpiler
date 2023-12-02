@@ -20,6 +20,9 @@ namespace common {
         RETURN,
         VARIABLE,
         BRANCH,
+        BREAK,
+        CONTINUE,
+        LOOP,
     };
 
     struct Statement {

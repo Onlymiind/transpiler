@@ -37,9 +37,10 @@ namespace parser {
 
         common::Statement parse_local_variable();
         common::Statement parse_statement();
-        common::Block parse_block();
-
         common::Statement parse_branch();
+        common::Statement parse_loop();
+
+        common::Block parse_block();
 
         common::VariableID parse_func_param();
 

@@ -576,19 +576,20 @@ TEST_CASE("parser: function calls", "[parser]") {
     }
 }
 
+common::Block make_block(std::vector<common::StatementType> smts) {
+    std::vector<common::Statement> result;
+    result.reserve(smts.size());
+    for (auto smt : smts) {
+        result.push_back(common::Statement{.type = smt});
+    }
+    return common::Block{std::move(result)};
+}
+
 TEST_CASE("parser: if statements", "[parser]") {
     struct Case {
         std::string str;
         common::Branch expected;
         bool should_fail = false;
-    };
-    auto make_block = [](std::vector<common::StatementType> smts) {
-        std::vector<common::Statement> result;
-        result.reserve(smts.size());
-        for (auto smt : smts) {
-            result.push_back(common::Statement{.type = smt});
-        }
-        return common::Block{std::move(result)};
     };
     std::vector<Case> cases{
         {.str = "if", .should_fail = true},
@@ -686,4 +687,123 @@ TEST_CASE("parser: fails", "[parser]") {
     parser::Parser p{std::move(result.tokens)};
     p.parse_expression();
     REQUIRE(!p.get_error().empty());
+}
+
+TEST_CASE("parser: break and continue", "[parser]") {
+    auto test = [](std::string str, common::StatementType expected) {
+        INFO(str);
+        str.push_back(';');
+        std::stringstream in{std::move(str)};
+        lexer::Lexer l{in};
+        l.split();
+        REQUIRE(l.get_error().empty());
+        auto result = l.reset();
+        parser::Parser p{std::move(result.tokens)};
+        auto smt = p.parse_statement();
+        REQUIRE(p.get_error().empty());
+        REQUIRE(!smt.is_error());
+        REQUIRE(smt.type == expected);
+        REQUIRE(smt.id == common::StatementID{});
+    };
+
+    test("break", common::StatementType::BREAK);
+    test("continue", common::StatementType::CONTINUE);
+}
+
+TEST_CASE("parser: loops", "[parser]") {
+    struct Case {
+        std::string str;
+        common::Loop expected;
+        bool should_fail = false;
+    };
+
+    std::vector<Case> cases{
+        Case{
+            .str = "for 1;2 + 4;!3 {1;}",
+            .expected = common::Loop{
+                .init = common::Statement{.type = common::StatementType::EXPRESSION},
+                .condition = common::Expression{.kind = common::ExpressionKind::BINARY},
+                .iteration = common::Expression{.kind = common::ExpressionKind::UNARY},
+                .body = make_block({common::StatementType::EXPRESSION})},
+        },
+        Case{
+            .str = "for var i u64;2 + 4;!3 {1;}",
+            .expected = common::Loop{
+                .init = common::Statement{.type = common::StatementType::VARIABLE},
+                .condition = common::Expression{.kind = common::ExpressionKind::BINARY},
+                .iteration = common::Expression{.kind = common::ExpressionKind::UNARY},
+                .body = make_block({common::StatementType::EXPRESSION}),
+            },
+        },
+        Case{
+            .str = "for var i u64 = 1;2 + 4;!3 {1;}",
+            .expected = common::Loop{
+                .init = common::Statement{.type = common::StatementType::VARIABLE},
+                .condition = common::Expression{.kind = common::ExpressionKind::BINARY},
+                .iteration = common::Expression{.kind = common::ExpressionKind::UNARY},
+                .body = make_block({common::StatementType::EXPRESSION}),
+            },
+        },
+
+        Case{
+            .str = "for var i u64;2 + 4 {1;}",
+            .expected = common::Loop{
+                .init = common::Statement{.type = common::StatementType::VARIABLE},
+                .condition = common::Expression{.kind = common::ExpressionKind::BINARY},
+                .body = make_block({common::StatementType::EXPRESSION}),
+            },
+        },
+
+        Case{
+            .str = "for var i u64 {1;}",
+            .expected = common::Loop{
+                .init = common::Statement{.type = common::StatementType::VARIABLE},
+                .body = make_block({common::StatementType::EXPRESSION}),
+            },
+        },
+        Case{
+            .str = "for {1;}",
+            .expected = common::Loop{.body = make_block({common::StatementType::EXPRESSION})},
+
+        },
+
+        Case{
+            .str = "for if false {}; 1; 2 {}",
+            .should_fail = true,
+        },
+        Case{
+            .str = "for 1 2; 3 {}",
+            .should_fail = true,
+        },
+        Case{
+            .str = "for 1; 2 3 {}",
+            .should_fail = true,
+        },
+    };
+
+    for (const auto &c : cases) {
+        INFO(c.str);
+        std::stringstream str{c.str};
+        lexer::Lexer l{str};
+        l.split();
+        REQUIRE(l.get_error().empty());
+        auto lexer_result = l.reset();
+
+        parser::Parser p{std::move(lexer_result.tokens)};
+        auto loop_smt = p.parse_loop();
+        INFO(p.get_error().msg);
+        if (c.should_fail) {
+            REQUIRE(loop_smt.is_error());
+            REQUIRE(!p.get_error().empty());
+            continue;
+        }
+        REQUIRE(p.get_error().empty());
+        REQUIRE(loop_smt.type == common::StatementType::LOOP);
+        auto ast = p.reset();
+        auto &loop = *ast.get_loop(loop_smt.id);
+        REQUIRE(c.expected.init.type == loop.init.type);
+        REQUIRE(c.expected.condition.kind == loop.condition.kind);
+        REQUIRE(c.expected.iteration.kind == loop.iteration.kind);
+        REQUIRE(c.expected.body.smts.size() == loop.body.smts.size());
+    }
 }

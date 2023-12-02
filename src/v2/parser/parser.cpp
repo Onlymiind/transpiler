@@ -245,36 +245,45 @@ namespace parser {
     }
 
     common::Statement Parser::parse_statement() {
-        if (next().type == common::TokenType::VAR) {
-            common::Statement result = parse_local_variable();
-            if (result.is_error() ||
-                !match(common::TokenType::SEMICOLON, "expected ';' at the end of the statement")) {
-                return common::Statement{};
-            }
-            return result;
-        }
 
-        if (next().type == common::TokenType::IF) {
-            return parse_branch();
-        }
+        auto make_single_keyword = [this](common::StatementType type) {
+            common::Statement result{.type = type, .pos = next().pos};
+            consume();
+            return result;
+        };
 
         common::Statement smt{.type = common::StatementType::EXPRESSION, .pos = next().pos};
-        if (next().type == common::TokenType::RETURN) {
+        bool needs_semicolon = true;
+        switch (next().type) {
+        case common::TokenType::VAR: smt = parse_local_variable(); break;
+        case common::TokenType::IF:
+            smt = parse_branch();
+            needs_semicolon = false;
+            break;
+        case common::TokenType::FOR:
+            smt = parse_statement();
+            needs_semicolon = false;
+            break;
+        case common::TokenType::BREAK: smt = make_single_keyword(common::StatementType::BREAK); break;
+        case common::TokenType::CONTINUE: smt = make_single_keyword(common::StatementType::CONTINUE); break;
+        case common::TokenType::RETURN:
             smt.type = common::StatementType::RETURN;
             consume();
             if (next().type == common::TokenType::SEMICOLON) {
-                consume();
                 smt.id = ast_.add(common::Expression{.kind = common::ExpressionKind::EMPTY, .pos = smt.pos});
-                return smt;
+                break;
             }
+            [[fallthrough]];
+        default: {
+            common::Expression expr = parse_expression();
+            if (expr.is_error()) {
+                return common::Statement{};
+            }
+            smt.id = ast_.add(expr);
         }
-        common::Expression expr = parse_expression();
-        if (expr.is_error()) {
-            return common::Statement{};
         }
-        smt.id = ast_.add(expr);
-
-        if (!match(common::TokenType::SEMICOLON, "expected ';' at the end of the statement")) {
+        if (smt.is_error() ||
+            (needs_semicolon && !match(common::TokenType::SEMICOLON, "expected ';' at the end of the statement"))) {
             return common::Statement{};
         }
         return smt;
@@ -356,7 +365,7 @@ namespace parser {
             result.smts.push_back(smt);
         }
 
-        if (!match(common::TokenType::RIGHT_BRACE, "expected '}' at the end of the function definition")) {
+        if (!match(common::TokenType::RIGHT_BRACE, "expected '}' at the end of a block")) {
             return common::Block{};
         }
 
@@ -400,5 +409,56 @@ namespace parser {
         }
         smt_result.id = ast_.add(std::move(result));
         return smt_result;
+    }
+
+    common::Statement Parser::parse_loop() {
+        size_t pos = next().pos;
+        if (!match(common::TokenType::FOR, "expected 'for' keyword")) {
+            return common::Statement{};
+        }
+
+        common::Loop result;
+        auto make_result = [this, &result, pos]() {
+            common::Statement smt_result{.type = common::StatementType::LOOP, .pos = pos};
+            result.body = parse_block();
+            if (!err_.empty()) {
+                return common::Statement{};
+            }
+            smt_result.id = ast_.add(std::move(result));
+            return smt_result;
+        };
+
+        if (next().type == common::TokenType::LEFT_BRACE) {
+            return make_result();
+        } else if (next().type == common::TokenType::VAR) {
+            result.init = parse_local_variable();
+        } else {
+            common::Expression expr = parse_expression();
+            if (expr.is_error()) {
+                return common::Statement{};
+            }
+            result.init = common::Statement{.type = common::StatementType::EXPRESSION, .id = ast_.add(expr), .pos = expr.pos};
+        }
+
+        if (next().type == common::TokenType::LEFT_BRACE) {
+            return make_result();
+        } else if (!match(common::TokenType::SEMICOLON, "expected ';'")) {
+            return common::Statement{};
+        }
+
+        result.condition = parse_expression();
+        if (result.condition.is_error()) {
+            return common::Statement{};
+        } else if (next().type == common::TokenType::LEFT_BRACE) {
+            return make_result();
+        } else if (!match(common::TokenType::SEMICOLON, "expected ';'")) {
+            return common::Statement{};
+        }
+
+        result.iteration = parse_expression();
+        if (result.iteration.is_error()) {
+            return common::Statement{};
+        }
+        return make_result();
     }
 } // namespace parser
