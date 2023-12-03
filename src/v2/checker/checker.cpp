@@ -159,6 +159,20 @@ namespace checker {
                 return common::Type{};
             }
             return type;
+        case common::UnaryOp::ADDRESS_OF:
+            if (!is_lvalue(expr.expr)) {
+                report_error("can't take address of an rvalue");
+                return common::Type{};
+            }
+            ++type.indirection_level;
+            return type;
+        case common::UnaryOp::DEREFERENCE:
+            if (!type.is_pointer()) {
+                report_error("can't dereference type that is not a pointer");
+                return common::Type{};
+            }
+            --type.indirection_level;
+            return type;
         default:
             report_error("unknown unary operator");
             return common::Type{};
@@ -185,11 +199,16 @@ namespace checker {
         }
 
         if (expr.op == common::BinaryOp::ASSIGN) {
-            if (!is_assignable(expr.lhs)) {
+            if (!is_lvalue(expr.lhs)) {
                 report_error("can not assing to rvalue");
                 return common::Type{};
             }
             return common::Type{common::g_void};
+        }
+
+        if (lhs.is_pointer() || rhs.is_pointer()) {
+            report_error("can not use pointers in binary expressions except for assignment");
+            return common::Type{};
         }
 
         common::TypeTraits traits = module_.get_scope(lhs.sym.scope)->get_traits(lhs.sym.id);
@@ -202,8 +221,7 @@ namespace checker {
             } else {
                 return lhs;
             }
-        }
-        if (common::is_equality_op(expr.op)) {
+        } else if (common::is_equality_op(expr.op)) {
             // for now, every type is comparable
             // later maybe should add COMPARABLE type trait
             return builtin_types_[common::BuiltinTypes::BOOL];
@@ -214,14 +232,14 @@ namespace checker {
             } else {
                 return builtin_types_[common::BuiltinTypes::BOOL];
             }
-        }
-
-        // arithmetic operators
-        if (common::empty(traits & common::TypeTraits::NUMERIC)) {
-            report_error("type mismatch: expected numeric type");
+        } else if (common::is_bitwise(expr.op) && common::empty(traits & common::TypeTraits::INTEGER)) {
+            report_error("bitwise operations are allowed only on integers");
             return common::Type{};
         } else if (expr.op == common::BinaryOp::REMAINDER && common::empty(traits & common::TypeTraits::INTEGER)) {
             report_error("type mismatch: expected integer operands for % operator");
+            return common::Type{};
+        } else if (common::empty(traits & common::TypeTraits::NUMERIC)) {
+            report_error("type mismatch: expected numeric type");
             return common::Type{};
         }
 
@@ -335,8 +353,14 @@ namespace checker {
         }
     }
 
-    bool Checker::is_assignable(common::Expression expr) {
-        return expr.kind == common::ExpressionKind::VARIABLE_REF;
+    bool Checker::is_lvalue(common::Expression expr) {
+        if (expr.kind == common::ExpressionKind::VARIABLE_REF) {
+            return true;
+        } else if (expr.kind != common::ExpressionKind::UNARY) {
+            return false;
+        }
+        const common::UnaryExpression &unary = *ast_->get_unary_expression(expr.id);
+        return unary.op == common::UnaryOp::DEREFERENCE;
     }
 
     common::Type Checker::check_variable_ref(common::IdentifierID name) {

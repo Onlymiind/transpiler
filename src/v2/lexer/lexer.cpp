@@ -200,20 +200,13 @@ namespace lexer {
         case '<': return handle_wide_op(LESS, '=', LESS_EQUALS);
         case '>': return handle_wide_op(GREATER, '=', GREATER_EQUALS);
         case '=': return handle_wide_op(ASSIGN, '=', EQUALS);
-        case '&': result.type = AND; break;
-        case '|': result.type = OR; break;
+        case '&': return handle_wide_op(BITWISE_AND, '&', AND);
+        case '|': return handle_wide_op(BITWISE_OR, '|', OR);
         default:
             put_back(*c);
             report_error("unknown symbol");
             return result;
         }
-
-        // && ||
-        if (c != file_->peek()) {
-            result.type = ERROR;
-            report_error("invalid operator");
-        }
-        get_char();
 
         return result;
     }

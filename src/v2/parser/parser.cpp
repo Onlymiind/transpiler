@@ -41,7 +41,12 @@ namespace parser {
         common::UnaryExpression result{.op = *common::to_unary_op(next().type)};
         size_t pos = next().pos;
         consume();
-        result.expr = parse_primary_expression();
+        if (common::is_unary_op(next().type)) {
+            result.expr = parse_unary_expression();
+        } else {
+            result.expr = parse_primary_expression();
+        }
+
         if (result.expr.is_error()) {
             return common::Expression{};
         }
@@ -329,7 +334,7 @@ namespace parser {
                 return common::VariableID{};
             }
             // unnamed parameter
-            if (next().type != common::TokenType::IDENTIFIER) {
+            if (next().type == common::TokenType::COMMA || next().type == common::TokenType::RIGHT_PARENTHESIS) {
                 return ast_.add_func_param(param);
             }
             param.name = param.explicit_type.name;

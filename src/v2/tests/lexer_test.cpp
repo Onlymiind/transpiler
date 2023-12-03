@@ -147,6 +147,8 @@ TEST_CASE("lexer: operators", "[lexer]") {
         {GREATER_EQUALS, ">="},
         {NOT, "!"},
         {ASSIGN, "="},
+        {BITWISE_OR, "|"},
+        {BITWISE_AND, "&"},
     };
 
     for (auto c : cases) {
@@ -234,7 +236,7 @@ TEST_CASE("lexer: identifiers", "[lexer]") {
 }
 
 TEST_CASE("lexer: multiple tokens", "[lexer]") {
-    std::stringstream in{"   +-\t<!\t==a 1234\n1234.1234 a!true bbb"};
+    std::stringstream in{"   +-\t<!\t==a 1234\n1234.1234&| a!true bbb"};
     using enum common::TokenType;
     constexpr double epsilon = 1.e-10;
     common::Literals lit;
@@ -247,6 +249,8 @@ TEST_CASE("lexer: multiple tokens", "[lexer]") {
         {.type = IDENTIFIER, .data = common::GenericID{lit.add("a")}},
         {.type = INTEGER, .data = common::GenericID{lit.add(uint64_t{1234})}},
         {.type = FLOAT, .data = common::GenericID{lit.add(1234.1234)}},
+        {.type = BITWISE_AND},
+        {.type = BITWISE_OR},
         {.type = IDENTIFIER, .data = common::GenericID{lit.add("a")}},
         {.type = NOT},
         {.type = BOOL, .data = common::GenericID{common::g_true_id}},

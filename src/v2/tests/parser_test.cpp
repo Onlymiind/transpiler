@@ -236,6 +236,9 @@ TEST_CASE("parser: unary operators", "[parser]") {
         ParserTestCase{"-1234", "(-1234"},
         ParserTestCase{"!true", "(!true"},
         ParserTestCase{"!1234.1234", "(!1234.1234"},
+        ParserTestCase{"!!1234.1234", "(!(!1234.1234"},
+        ParserTestCase{"& & &1234.1234", "(&(&(&1234.1234"},
+        ParserTestCase{"*1234.1234", "(*1234.1234"},
     };
 
     run_tests(cases);
@@ -269,6 +272,8 @@ TEST_CASE("parser: binary operators", "[parser]") {
         ParserTestCase{"1234 <= 5678", "<= 1234 5678"},
         ParserTestCase{"1234 >= 5678", ">= 1234 5678"},
         ParserTestCase{"1234 = 5678", "= 1234 5678"},
+        ParserTestCase{"1234 & 5678", "& 1234 5678"},
+        ParserTestCase{"1234 | 5678", "| 1234 5678"},
     };
 
     run_tests(cases);

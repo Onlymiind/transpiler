@@ -33,6 +33,8 @@ namespace common {
         LESS_EQUALS,
         GREATER_EQUALS,
         ASSIGN,
+        BITWISE_OR,
+        BITWISE_AND,
 
         BINARY_OP_END,
 
@@ -75,7 +77,7 @@ namespace common {
     }
 
     constexpr inline bool is_unary_op(TokenType type) noexcept {
-        return type == TokenType::SUB || type == TokenType::NOT;
+        return type == TokenType::SUB || type == TokenType::NOT || type == TokenType::BITWISE_AND || type == TokenType::MUL;
     }
 
     struct Token {

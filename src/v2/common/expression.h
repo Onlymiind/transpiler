@@ -43,6 +43,8 @@ namespace common {
         LESS_EQUALS,
         GREATER_EQUALS,
         ASSIGN,
+        BITWISE_OR,
+        BITWISE_AND,
     };
 
     constexpr inline bool is_logic_op(BinaryOp op) {
@@ -57,6 +59,10 @@ namespace common {
         return op >= BinaryOp::EQUALS && op <= BinaryOp::GREATER_EQUALS;
     }
 
+    constexpr inline bool is_bitwise(BinaryOp op) {
+        return op == BinaryOp::BITWISE_AND || op == BinaryOp::BITWISE_OR;
+    }
+
     constexpr inline std::optional<BinaryOp> to_binary_op(TokenType type) {
         if (!is_binary_op(type)) {
             return {};
@@ -69,9 +75,11 @@ namespace common {
         // based on C++ operator precedence
         using enum BinaryOp;
         switch (op) {
+        case BITWISE_OR: [[fallthrough]];
         case ADD: [[fallthrough]];
         case SUB: return 5;
 
+        case BITWISE_AND: [[fallthrough]];
         case MUL: [[fallthrough]];
         case DIV: [[fallthrough]];
         case REMAINDER: return 8;
@@ -91,16 +99,21 @@ namespace common {
         return g_invalid_precedence;
     }
 
-    enum class UnaryOp { NEGATE,
-                         NOT };
+    enum class UnaryOp {
+        NEGATE,
+        NOT,
+        ADDRESS_OF,
+        DEREFERENCE,
+    };
 
     constexpr inline std::optional<UnaryOp> to_unary_op(TokenType type) {
-        if (type == TokenType::NOT) {
-            return UnaryOp::NOT;
-        } else if (type == TokenType::SUB) {
-            return UnaryOp::NEGATE;
+        switch (type) {
+        case TokenType::NOT: return UnaryOp::NOT;
+        case TokenType::SUB: return UnaryOp::NEGATE;
+        case TokenType::BITWISE_AND: return UnaryOp::ADDRESS_OF;
+        case TokenType::MUL: return UnaryOp::DEREFERENCE;
+        default: return {};
         }
-        return {};
     }
 
     struct Expression {

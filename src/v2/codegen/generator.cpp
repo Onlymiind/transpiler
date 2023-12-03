@@ -94,6 +94,8 @@ namespace codegen {
         switch (expr.op) {
         case common::UnaryOp::NOT: *out_ << '!'; break;
         case common::UnaryOp::NEGATE: *out_ << '-'; break;
+        case common::UnaryOp::ADDRESS_OF: *out_ << '&'; break;
+        case common::UnaryOp::DEREFERENCE: *out_ << '*'; break;
         default:
             report_error("unknown unary operator");
             break;
@@ -126,6 +128,8 @@ namespace codegen {
         case LESS_EQUALS: *out_ << "<="; break;
         case GREATER_EQUALS: *out_ << ">="; break;
         case ASSIGN: *out_ << '='; break;
+        case BITWISE_AND: *out_ << '&'; break;
+        case BITWISE_OR: *out_ << '|'; break;
         default:
             report_error("unlnown binary operator");
             return;
