@@ -1,12 +1,10 @@
 ## About
 
-This is a work-in-progress implementation of custom compiled general-purpose language (some syntax sketches can be found in ```desing_doc.md```). For up-to-date examples check files in ```src/v2/tests/functional/data``` directory (files with ```_fail``` postfix are examples of invalid programs, files with ```_expected``` postfix contain expected C output).
+This is a work-in-progress implementation of custom compiled general-purpose language. For up-to-date examples check files in ```tests/functional/data``` directory (files with ```_fail``` postfix are examples of invalid programs, files with ```_expected``` postfix contain expected C output). Supported syntax is described in ```desing_doc.md``` file.
 
 ## Current Status
 
-A vertical slice of a future compiler can be found in ```src/v2``` directory. It implements a significant part of basic compiler functionality, although a large number of crucial features is (for now) missing. It also takes a number of shortcuts by transpiling source code into C instead of machine language (e.g. there is no optimization pass whatsoever).
-
-All other files are part of "older" implementation and will soon be removed.
+The compiler in it's current state implements a significant part of basic functionality, although a large number of crucial features is (for now) missing. It also takes a number of shortcuts by transpiling source code into C instead of machine language (e.g. there is no optimization pass whatsoever).
 
 Currently inmplemented:
 - Basic strict type system

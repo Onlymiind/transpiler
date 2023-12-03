@@ -1,5 +1,6 @@
 
-Legend:
+Syntax legend:
+```
   <name> - non-terminal
   '' - used for escaping of special symbols
   <name>? - optional
@@ -8,39 +9,58 @@ Legend:
   | - or
   NON_EMPTY_LIST(<item>, sep = ,) - <item> | (<item> sep NON_EMPTY_LIST(<item>))
   LIST(<item>, sep = ,) - NON_EMPTY_LIST(<item>, sep) | empty
-Type declaration:
+```
 
-  Syntax: type <identifier> <type_definition> //note: semicolon must follow, unless type definition is a struct
-  <type_definition> = <tuple_definition> | <union_definition> | <struct_definition> | <function_type_definition> | <identifier> | <modified_type>
-  <type_definition> = (<type_definition>, <type_definition_list>) | empty //note: trailing comma not allowed
-  <tuple_definition> = tuple '<' LIST(<type_definition>) '>'
-  <union_definition> = union '<' LIST(<type_definition>) '>'
-  <struct_definition> = struct { LIST(<field_declaration>, ;) }
-  <function_type_definition> = func'('LIST(<func_param>)')' <type_definition>?
-  <modified_type> = (* | '?')+<type_definition>
-  <field_declaration> = <identifier> : <type_definition> (= <expression>)?;
-  <func_param> = (<identifier> : <type_definition>) | <type_definition>
+Unary operators:
+```
+- ! * &
+```
 
-Variable declarations:
-  Syntax: var <identifier> : <type_definition> (= <expression>)?;
+Binary operators:
+```
+Precedence:
+6: & * / %
+5: | + -
+4: < > <= >= != ==
+3: &&
+2: ||
+1: =
+```
 
-Function declarations:
-  Syntax: func <identifier>'('LIST(<func_param>)')' <type_definition>? ; | <block>
+Expression syntax:
 
-Statements:
-  <block> = {LIST(<statement>)}
-  <statement> = <expression> | <return_smt> | <if_smt> | <assignment> | <loop> | <variable_declaration> ; //';' does not follow blocks!
+```
+<expression> = <binary_expression> | <unary_expression> | <primary_expression>
+<primary_expression> = ('('<expression>')') | <identifier> | <function_call> | <literal>
+<function_call> = <identifier>'('LIST(<expression>)')'
+<literal> = true | false | <integer_constant> | <floating_point_constant>
+<unary_expression> = <unary_op>?+ <primary_expression>
+<binary_expression> = <expression> <binary_op> <expression>
+```
 
-  <return_smt> = return <expression>?
-  <assignment> = <identifier> '=' <expression>
-  <if_smt> = if <expression> <block> <otherwise>
-  <otherwise> = (elif <expression> <block> <otherwise>) | (else <block>) | empty
-  <loop> = for (<assignment>;<expression>;<assignment>) | <expression> | empty <block>
+Statement syntax:
+```
+<statement> = <return_statement> | <expression_statement> | <loop> | <branch> | <var_decl>
+<expression_statement> = <expression> ;
+<return_statement> = return <expression>? ;
+<branch> = if <expression> <block> <else_branch>?
+<else_branch> = (else <block>) | (else <branch>)
+<loop> = for (<var_decl> | <expression>)? ( ; <expression>)? ( ; <expression>)? <block>
+<var_decl> = var <identifier> (<type>) | (<type> = <expression>) | ( = <expression>) ;
+<block> = '{' LIST(<statement>) '}'
+```
 
-Expressions:
-  <expression> = <unary_expression> | <binary_expression> | <primary_expression>
-  <unary_expression> = <unary_op> <expression>
-  <binary_expression> = <unary_expression> | <primary_expression> <binary_op> <expression>
-  <primary_expression> = <identifier> | <literal> | <type_cast> | <function_call>
-  <type_cast> = <identifier>'('<expression>')' //TODO: support casting to any type
-  <function_call> = <identifier>'('LIST(<expression>)')'
+Function syntax:
+```
+<function_decl> = func <identifier>'('LIST(((<name> <type>) | <type>))')' <type>? ; | <block>
+```
+
+Type syntax:
+```
+<type> = u64 | bool | f64 | (* <type>)
+```
+
+Global variable syntax:
+```
+<global_var> = var <identifier> <type> ;
+```
