@@ -4,19 +4,21 @@ This is a work-in-progress implementation of custom compiled general-purpose lan
 
 ## Current Status
 
-A vertical slice of a future compiler is fully implemented (albeit for now quite incapable) and can be found in ```src/v2``` directory.
-All other files are part of "older" implementation and are left as a reference.
+A vertical slice of a future compiler can be found in ```src/v2``` directory. It implements a significant part of basic compiler functionality, although a large number of crucial features is (for now) missing. It also takes a number of shortcuts by transpiling source code into C instead of machine language (e.g. there is no optimization pass whatsoever).
 
-Implemented:
+All other files are part of "older" implementation and will soon be removed.
+
+Currently inmplemented:
 - Basic strict type system
-- Arbitrary arithmetic and logic expressions
+- Arbitrary expressions
 - Explicit type conversions
-- Basic functions and function calls
+- Functions and function calls
 - Statements and function return types
-- Global and local variables
+- Variables
 - Basic type inference for local variables
 - If statements
 - Loops
+- Pointers
 
 ## Building
 
@@ -36,7 +38,6 @@ gcc <path-to-output-file>
 ```
 
 ## TODO next (roadmap):
-- pointers
 - arrays and slices
 - record types
 - temporary basic built-in IO
