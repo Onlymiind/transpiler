@@ -49,7 +49,7 @@ void run_tests(const std::vector<CheckerTestCase> cases) {
         REQUIRE(ch.get_error().empty());
 
         auto mod = ch.reset();
-        REQUIRE(c.expected == mod.get_scope(type.scope)->get_type(type.id)->type);
+        REQUIRE(c.expected == mod.get_scope(type.sym.scope)->get_type(type.sym.id)->type);
     }
 }
 
@@ -118,9 +118,9 @@ TEST_CASE("checker: expressions", "[checker]") {
 TEST_CASE("checker: casts", "[checker]") {
     using enum common::BuiltinTypes;
     std::vector<CheckerTestCase> cases{
-        {.data = "bool(true)", .expected = BOOL},
-        {.data = "u64(1.1)", .expected = UINT},
-        {.data = "f64(1)", .expected = FLOAT},
+        {.data = "cast<bool>(true)", .expected = BOOL},
+        {.data = "cast<u64>(1.1)", .expected = UINT},
+        {.data = "cast<f64>(1)", .expected = FLOAT},
     };
     run_tests(cases);
 }

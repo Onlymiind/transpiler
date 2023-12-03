@@ -10,6 +10,13 @@
 #include <optional>
 
 namespace common {
+
+    struct ParsedType {
+        IdentifierID name;
+        uint64_t indirection_level = 0;
+        constexpr bool is_error() const noexcept { return name == common::IdentifierID{}; }
+    };
+
     enum class ExpressionKind : uint8_t {
         ERROR,
         BINARY,
@@ -102,7 +109,7 @@ namespace common {
         ExpressionID id = ExpressionID{g_invalid_id};
         size_t pos = 0;
 
-        Symbol type;
+        Type type;
 
         constexpr bool is_error() const {
             return kind == ExpressionKind::ERROR;
@@ -155,8 +162,9 @@ namespace common {
 
     // probably should implement separate ID for identifiers
     struct Cast {
-        IdentifierID to = IdentifierID{g_invalid_id};
-        Expression from{};
+        ParsedType to;
+        Expression from;
+        Type dst_type;
     };
 
 } // namespace common

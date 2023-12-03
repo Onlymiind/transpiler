@@ -58,6 +58,8 @@ namespace codegen {
 
         void codegen(const common::Loop &loop);
 
+        void codegen(common::Type type);
+
         void codegen_function_decl(const common::Function &func);
 
         void codegen_decls();

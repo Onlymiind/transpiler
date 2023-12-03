@@ -78,6 +78,7 @@ namespace parser {
         case BOOL: return make_literal_expr(common::LiteralType::BOOL);
         case INTEGER: return make_literal_expr(common::LiteralType::UINT);
         case FLOAT: return make_literal_expr(common::LiteralType::FLOAT);
+        case CAST: return parse_cast();
         default:
             report_error("expected primary expression");
             break;
@@ -199,9 +200,8 @@ namespace parser {
             return;
         }
 
-        if (next().type == common::TokenType::IDENTIFIER) {
-            result.return_typename = common::IdentifierID{next().data};
-            consume();
+        if (!(next().type == common::TokenType::SEMICOLON || next().type == common::TokenType::LEFT_BRACE)) {
+            result.return_typename = parse_type();
         }
         if (next().type == common::TokenType::SEMICOLON) {
             consume();
@@ -230,10 +230,8 @@ namespace parser {
             return;
         }
 
-        result.explicit_type = common::IdentifierID{
-            get_expected(common::TokenType::IDENTIFIER, "global variables must be explicitly typed"),
-        };
-        if (result.explicit_type == common::IdentifierID{}) {
+        result.explicit_type = parse_type();
+        if (result.explicit_type.is_error()) {
             return;
         }
 
@@ -303,10 +301,8 @@ namespace parser {
         }
 
         if (next().type != common::TokenType::ASSIGN) {
-            result.explicit_type = common::IdentifierID{
-                get_expected(common::TokenType::IDENTIFIER, "expected variable's type"),
-            };
-            if (result.explicit_type == common::IdentifierID{}) {
+            result.explicit_type = parse_type();
+            if (result.explicit_type.is_error()) {
                 return common::Statement{};
             }
         }
@@ -325,23 +321,24 @@ namespace parser {
 
     common::VariableID Parser::parse_func_param() {
         size_t pos = next().pos;
-        common::IdentifierID name = common::IdentifierID{
-            get_expected(common::TokenType::IDENTIFIER, "function parameter declaration: expected identifier")};
-        if (name == common::IdentifierID{}) {
-            return common::VariableID{};
-        }
-
         common::Variable param{.pos = pos};
-        // unnamed parameter
-        if (next().type != common::TokenType::IDENTIFIER) {
-            param.explicit_type = name;
-            return ast_.add_func_param(param);
+        if (next().type == common::TokenType::IDENTIFIER) {
+            param.explicit_type.name = common::IdentifierID{next().data};
+            consume();
+            if (param.explicit_type.name == common::IdentifierID{}) {
+                return common::VariableID{};
+            }
+            // unnamed parameter
+            if (next().type != common::TokenType::IDENTIFIER) {
+                return ast_.add_func_param(param);
+            }
+            param.name = param.explicit_type.name;
+            param.explicit_type = common::ParsedType{};
         }
 
-        param.name = name;
         // can't fail
-        param.explicit_type = common::IdentifierID{get_expected(common::TokenType::IDENTIFIER, "parse_fun_param: unreachable")};
-        if (param.explicit_type == common::IdentifierID{}) {
+        param.explicit_type = parse_type();
+        if (param.explicit_type.is_error()) {
             return common::VariableID{};
         }
         return ast_.add_func_param(param);
@@ -460,5 +457,47 @@ namespace parser {
             return common::Statement{};
         }
         return make_result();
+    }
+
+    common::ParsedType Parser::parse_type() {
+        common::ParsedType result;
+        for (; next().type == common::TokenType::MUL; consume()) {
+            ++result.indirection_level;
+        }
+        result.name = common::IdentifierID{get_expected(common::TokenType::IDENTIFIER, "expected type name")};
+        if (result.name == common::IdentifierID{}) {
+            return common::ParsedType{};
+        }
+        return result;
+    }
+
+    common::Expression Parser::parse_cast() {
+        common::Expression result{.kind = common::ExpressionKind::CAST, .pos = next().pos};
+        if (!match(common::TokenType::CAST, "expected 'cast' keyword")) {
+            return common::Expression{};
+        }
+        if (!match(common::TokenType::LESS, "expected '<'")) {
+            return common::Expression{};
+        }
+        common::Cast cast;
+        cast.to = parse_type();
+        if (cast.to.is_error()) {
+            return common::Expression{};
+        }
+        if (!match(common::TokenType::GREATER, "expected '>'")) {
+            return common::Expression{};
+        }
+        if (!match(common::TokenType::LEFT_PARENTHESIS, "expected '('")) {
+            return common::Expression{};
+        }
+        cast.from = parse_expression();
+        if (cast.from.is_error()) {
+            return common::Expression{};
+        }
+        if (!match(common::TokenType::RIGHT_PARENTHESIS, "expected ')'")) {
+            return common::Expression{};
+        }
+        result.id = ast_.add_cast(cast);
+        return result;
     }
 } // namespace parser

@@ -94,14 +94,14 @@ TEST_CASE("generator: binary expressions", "[generator]") {
 
 TEST_CASE("generator: casts", "[generator]") {
     std::vector<GeneratorTestCase> cases{
-        {"bool(true)", "(bool)1"},
-        {"u64(1.1)", "(u64)1.1"},
-        {"f64(1)", "(f64)1"},
-        {"u64(-1.1)", "(u64)-(f64)1.1"},
-        {"bool(!false)", "(bool)!(bool)0"},
-        {"f64(1 / 2)", "(f64)((u64)1 / (u64)2)"},
-        {"u64(1.1 * 2.2)", "(u64)((f64)1.1 * (f64)2.2)"},
-        {"bool(true == false)", "(bool)((bool)1 == (bool)0)"},
+        {"cast<bool>(true)", "(bool)1"},
+        {"cast<u64>(1.1)", "(u64)1.1"},
+        {"cast<f64>(1)", "(f64)1"},
+        {"cast<u64>(-1.1)", "(u64)-(f64)1.1"},
+        {"cast<bool>(!false)", "(bool)!(bool)0"},
+        {"cast<f64>(1 / 2)", "(f64)((u64)1 / (u64)2)"},
+        {"cast<u64>(1.1 * 2.2)", "(u64)((f64)1.1 * (f64)2.2)"},
+        {"cast<bool>(true == false)", "(bool)((bool)1 == (bool)0)"},
     };
 
     run_tests(cases);
@@ -111,7 +111,7 @@ TEST_CASE("generator: expressions", "[generator]") {
     std::vector<GeneratorTestCase> cases{
         {"false && true || false && 1 != 2 * 3", "(((bool)0 && (bool)1) || ((bool)0 && ((u64)1 != ((u64)2 * (u64)3))))"},
         {"1 + 2 * (3 + 5) / 4", "((u64)1 + (((u64)2 * ((u64)3 + (u64)5)) / (u64)4))"},
-        {"f64(1 + 2 * u64(1.3 - 11.02 * f64(12)) /1000)",
+        {"cast<f64>(1 + 2 * cast<u64>(1.3 - 11.02 * cast<f64>(12)) /1000)",
          "(f64)((u64)1 + (((u64)2 * (u64)((f64)1.3 - ((f64)11.02 * (f64)12))) / (u64)1000))"},
     };
 

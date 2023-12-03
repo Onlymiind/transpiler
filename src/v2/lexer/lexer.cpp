@@ -82,6 +82,7 @@ namespace lexer {
         {"for", common::Token{.type = common::TokenType::FOR}},
         {"break", common::Token{.type = common::TokenType::BREAK}},
         {"continue", common::Token{.type = common::TokenType::CONTINUE}},
+        {"cast", common::Token{.type = common::TokenType::CAST}},
     };
 
     common::Token Lexer::get_identifier() {

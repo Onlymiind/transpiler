@@ -15,13 +15,13 @@ namespace common {
 
         FunctionID id;
         IdentifierID name;
-        IdentifierID return_typename;
+        ParsedType return_typename;
         Block body{};
 
         size_t pos = 0;
         bool decl_only = false;
 
-        Symbol return_type;
+        Type return_type;
         ScopeID scope;
 
         std::vector<VariableID> params;
@@ -34,10 +34,10 @@ namespace common {
 
         VariableID id;
         IdentifierID name;
-        IdentifierID explicit_type;
+        ParsedType explicit_type;
         Expression initial_value;
         size_t pos = 0;
-        Symbol type;
+        Type type;
     };
 } // namespace common
 

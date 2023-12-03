@@ -60,10 +60,10 @@ class PolishNotationParser {
             consume();
             return parse_unary_expression();
         case common::TokenType::IDENTIFIER: {
-            common::FunctionCall result{.name = common::IdentifierID{next().data}};
+            common::Cast result{.to = common::ParsedType{common::IdentifierID{next().data}}};
             consume();
-            result.args.push_back(parse_expression());
-            return common::Expression{.kind = common::ExpressionKind::FUNCTION_CALL, .id = file_.add(result)};
+            result.from = parse_expression();
+            return common::Expression{.kind = common::ExpressionKind::CAST, .id = file_.add_cast(result)};
         }
         }
 
@@ -130,8 +130,8 @@ struct ExprComparer {
         case common::ExpressionKind::CAST: {
             auto lhs_cast = *lhs_file.get_cast(lhs.id);
             auto rhs_cast = *rhs_file.get_cast(rhs.id);
-            auto str1 = *lhs_identifiers.get(lhs_cast.to);
-            auto str2 = *rhs_identifiers.get(rhs_cast.to);
+            auto str1 = *lhs_identifiers.get(lhs_cast.to.name);
+            auto str2 = *rhs_identifiers.get(rhs_cast.to.name);
             return str1 == str2 &&
                    compare(lhs_cast.from, rhs_cast.from);
         }
@@ -244,9 +244,9 @@ TEST_CASE("parser: unary operators", "[parser]") {
 TEST_CASE("parser: casts", "[parser]") {
     using namespace std::string_view_literals;
     std::vector<ParserTestCase> cases = {
-        ParserTestCase{"bool(1234)", "bool 1234"},
-        ParserTestCase{"int(!true)", "int (!true"},
-        ParserTestCase{"float(1 + 2)", "float + 1 2"},
+        ParserTestCase{"cast<bool>(1234)", "bool 1234"},
+        ParserTestCase{"cast<int>(!true)", "int (!true"},
+        ParserTestCase{"cast<float>(1 + 2)", "float + 1 2"},
     };
 
     run_tests(cases);
@@ -279,7 +279,7 @@ TEST_CASE("parser: parenthesized expressions", "[parser]") {
         ParserTestCase{"(1234)", "1234"},
         ParserTestCase{"(!true)", "(!true"},
         ParserTestCase{"(1 + 2)", "+ 1 2"},
-        ParserTestCase{"(bool(1))", "bool 1"},
+        ParserTestCase{"(cast<bool>(1))", "bool 1"},
     };
 
     run_tests(cases);
@@ -309,7 +309,7 @@ TEST_CASE("parser: functions", "[parser]") {
         if (!name.empty()) {
             var.name = ids.add(std::move(name));
         }
-        var.explicit_type = ids.add(std::move(type));
+        var.explicit_type.name = ids.add(std::move(type));
         return expected_ast.add_func_param(var);
     };
     std::vector<Case> cases = {
@@ -369,9 +369,9 @@ TEST_CASE("parser: functions", "[parser]") {
             auto &expected = c.expected[i];
 
             REQUIRE(*ids.get(expected.name) == *lexer_result.identifiers.get(func.name));
-            if (expected.return_typename != common::IdentifierID{}) {
-                REQUIRE(func.return_typename != common::IdentifierID{});
-                REQUIRE(*ids.get(expected.return_typename) == *lexer_result.identifiers.get(func.return_typename));
+            if (!expected.return_typename.is_error()) {
+                REQUIRE(!func.return_typename.is_error());
+                REQUIRE(*ids.get(expected.return_typename.name) == *lexer_result.identifiers.get(func.return_typename.name));
             }
 
             REQUIRE(expected.body.smts.size() == func.body.smts.size());
@@ -379,7 +379,7 @@ TEST_CASE("parser: functions", "[parser]") {
             for (size_t j = 0; j < expected.params.size(); ++j) {
                 auto &param = *ast.get_var(func.params[j]);
                 auto &param_expected = *expected_ast.get_var(expected.params[j]);
-                REQUIRE(*ids.get(param_expected.explicit_type) == *lexer_result.identifiers.get(param.explicit_type));
+                REQUIRE(*ids.get(param_expected.explicit_type.name) == *lexer_result.identifiers.get(param.explicit_type.name));
                 if (param_expected.name != common::IdentifierID{}) {
                     REQUIRE(*ids.get(param_expected.name) == *lexer_result.identifiers.get(param.name));
                 }
@@ -427,7 +427,7 @@ TEST_CASE("parser: global variables", "[parser]") {
         REQUIRE(ast.variables().size() == 1);
         auto &var = ast.variables()[0];
         REQUIRE(*lexer_result.identifiers.get(var.name) == *ids.get(c.expected.name));
-        REQUIRE(*lexer_result.identifiers.get(var.explicit_type) == *ids.get(c.expected.explicit_type));
+        REQUIRE(*lexer_result.identifiers.get(var.explicit_type.name) == *ids.get(c.expected.explicit_type.name));
         REQUIRE(var.initial_value == common::Expression{});
     }
 }
@@ -487,10 +487,10 @@ TEST_CASE("parser: local variables", "[parser]") {
         REQUIRE(main.body.smts[0].type == common::StatementType::VARIABLE);
         auto &var = *ast.get_var(main.body.smts[0].id);
         REQUIRE(*lexer_result.identifiers.get(var.name) == *ids.get(c.expected.name));
-        if (c.expected.explicit_type == common::IdentifierID{}) {
-            REQUIRE(var.explicit_type == common::IdentifierID{});
+        if (c.expected.explicit_type.is_error()) {
+            REQUIRE(var.explicit_type.is_error());
         } else {
-            REQUIRE(*lexer_result.identifiers.get(var.explicit_type) == *ids.get(c.expected.explicit_type));
+            REQUIRE(*lexer_result.identifiers.get(var.explicit_type.name) == *ids.get(c.expected.explicit_type.name));
         }
         REQUIRE(var.initial_value.type == c.expected.initial_value.type);
     }

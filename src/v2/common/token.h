@@ -48,6 +48,7 @@ namespace common {
         FOR,
         BREAK,
         CONTINUE,
+        CAST,
 
         // identifier
         IDENTIFIER,

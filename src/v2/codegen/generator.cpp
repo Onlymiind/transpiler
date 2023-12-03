@@ -62,7 +62,7 @@ namespace codegen {
 
     void Generator::codegen(common::Literal lit, common::Expression expr) {
         *out_ << '(';
-        *out_ << *identifiers_->get(mod_->get_scope(expr.type.scope)->get_type(expr.type.id)->name);
+        codegen(expr.type);
         *out_ << ')';
 
         switch (lit.type) {
@@ -144,7 +144,7 @@ namespace codegen {
         }
 
         *out_ << '(';
-        *out_ << *identifiers_->get(cast.to);
+        codegen(cast.dst_type);
         *out_ << ')';
         codegen(cast.from);
     }
@@ -161,7 +161,7 @@ namespace codegen {
             if (func.return_type.is_void()) {
                 *out_ << "void";
             } else {
-                *out_ << *identifiers_->get(func.return_typename);
+                codegen(func.return_type);
             }
             *out_ << ' ';
             *out_ << name;
@@ -171,7 +171,7 @@ namespace codegen {
                 if (i != 0) {
                     *out_ << ", ";
                 }
-                *out_ << *identifiers_->get(param.explicit_type);
+                codegen(param.type);
                 if (param.name != common::IdentifierID{}) {
                     *out_ << ' ' << *identifiers_->get(param.name);
                 }
@@ -217,11 +217,13 @@ namespace codegen {
     }
 
     void Generator::codegen(const common::Variable &var) {
-        *out_ << *identifiers_->get(mod_->get_scope(var.type.scope)->get_type(var.type.id)->name)
-              << ' ' << *identifiers_->get(var.name) << " = ";
+        codegen(var.type);
+        *out_ << ' ' << *identifiers_->get(var.name) << " = ";
         if (var.initial_value.is_error()) {
             // TODO: proper zero-initialization
-            *out_ << '(' << *identifiers_->get(mod_->get_scope(var.type.scope)->get_type(var.type.id)->name) << ")0;";
+            *out_ << '(';
+            codegen(var.type);
+            *out_ << ")0;";
             return;
         }
         codegen(var.initial_value);
@@ -232,7 +234,7 @@ namespace codegen {
         if (func.return_type.is_void()) {
             *out_ << "void";
         } else {
-            *out_ << *identifiers_->get(func.return_typename);
+            codegen(func.return_type);
         }
         *out_ << ' ';
         *out_ << *identifiers_->get(func.name);
@@ -242,7 +244,7 @@ namespace codegen {
             if (i != 0) {
                 *out_ << ", ";
             }
-            *out_ << *identifiers_->get(param.explicit_type);
+            codegen(param.type);
             if (param.name != common::IdentifierID{}) {
                 *out_ << ' ' << *identifiers_->get(param.name);
             }
@@ -325,6 +327,13 @@ namespace codegen {
         default:
             report_error("statement type not supported");
             return;
+        }
+    }
+
+    void Generator::codegen(common::Type type) {
+        *out_ << *identifiers_->get(mod_->get_scope(type.sym.scope)->get_type(type.sym.id)->name);
+        for (uint64_t i = 0; i < type.indirection_level; ++i) {
+            *out_ << '*';
         }
     }
 } // namespace codegen

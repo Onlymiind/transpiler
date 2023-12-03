@@ -54,6 +54,16 @@ namespace common {
 
     constexpr inline Symbol g_void = Symbol{.scope = common::ScopeID{0}, .id = common::SymbolID{0}};
     constexpr inline bool Symbol::is_void() const noexcept { return *this == g_void; }
+
+    struct Type {
+        Symbol sym;
+        uint64_t indirection_level = 0;
+
+        constexpr bool is_pointer() const noexcept { return indirection_level != 0; }
+        constexpr bool is_error() const noexcept { return sym.is_error(); }
+        constexpr bool is_void() const noexcept { return sym.is_void(); }
+        constexpr bool operator==(Type rhs) const noexcept { return sym == rhs.sym && indirection_level == rhs.indirection_level; }
+    };
 } // namespace common
 
 #endif

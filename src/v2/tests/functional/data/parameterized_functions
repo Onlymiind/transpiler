@@ -1,5 +1,5 @@
 func foo(b u64, c f64, bool) f64 {
-    return f64(b) * c - 1.1;
+    return cast<f64>(b) * c - 1.1;
 }
 
 var x f64;

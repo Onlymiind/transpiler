@@ -31,6 +31,7 @@ namespace parser {
         common::Expression parse_unary_expression();
         common::Expression parse_primary_expression();
         common::Expression parse_identifier_ref();
+        common::Expression parse_cast();
 
         void parse_function();
         void parse_global_variabe();
@@ -43,6 +44,7 @@ namespace parser {
         common::Block parse_block();
 
         common::VariableID parse_func_param();
+        common::ParsedType parse_type();
 
         common::AST reset() noexcept {
             common::AST ast{std::move(ast_)};

@@ -13,27 +13,27 @@ namespace checker {
     void Checker::add_builtins() {
         module_.make_scope();
         common::ScopeID global = module_.global_scope()->id();
-        builtin_types_[common::BuiltinTypes::BOOL] = common::Symbol{
+        builtin_types_[common::BuiltinTypes::BOOL] = common::Type{common::Symbol{
             global,
             module_.global_scope()->add(common::BuiltinType{
                 .name = identifiers_->add("bool"),
                 .type = common::BuiltinTypes::BOOL,
                 .traits = common::TypeTraits::BOOLEAN,
-            })};
-        builtin_types_[common::BuiltinTypes::UINT] = common::Symbol{
+            })}};
+        builtin_types_[common::BuiltinTypes::UINT] = common::Type{common::Symbol{
             global,
             module_.global_scope()->add(common::BuiltinType{
                 .name = identifiers_->add("u64"),
                 .type = common::BuiltinTypes::UINT,
                 .traits = common::TypeTraits::INTEGER,
-            })};
-        builtin_types_[common::BuiltinTypes::FLOAT] = common::Symbol{
+            })}};
+        builtin_types_[common::BuiltinTypes::FLOAT] = common::Type{common::Symbol{
             global,
             module_.global_scope()->add(common::BuiltinType{
                 .name = identifiers_->add("f64"),
                 .type = common::BuiltinTypes::FLOAT,
                 .traits = common::TypeTraits::FLOATING_POINT,
-            })};
+            })}};
     }
 
     void Checker::add_declarations() {
@@ -56,12 +56,12 @@ namespace checker {
                 return;
             }
 
-            var.type = module_.find(var.explicit_type);
+            var.type = common::Type{module_.find(var.explicit_type.name), var.explicit_type.indirection_level};
             if (var.type.is_error()) {
                 report_error("variable type not declared");
                 return;
             }
-            if (common::Scope::type(var.type.id) != common::SymbolType::BUILTIN_TYPE) {
+            if (common::Scope::type(var.type.sym.id) != common::SymbolType::BUILTIN_TYPE) {
                 report_error("invalid variable type");
                 return;
             }
@@ -94,12 +94,12 @@ namespace checker {
         }
     }
 
-    common::Symbol Checker::check_expression(common::Expression &expr) {
+    common::Type Checker::check_expression(common::Expression &expr) {
         if (expr.is_error()) {
-            return common::Symbol{};
+            return common::Type{};
         }
 
-        common::Symbol result{};
+        common::Type result{};
         ErrorGuard g{*this, expr.pos};
         switch (expr.kind) {
         case common::ExpressionKind::LITERAL:
@@ -121,11 +121,11 @@ namespace checker {
             result = check_variable_ref(ast_->get_variable_ref(expr.id));
             break;
         case common::ExpressionKind::EMPTY:
-            result = common::g_void;
+            result = common::Type{common::g_void};
             break;
         default:
             report_error("unknown expression type");
-            return common::Symbol{};
+            return common::Type{};
         }
 
         if (result.is_error()) {
@@ -135,70 +135,70 @@ namespace checker {
         return result;
     }
 
-    common::Symbol Checker::check_unary_expression(common::UnaryExpression &expr) {
+    common::Type Checker::check_unary_expression(common::UnaryExpression &expr) {
         if (expr.expr.is_error()) {
-            return common::Symbol{};
+            return common::Type{};
         }
-        common::Symbol type = check_expression(expr.expr);
+        common::Type type = check_expression(expr.expr);
         if (type.is_error()) {
-            return common::Symbol{};
+            return common::Type{};
         }
 
-        common::TypeTraits traits = module_.get_scope(type.scope)->get_traits(type.id);
+        common::TypeTraits traits = module_.get_scope(type.sym.scope)->get_traits(type.sym.id);
         switch (expr.op) {
         case common::UnaryOp::NOT:
             if (common::empty(traits & common::TypeTraits::BOOLEAN)) {
                 report_error("operator ! is defined only for booleans");
-                return common::Symbol{};
+                return common::Type{};
             }
             return type;
         case common::UnaryOp::NEGATE:
             // no signed integer type for now
             if (common::empty(traits & common::TypeTraits::FLOATING_POINT)) {
                 report_error("unary - is defined only for floats");
-                return common::Symbol{};
+                return common::Type{};
             }
             return type;
         default:
             report_error("unknown unary operator");
-            return common::Symbol{};
+            return common::Type{};
         }
     }
 
-    common::Symbol Checker::check_binary_expression(common::BinaryExpression &expr) {
+    common::Type Checker::check_binary_expression(common::BinaryExpression &expr) {
         if (expr.lhs.is_error() || expr.rhs.is_error()) {
-            return common::Symbol{};
+            return common::Type{};
         }
 
-        common::Symbol lhs = check_expression(expr.lhs);
+        common::Type lhs = check_expression(expr.lhs);
         if (lhs.is_error()) {
-            return common::Symbol{};
+            return common::Type{};
         }
-        common::Symbol rhs = check_expression(expr.rhs);
+        common::Type rhs = check_expression(expr.rhs);
         if (rhs.is_error()) {
-            return common::Symbol{};
+            return common::Type{};
         }
 
         if (lhs != rhs) {
             report_error("type mismatch: can not convert types");
-            return common::Symbol{};
+            return common::Type{};
         }
 
         if (expr.op == common::BinaryOp::ASSIGN) {
             if (!is_assignable(expr.lhs)) {
                 report_error("can not assing to rvalue");
-                return common::Symbol{};
+                return common::Type{};
             }
-            return common::g_void;
+            return common::Type{common::g_void};
         }
 
-        common::TypeTraits traits = module_.get_scope(lhs.scope)->get_traits(lhs.id);
+        common::TypeTraits traits = module_.get_scope(lhs.sym.scope)->get_traits(lhs.sym.id);
 
         if (common::is_logic_op(expr.op)) {
             if (common::empty(traits & common::TypeTraits::BOOLEAN)) {
 
                 report_error("type mismatch: expected boolean");
-                return common::Symbol{};
+                return common::Type{};
             } else {
                 return lhs;
             }
@@ -210,7 +210,7 @@ namespace checker {
         } else if (common::is_relational(expr.op)) {
             if (common::empty(traits & common::TypeTraits::ORDERED)) {
                 report_error("type mismatch: expected ordered type");
-                return common::Symbol{};
+                return common::Type{};
             } else {
                 return builtin_types_[common::BuiltinTypes::BOOL];
             }
@@ -219,44 +219,52 @@ namespace checker {
         // arithmetic operators
         if (common::empty(traits & common::TypeTraits::NUMERIC)) {
             report_error("type mismatch: expected numeric type");
-            return common::Symbol{};
+            return common::Type{};
         } else if (expr.op == common::BinaryOp::REMAINDER && common::empty(traits & common::TypeTraits::INTEGER)) {
             report_error("type mismatch: expected integer operands for % operator");
-            return common::Symbol{};
+            return common::Type{};
         }
 
         return lhs;
     }
 
-    common::Symbol Checker::check_cast(common::Cast &cast) {
-        common::Symbol dst_sym = module_.find(cast.to);
+    common::Type Checker::check_cast(common::Cast &cast) {
+        if (cast.to.indirection_level != 0) {
+            report_error("cats to pointer types are not allowed");
+            return common::Type{};
+        }
+        common::Symbol dst_sym = module_.find(cast.to.name);
+        cast.dst_type = common::Type{dst_sym};
         std::optional<common::BuiltinType> dst = module_.get_scope(dst_sym.scope)->get_type(dst_sym.id);
         if (!dst) {
             report_error("can not cast to unknown type");
-            return common::Symbol{};
+            return common::Type{};
         }
 
-        common::Symbol src = check_expression(cast.from);
+        common::Type src = check_expression(cast.from);
         if (src.is_error()) {
-            return common::Symbol{};
+            return common::Type{};
+        } else if (src.is_pointer()) {
+            report_error("casts from pointer types are not allowed");
+            return common::Type{};
         }
-        common::TypeTraits src_traits = module_.get_scope(src.scope)->get_type(src.id)->traits;
+        common::TypeTraits src_traits = module_.get_scope(src.sym.scope)->get_type(src.sym.id)->traits;
 
         // TODO: empty traits
         if (dst->traits == src_traits) {
-            return dst_sym;
+            return common::Type{dst_sym};
         }
 
         if (!common::empty(dst->traits & common::TypeTraits::BOOLEAN) ||
             !common::empty(src_traits & common::TypeTraits::BOOLEAN)) {
             report_error("can not cast to bool");
-            return common::Symbol{};
+            return common::Type{};
         }
 
-        return dst_sym;
+        return cast.dst_type;
     }
 
-    common::Symbol Checker::get_type_for_literal(common::Literal lit) {
+    common::Type Checker::get_type_for_literal(common::Literal lit) {
         switch (lit.type) {
         case common::LiteralType::BOOL:
             return builtin_types_.at(common::BuiltinTypes::BOOL);
@@ -266,59 +274,48 @@ namespace checker {
             return builtin_types_.at(common::BuiltinTypes::FLOAT);
         default:
             report_error("unknown literal type");
-            return common::Symbol{};
+            return common::Type{};
         }
     }
 
-    common::Symbol Checker::check_function_call(common::FunctionCall &call, common::Expression &incoming_edge) {
-        if (common::Scope::type(module_.global_scope()->find(call.name)) == common::SymbolType::BUILTIN_TYPE) {
-            if (call.args.size() != 1) {
-                report_error("expected exactly 1 argument for a cast");
-                return common::Symbol{};
-            }
-
-            common::Cast cast{.to = call.name, .from = call.args[0]};
-            common::Symbol result = check_cast(cast);
-            if (result.is_error()) {
-                return common::Symbol{};
-            }
-            incoming_edge.kind = common::ExpressionKind::CAST;
-            incoming_edge.id = ast_->add_cast(cast);
-            return result;
+    common::Type Checker::check_function_call(common::FunctionCall &call, common::Expression &incoming_edge) {
+        if (common::Scope::type(module_.global_scope()->find(call.name)) != common::SymbolType::FUNCTION) {
+            report_error(*identifiers_->get(call.name) + " is not a function");
+            return common::Type{};
         }
 
         common::FunctionID func_id = module_.global_scope()->get_function(call.name);
         if (func_id == common::FunctionID{}) {
             report_error("function not defined");
-            return common::Symbol{};
+            return common::Type{};
         }
         common::Function &func = *ast_->get_function(func_id);
         if (func.decl_only) {
             // function declared, but not defined
             report_error("function not defined");
-            return common::Symbol{};
+            return common::Type{};
         }
         if (*identifiers_->get(func.name) == "main") {
             report_error("main() must not be called");
-            return common::Symbol{};
+            return common::Type{};
         }
 
         if (call.args.size() != func.params.size()) {
             report_error("function call argument count mismatch, expected " +
                          std::to_string(func.params.size()) + ", got " + std::to_string(call.args.size()));
-            return common::Symbol{};
+            return common::Type{};
         }
         for (size_t i = 0; i < func.params.size(); ++i) {
             ErrorGuard eg{*this, call.args[i].pos};
             common::Variable &param = *ast_->get_var(func.params[i]);
 
-            common::Symbol type = check_expression(call.args[i]);
+            common::Type type = check_expression(call.args[i]);
             if (type.is_error()) {
-                return common::Symbol{};
+                return common::Type{};
             }
             if (type != param.type) {
                 report_error("function call argument's type mismatch");
-                return common::Symbol{};
+                return common::Type{};
             }
         }
 
@@ -342,11 +339,11 @@ namespace checker {
         return expr.kind == common::ExpressionKind::VARIABLE_REF;
     }
 
-    common::Symbol Checker::check_variable_ref(common::IdentifierID name) {
+    common::Type Checker::check_variable_ref(common::IdentifierID name) {
         common::Symbol sym = module_.find(name, scope_stack_.top());
         if (sym.is_error() || common::Scope::type(sym.id) != common::SymbolType::VARIABLE) {
             report_error("identifier does not name a variable");
-            return common::Symbol{};
+            return common::Type{};
         }
 
         common::Variable &var = *ast_->get_var(module_.get_scope(sym.scope)->get_variable(sym.id));
@@ -362,7 +359,7 @@ namespace checker {
         module_.global_scope()->add(func.name, func.id);
         const std::string &name = *identifiers_->get(func.name);
         if (name == "main") {
-            if (func.return_typename != common::IdentifierID{}) {
+            if (!func.return_typename.is_error()) {
                 report_error("main() must return void");
                 return;
             } else if (!func.params.empty()) {
@@ -370,18 +367,18 @@ namespace checker {
                 return;
             }
         }
-        if (func.return_typename != common::IdentifierID{}) {
-            func.return_type = module_.find(func.return_typename);
+        if (!func.return_typename.is_error()) {
+            func.return_type = common::Type{module_.find(func.return_typename.name), func.return_typename.indirection_level};
             if (func.return_type.is_error()) {
                 report_error("unknown return type");
                 return;
             }
-            if (common::Scope::type(func.return_type.id) != common::SymbolType::BUILTIN_TYPE) {
+            if (common::Scope::type(func.return_type.sym.id) != common::SymbolType::BUILTIN_TYPE) {
                 report_error("function's return type must be a typename");
                 return;
             }
         } else {
-            func.return_type = common::g_void;
+            func.return_type = common::Type{common::g_void};
         }
 
         func.scope = module_.make_scope(module_.global_scope()->id());
@@ -392,11 +389,11 @@ namespace checker {
                 report_error("can't declare function parameter: name already declared");
                 return;
             }
-            if (param.explicit_type == common::IdentifierID{}) {
+            if (param.explicit_type.is_error()) {
                 report_error("function parameters must be explicitly typed");
                 return;
             }
-            param.type = module_.find(param.explicit_type);
+            param.type = common::Type{module_.find(param.explicit_type.name), param.explicit_type.indirection_level};
             if (param.type.is_error()) {
                 report_error("invalid function parameter type");
                 return;
@@ -410,12 +407,12 @@ namespace checker {
     }
 
     void Checker::check_branch(common::Branch &branch) {
-        common::Symbol type = check_expression(branch.predicate);
+        common::Type type = check_expression(branch.predicate);
         branch.predicate.type = type;
         if (type.is_error()) {
             return;
-        }
-        if (common::empty(module_.get_scope(type.scope)->get_traits(type.id) & common::TypeTraits::BOOLEAN)) {
+        } else if (type.is_pointer() ||
+                   common::empty(module_.get_scope(type.sym.scope)->get_traits(type.sym.id) & common::TypeTraits::BOOLEAN)) {
             ErrorGuard eg{*this, branch.predicate.pos};
             report_error("expected boolean expression in an if statement");
             return;
@@ -466,7 +463,7 @@ namespace checker {
                 reachability_stack_.top() = Reachability::RETURNS;
             }
             common::Function &func = *ast_->get_function(current_function_);
-            common::Symbol ret = check_expression(*ast_->get_expression(smt.id));
+            common::Type ret = check_expression(*ast_->get_expression(smt.id));
             if (!ret.is_error() && func.return_type != ret) {
                 report_error("wrong return type");
             }
@@ -508,20 +505,23 @@ namespace checker {
             return;
         }
 
-        if (var.explicit_type != common::IdentifierID{}) {
-            var.type = module_.find(var.explicit_type, scope_stack_.top());
-            if (var.type.is_error() || common::Scope::type(var.type.id) != common::SymbolType::BUILTIN_TYPE) {
+        if (!var.explicit_type.is_error()) {
+            var.type = common::Type{
+                module_.find(var.explicit_type.name, scope_stack_.top()),
+                var.explicit_type.indirection_level,
+            };
+            if (var.type.is_error() || common::Scope::type(var.type.sym.id) != common::SymbolType::BUILTIN_TYPE) {
                 report_error("invalid variable type");
                 return;
             }
         }
 
-        common::Symbol expected_type = var.type;
+        common::Type expected_type = var.type;
         if (!var.initial_value.is_error()) {
             var.initial_value.type = check_expression(var.initial_value);
             expected_type = var.initial_value.type;
         }
-        if (var.explicit_type != common::IdentifierID{}) {
+        if (!var.explicit_type.is_error()) {
             if (var.type != expected_type) {
                 report_error("type mismatch: can not initialize variabe with expression of wrong type");
                 return;
@@ -544,8 +544,8 @@ namespace checker {
             return;
         } else if (!loop.condition.type.is_void()) {
             ErrorGuard eg{*this, loop.condition.pos};
-            common::Scope &scope = *module_.get_scope(loop.condition.type.scope);
-            if (common::empty(scope.get_traits(loop.condition.type.id) & common::TypeTraits::BOOLEAN)) {
+            common::Scope &scope = *module_.get_scope(loop.condition.type.sym.scope);
+            if (loop.condition.type.is_pointer() || common::empty(scope.get_traits(loop.condition.type.sym.id) & common::TypeTraits::BOOLEAN)) {
                 report_error("loop's condition must have boolean type");
                 return;
             }

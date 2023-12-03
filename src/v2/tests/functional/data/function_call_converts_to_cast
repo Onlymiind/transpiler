@@ -1,1 +1,1 @@
-func main() {u64(f64(u64(1.1 + 2.2)));}
+func main() {cast<u64>(cast<f64>(cast<u64>(1.1 + 2.2)));}

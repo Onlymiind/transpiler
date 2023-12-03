@@ -2,7 +2,7 @@ func a();
 
 func b() u64 {return 1 + 2;}
 
-func c() bool {return bool(f64(1) == f64(2));}
+func c() bool {return cast<bool>(cast<f64>(1) == cast<f64>(2));}
 
 func d() f64 {return -1.1;}
 

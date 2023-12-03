@@ -31,13 +31,13 @@ namespace checker {
         void add_declarations();
         void check();
 
-        common::Symbol check_expression(common::Expression &expr);
-        common::Symbol check_unary_expression(common::UnaryExpression &expr);
-        common::Symbol check_binary_expression(common::BinaryExpression &expr);
-        common::Symbol check_cast(common::Cast &cast);
-        common::Symbol check_function_call(common::FunctionCall &call, common::Expression &incoming_edge);
-        common::Symbol check_literal();
-        common::Symbol check_variable_ref(common::IdentifierID name);
+        common::Type check_expression(common::Expression &expr);
+        common::Type check_unary_expression(common::UnaryExpression &expr);
+        common::Type check_binary_expression(common::BinaryExpression &expr);
+        common::Type check_cast(common::Cast &cast);
+        common::Type check_function_call(common::FunctionCall &call, common::Expression &incoming_edge);
+        common::Type check_literal();
+        common::Type check_variable_ref(common::IdentifierID name);
         void check_function(common::Function &func);
         void check_function_decl(common::Function &func);
         void check_branch(common::Branch &branch);
@@ -55,7 +55,7 @@ namespace checker {
             return result;
         }
 
-        common::Symbol get_type_for_literal(common::Literal lit);
+        common::Type get_type_for_literal(common::Literal lit);
 
         void report_error(std::string err) {
             err_.msg = err;
@@ -95,7 +95,7 @@ namespace checker {
         common::Module module_;
         common::AST *ast_ = nullptr;
         common::Identifiers *identifiers_ = nullptr;
-        std::unordered_map<common::BuiltinTypes, common::Symbol> builtin_types_;
+        std::unordered_map<common::BuiltinTypes, common::Type> builtin_types_;
         common::Error err_;
         std::stack<size_t> err_positions_;
         std::stack<common::ScopeID> scope_stack_;
