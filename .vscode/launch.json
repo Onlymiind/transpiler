@@ -7,10 +7,20 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug",
-            "program": "${workspaceFolder}/build/transpiler",
+            "name": "tests",
+            "program": "${command:cmake.launchTargetDirectory}/tests",
             "args": [],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}/tests/functional"
+        },
+        {
+            "name": "compiler",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetDirectory}/compiler",
+            "args": [
+                "loop_reachability_fail"
+            ],
+            "cwd": "",
         }
     ]
 }

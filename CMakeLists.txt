@@ -1,70 +1,59 @@
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.18)
 
-project(transpiler CXX)
+project(compiler_v2 CXX)
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(LEXER_MODULE
-    src/lexer/lexer.h
-    src/lexer/lexer.cpp
+add_subdirectory(../../Catch2 ../../Catch2/build)
+
+set(COMPILER_SRC
+    common/token.h
+    common/util.h
+    common/expression.h
+    common/ast.h
+    common/types.h
+    common/module.h
+    common/literals.h
+    common/scope.h
+    common/statement.h
+
+    lexer/lexer.h
+    lexer/lexer.cpp
+
+    parser/parser.h
+    parser/parser.cpp
+
+    checker/checker.h
+    checker/checker.cpp
+
+    codegen/generator.h
+    codegen/generator.cpp
+
+    compiler/compiler.h
+    compiler/compiler.cpp
 )
 
-set(PARSER_MODULE
-    src/parser/parser.h
-    src/parser/parser.cpp
-    src/parser/declaration.h
+add_library(compiler_lib ${COMPILER_SRC})
+target_include_directories(compiler_lib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_executable(compiler main.cpp)
+target_include_directories(compiler PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(compiler compiler_lib)
+
+set(TEST_SRCS
+    tests/lexer_test.cpp
+    tests/parser_test.cpp
+    tests/checker_test.cpp
+    tests/generator_test.cpp
+    tests/functional/functional_tests.cpp
 )
 
-set(CHECKER_MODULE
-    src/checker/statement.h
-    src/checker/traits.h
-    src/checker/sym_table.h
-    src/checker/sym_table.cpp
-    src/checker/type_checker.h
-    src/checker/type_checker.cpp
-)
+add_executable(tests ${TEST_SRCS})
+target_include_directories(tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(tests Catch2WithMain compiler_lib)
 
-set(UTIL_MODULE
-    src/util/util.h
-    src/util/util.cpp
-    src/util/arena.h
-    src/util/variant.h
-    src/util/error_handler.h
-    src/util/error_handler.cpp
-)
+include(CTest)
+include(Catch)
+catch_discover_tests(tests WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/functional)
 
-set(TYPES_MODULE
-    src/types/token.h
-    src/types/token.cpp
-)
 
-add_library(transpiler_lib
-    ${LEXER_MODULE}
-    ${PARSER_MODULE}
-    ${CHECKER_MODULE}
-    ${UTIL_MODULE}
-    ${TYPES_MODULE}
-)
-
-add_executable(transpiler
-    src/main.cpp
-)
-
-add_executable(tests
-    tests/pn_parser.h
-    tests/pn_parser.cpp
-    tests/expression_test.cpp
-    tests/parser_tests.cpp
-)
-
-add_subdirectory(${CMAKE_SOURCE_DIR}/Catch2)
-
-set(BENCHMARK_ENABLE_TESTING OFF)
-add_subdirectory(${CMAKE_SOURCE_DIR}/benchmark)
-
-target_link_libraries(transpiler PRIVATE transpiler_lib)
-target_link_libraries(tests PRIVATE transpiler_lib Catch2WithMain)
-
-target_include_directories(transpiler_lib PUBLIC ${CMAKE_SOURCE_DIR}/src)
-#target_include_directories(tests PRIVATE ${CMAKE_SOURCE_DIR}/test)
-
-add_test("Transpiler tests" tests, WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
