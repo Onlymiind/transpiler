@@ -4,7 +4,7 @@ project(compiler_v2 CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_subdirectory(../../Catch2 ../../Catch2/build)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Catch2)
 
 set(COMPILER_SRC
     common/token.h

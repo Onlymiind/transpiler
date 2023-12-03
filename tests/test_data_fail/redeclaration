@@ -1,3 +1,0 @@
-type Foo u8;
-type Foo Foo;
-
