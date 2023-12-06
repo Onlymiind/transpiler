@@ -66,22 +66,12 @@ namespace codegen {
         *out_ << ')';
 
         switch (lit.type) {
-        case common::LiteralType::BOOL:
-            if (lit.value == common::g_false_id) {
-                *out_ << '0';
-            } else if (lit.value == common::g_true_id) {
-                *out_ << '1';
-            } else {
-                report_error("livalid literal id for boolean");
-            }
-            break;
-        case common::LiteralType::UINT:
-            *out_ << *literals_->get_integer(lit.value);
-            break;
+        case common::LiteralType::BOOL: *out_ << lit.boolean; break;
+        case common::LiteralType::UINT: *out_ << lit.integer; break;
         case common::LiteralType::FLOAT: {
             int presicion = out_->precision();
             *out_ << std::setprecision(std::numeric_limits<double>::digits10)
-                  << *literals_->get_double(lit.value) << std::setprecision(presicion);
+                  << lit.floating << std::setprecision(presicion);
             break;
         }
         default:

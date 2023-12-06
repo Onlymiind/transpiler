@@ -72,8 +72,8 @@ namespace lexer {
     }
 
     static const std::unordered_map<std::string_view, common::Token> g_keywords{
-        {"true", common::Token{.type = common::TokenType::BOOL, .data = common::GenericID{common::g_true_id}}},
-        {"false", common::Token{.type = common::TokenType::BOOL, .data = common::GenericID{common::g_false_id}}},
+        {"true", common::Token{.type = common::TokenType::BOOL, .boolean = true}},
+        {"false", common::Token{.type = common::TokenType::BOOL, .boolean = false}},
         {"func", common::Token{.type = common::TokenType::FUNC}},
         {"return", common::Token{.type = common::TokenType::RETURN}},
         {"var", common::Token{.type = common::TokenType::VAR}},
@@ -112,7 +112,7 @@ namespace lexer {
         }
 
         result.type = common::TokenType::IDENTIFIER;
-        result.data = common::GenericID{result_.identifiers.add(std::move(buf))};
+        result.identifier = result_.identifiers.add(std::move(buf));
 
         return result;
     }
@@ -135,7 +135,7 @@ namespace lexer {
                 put_back(*c);
             }
             result.type = common::TokenType::INTEGER;
-            result.data = common::GenericID{result_.literals.add(integer)};
+            result.integer = integer;
             return result;
         } else if (*c != '.') {
             report_error("expected either . or a space after numeric literal");
@@ -160,9 +160,7 @@ namespace lexer {
         }
 
         result.type = common::TokenType::FLOAT;
-        result.data = common::GenericID{result_.literals.add(static_cast<double>(integer) +
-                                                             static_cast<double>(fraction) /
-                                                                 static_cast<double>(exponent))};
+        result.floating = static_cast<double>(integer) + static_cast<double>(fraction) / static_cast<double>(exponent);
 
         return result;
     }

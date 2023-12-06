@@ -58,10 +58,17 @@ namespace parser {
         using enum common::TokenType;
         auto make_literal_expr = [this](common::LiteralType type) {
             common::Token tok = next();
+            common::Literal result{.type = type};
+            switch (type) {
+            case common::LiteralType::BOOL: result.boolean = tok.boolean; break;
+            case common::LiteralType::UINT: result.integer = tok.integer; break;
+            case common::LiteralType::FLOAT: result.floating = tok.floating; break;
+            default: report_error("unknown literal type"); break;
+            }
             consume();
             return common::Expression{
                 .kind = common::ExpressionKind::LITERAL,
-                .id = ast_.add(common::Literal{.type = type, .value = common::LiteralID{tok.data}}),
+                .id = ast_.add(result),
                 .pos = tok.pos,
             };
         };
@@ -94,7 +101,7 @@ namespace parser {
 
     common::Expression Parser::parse_identifier_ref() {
         size_t pos = next().pos;
-        common::IdentifierID name = common::IdentifierID{get_expected(common::TokenType::IDENTIFIER, "function call: expected function name")};
+        common::IdentifierID name = common::IdentifierID{match_identifier("function call: expected function name")};
         if (name == common::IdentifierID{}) {
             return common::Expression{};
         }
@@ -179,7 +186,7 @@ namespace parser {
             return;
         }
 
-        result.name = common::IdentifierID{get_expected(common::TokenType::IDENTIFIER, "expected function name")};
+        result.name = common::IdentifierID{match_identifier("expected function name")};
         if (result.name == common::IdentifierID{}) {
             return;
         }
@@ -230,7 +237,7 @@ namespace parser {
         }
 
         common::Variable result{.pos = next().pos};
-        result.name = common::IdentifierID{get_expected(common::TokenType::IDENTIFIER, "expected variable's name")};
+        result.name = common::IdentifierID{match_identifier("expected variable's name")};
         if (result.name == common::IdentifierID{}) {
             return;
         }
@@ -300,7 +307,7 @@ namespace parser {
             return common::Statement{};
         }
 
-        result.name = common::IdentifierID{get_expected(common::TokenType::IDENTIFIER, "expected variable's name")};
+        result.name = common::IdentifierID{match_identifier("expected variable's name")};
         if (result.name == common::IdentifierID{}) {
             return common::Statement{};
         }
@@ -328,7 +335,7 @@ namespace parser {
         size_t pos = next().pos;
         common::Variable param{.pos = pos};
         if (next().type == common::TokenType::IDENTIFIER) {
-            param.explicit_type.name = common::IdentifierID{next().data};
+            param.explicit_type.name = common::IdentifierID{next().identifier};
             consume();
             if (param.explicit_type.name == common::IdentifierID{}) {
                 return common::VariableID{};
@@ -469,7 +476,7 @@ namespace parser {
         for (; next().type == common::TokenType::MUL; consume()) {
             ++result.indirection_level;
         }
-        result.name = common::IdentifierID{get_expected(common::TokenType::IDENTIFIER, "expected type name")};
+        result.name = common::IdentifierID{match_identifier("expected type name")};
         if (result.name == common::IdentifierID{}) {
             return common::ParsedType{};
         }

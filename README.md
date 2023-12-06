@@ -38,6 +38,10 @@ gcc <path-to-output-file>
 ## TODO next (roadmap):
 - arrays and slices
 - record types
+- add more built-in types
 - temporary basic built-in IO
+- constant folding
+- allow constexpr initializers on global variables
+- struct and array literals
 - all other features to make this usable :)
 

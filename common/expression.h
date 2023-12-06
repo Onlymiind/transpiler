@@ -161,11 +161,11 @@ namespace common {
 
     struct Literal {
         LiteralType type{};
-        LiteralID value = LiteralID{g_invalid_id};
-
-        constexpr bool operator==(const Literal &other) const noexcept {
-            return value == other.value;
-        }
+        union {
+            uint64_t integer = 0;
+            double floating;
+            bool boolean;
+        };
     };
 
     struct FunctionCall {
@@ -178,6 +178,11 @@ namespace common {
         ParsedType to;
         Expression from;
         Type dst_type;
+    };
+
+    struct ParsedArray {
+        Literal length;
+        ParsedType type;
     };
 
 } // namespace common

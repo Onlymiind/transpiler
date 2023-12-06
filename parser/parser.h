@@ -60,12 +60,12 @@ namespace parser {
         const common::Token &next() const { return remainder_.front(); }
         void consume() { remainder_ = remainder_.subspan(1); }
 
-        common::GenericID get_expected(common::TokenType expected, std::string_view err_msg) {
-            if (next().type != expected) {
+        common::IdentifierID match_identifier(std::string_view err_msg) {
+            if (next().type != common::TokenType::IDENTIFIER) {
                 report_error(err_msg);
-                return common::GenericID{};
+                return common::IdentifierID{};
             }
-            common::GenericID result = next().data;
+            common::IdentifierID result = next().identifier;
             consume();
             return result;
         }

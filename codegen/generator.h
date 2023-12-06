@@ -20,15 +20,14 @@ namespace codegen {
 
     class Generator {
       public:
-        Generator(std::ostream &out, common::Module &mod, common::AST &ast, common::Identifiers &identifiers, common::Literals &literals)
-            : out_(&out), mod_(&mod), ast_(&ast), identifiers_(&identifiers), literals_(&literals) {}
+        Generator(std::ostream &out, common::Module &mod, common::AST &ast, common::Identifiers &identifiers)
+            : out_(&out), mod_(&mod), ast_(&ast), identifiers_(&identifiers) {}
 
         void set_file(std::ostream &out) { out_ = &out; }
-        void set_module(common::Module &mod, common::AST &ast, common::Identifiers &identifiers, common::Literals &literals) {
+        void set_module(common::Module &mod, common::AST &ast, common::Identifiers &identifiers) {
             mod_ = &mod;
             ast_ = &ast;
             identifiers_ = &identifiers;
-            literals_ = &literals;
         }
 
         void codegen();
@@ -74,7 +73,6 @@ namespace codegen {
         common::Module *mod_ = nullptr;
         common::AST *ast_ = nullptr;
         common::Identifiers *identifiers_ = nullptr;
-        common::Literals *literals_ = nullptr;
         std::string_view err_;
     };
 } // namespace codegen

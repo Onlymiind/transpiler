@@ -15,7 +15,6 @@
 namespace lexer {
     struct LexerResult {
         std::vector<common::Token> tokens;
-        common::Literals literals;
         common::Identifiers identifiers;
     };
 

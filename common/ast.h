@@ -181,12 +181,6 @@ namespace common {
         std::vector<VariableID> &global_variables() { return global_variables_; }
         const std::vector<VariableID> &global_variables() const { return global_variables_; }
 
-        bool operator==(const AST &other) const {
-            return unary_exprs_ == other.unary_exprs_ &&
-                   binary_exprs_ == other.binary_exprs_ &&
-                   literal_exprs_ == other.literal_exprs_;
-        }
-
       private:
         std::vector<UnaryExpression> unary_exprs_;
         std::vector<BinaryExpression> binary_exprs_;

@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -44,11 +45,19 @@ class PolishNotationParser {
         }
 
         auto make_literal_expr = [this](common::LiteralType type) {
-            auto tok = next();
+            common::Token tok = next();
+            common::Literal result{.type = type};
+            switch (type) {
+            case common::LiteralType::BOOL: result.boolean = tok.boolean; break;
+            case common::LiteralType::UINT: result.integer = tok.integer; break;
+            case common::LiteralType::FLOAT: result.floating = tok.floating; break;
+            default: throw std::runtime_error("unknown literal type");
+            }
             consume();
             return common::Expression{
                 .kind = common::ExpressionKind::LITERAL,
-                .id = file_.add(common::Literal{.type = type, .value = common::LiteralID{tok.data}}),
+                .id = file_.add(result),
+                .pos = tok.pos,
             };
         };
 
@@ -60,7 +69,7 @@ class PolishNotationParser {
             consume();
             return parse_unary_expression();
         case common::TokenType::IDENTIFIER: {
-            common::Cast result{.to = common::ParsedType{common::IdentifierID{next().data}}};
+            common::Cast result{.to = common::ParsedType{common::IdentifierID{next().identifier}}};
             consume();
             result.from = parse_expression();
             return common::Expression{.kind = common::ExpressionKind::CAST, .id = file_.add_cast(result)};
@@ -99,10 +108,8 @@ class PolishNotationParser {
 
 struct ExprComparer {
     common::AST &lhs_file;
-    common::Literals &lhs_literals;
     common::Identifiers &lhs_identifiers;
     common::AST &rhs_file;
-    common::Literals &rhs_literals;
     common::Identifiers &rhs_identifiers;
 
     bool compare(common::Expression lhs, common::Expression rhs) {
@@ -158,12 +165,9 @@ struct ExprComparer {
                 return false;
             }
             switch (lhs_lit.type) {
-            case common::LiteralType::BOOL:
-                return lhs_lit.value == rhs_lit.value;
-            case common::LiteralType::UINT:
-                return lhs_literals.get_integer(lhs_lit.value) == rhs_literals.get_integer(rhs_lit.value);
-            case common::LiteralType::FLOAT:
-                return lhs_literals.get_double(lhs_lit.value) == rhs_literals.get_double(rhs_lit.value);
+            case common::LiteralType::BOOL: return lhs_lit.boolean == rhs_lit.boolean;
+            case common::LiteralType::UINT: return lhs_lit.integer == rhs_lit.integer;
+            case common::LiteralType::FLOAT: return lhs_lit.floating == rhs_lit.floating;
             }
         }
         }
@@ -192,10 +196,7 @@ TEST_CASE("parser: literals", "[parser]") {
     auto result = p.parse_expression();
     REQUIRE(p.get_error().empty());
     auto file = p.reset();
-    REQUIRE(ExprComparer{
-        file, lexer_result2.literals, lexer_result2.identifiers,
-        expected.first, lexer_result1.literals, lexer_result1.identifiers}
-                .compare(result, expected.second));
+    REQUIRE(ExprComparer{file, lexer_result2.identifiers, expected.first, lexer_result1.identifiers}.compare(result, expected.second));
 }
 
 struct ParserTestCase {
@@ -224,9 +225,7 @@ void run_tests(const std::vector<ParserTestCase> &cases) {
         auto result = p.parse_expression();
         REQUIRE(p.get_error().empty());
         auto file = p.reset();
-        REQUIRE(ExprComparer{file, lexer_result2.literals, lexer_result2.identifiers,
-                             expected.first, lexer_result1.literals, lexer_result1.identifiers}
-                    .compare(result, expected.second));
+        REQUIRE(ExprComparer{file, lexer_result2.identifiers, expected.first, lexer_result1.identifiers}.compare(result, expected.second));
     }
 }
 

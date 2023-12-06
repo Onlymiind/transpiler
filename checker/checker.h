@@ -36,7 +36,6 @@ namespace checker {
         common::Type check_binary_expression(common::BinaryExpression &expr);
         common::Type check_cast(common::Cast &cast);
         common::Type check_function_call(common::FunctionCall &call, common::Expression &incoming_edge);
-        common::Type check_literal();
         common::Type check_variable_ref(common::IdentifierID name);
         void check_function(common::Function &func);
         void check_function_decl(common::Function &func);

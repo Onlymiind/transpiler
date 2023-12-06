@@ -82,8 +82,12 @@ namespace common {
 
     struct Token {
         TokenType type = TokenType::ERROR;
-
-        GenericID data = g_invalid_id;
+        union {
+            uint64_t integer = 0;
+            double floating;
+            IdentifierID identifier;
+            bool boolean;
+        };
 
         size_t pos = 0;
 
@@ -93,10 +97,6 @@ namespace common {
 
         constexpr bool is_eof() const noexcept {
             return type == TokenType::END_OF_FILE;
-        }
-
-        constexpr bool operator==(const Token &other) const noexcept {
-            return type == other.type && data == other.data;
         }
     };
 
