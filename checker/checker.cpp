@@ -6,6 +6,8 @@
 #include "common/types.h"
 #include "common/util.h"
 #include <cstddef>
+#include <cstdint>
+#include <optional>
 #include <string>
 
 namespace checker {
@@ -105,15 +107,30 @@ namespace checker {
         case common::ExpressionKind::LITERAL:
             result = get_type_for_literal(*ast_->get_literal(expr.id));
             break;
-        case common::ExpressionKind::UNARY:
-            result = check_unary_expression(*ast_->get_unary_expression(expr.id));
+        case common::ExpressionKind::UNARY: {
+            common::UnaryExpression &unary = *ast_->get_unary_expression(expr.id);
+            result = check_unary_expression(unary);
+            if (!result.is_error() && do_constant_folding_) {
+                try_compute(unary, expr);
+            }
             break;
-        case common::ExpressionKind::BINARY:
-            result = check_binary_expression(*ast_->get_binary_expression(expr.id));
+        }
+        case common::ExpressionKind::BINARY: {
+            common::BinaryExpression &binary = *ast_->get_binary_expression(expr.id);
+            result = check_binary_expression(binary);
+            if (!result.is_error() && do_constant_folding_) {
+                try_compute(binary, expr);
+            }
             break;
-        case common::ExpressionKind::CAST:
-            result = check_cast(*ast_->get_cast(expr.id));
+        }
+        case common::ExpressionKind::CAST: {
+            common::Cast &cast = *ast_->get_cast(expr.id);
+            result = check_cast(cast);
+            if (!result.is_error() && do_constant_folding_) {
+                try_compute(cast, expr);
+            }
             break;
+        }
         case common::ExpressionKind::FUNCTION_CALL:
             result = check_function_call(*ast_->get_call(expr.id), expr);
             break;
@@ -590,6 +607,182 @@ namespace checker {
             return Reachability::REACHABLE;
         }
         return Reachability::UNREACHABLE;
+    }
+
+    void Checker::try_compute(common::UnaryExpression &expr, common::Expression &ref_to_this) {
+        if (expr.expr.kind != common::ExpressionKind::LITERAL) {
+            return;
+        }
+
+        common::Literal lit = *ast_->get_literal(expr.expr.id);
+        switch (expr.op) {
+        case common::UnaryOp::NEGATE:
+            if (lit.type != common::LiteralType::FLOAT) {
+                return;
+            }
+            lit.floating = -lit.floating;
+            break;
+        case common::UnaryOp::NOT: lit.boolean = !lit.boolean; break;
+        default: return;
+        }
+        ast_->free_literal(expr.expr.id);
+        ref_to_this.kind = common::ExpressionKind::LITERAL;
+        ref_to_this.id = ast_->add(lit);
+    }
+
+    void Checker::try_compute(common::BinaryExpression &expr, common::Expression &ref_to_this) {
+        if (expr.lhs.kind != common::ExpressionKind::LITERAL || expr.rhs.kind != common::ExpressionKind::LITERAL) {
+            return;
+        }
+
+        common::Literal lhs = *ast_->get_literal(expr.lhs.id);
+        common::Literal rhs = *ast_->get_literal(expr.rhs.id);
+        if (lhs.type != rhs.type) {
+            return;
+        }
+
+        auto do_rel_op = []<typename T>(common::BinaryOp op, T lhs, T rhs) -> std::optional<bool> {
+            switch (op) {
+            case common::BinaryOp::LESS: return lhs < rhs;
+            case common::BinaryOp::LESS_EQUALS: return lhs <= rhs;
+            case common::BinaryOp::GREATER: return lhs > rhs;
+            case common::BinaryOp::GREATER_EQUALS: return lhs >= rhs;
+            case common::BinaryOp::NOT_EQUALS: return lhs != rhs;
+            case common::BinaryOp::EQUALS: return lhs == rhs;
+            default: return {};
+            }
+        };
+        auto do_integer_op = [this](common::BinaryOp op, uint64_t lhs, uint64_t rhs) -> std::optional<uint64_t> {
+            switch (op) {
+            case common::BinaryOp::BITWISE_OR: return lhs | rhs;
+            case common::BinaryOp::BITWISE_AND: return lhs & rhs;
+            case common::BinaryOp::REMAINDER:
+                if (rhs == 0) {
+                    report_error("division by zero");
+                    return {};
+                }
+                return lhs % rhs;
+            default: return {};
+            }
+        };
+        auto do_op = [this]<typename T>(common::BinaryOp op, T lhs, T rhs) -> std::optional<T> {
+            switch (op) {
+            case common::BinaryOp::ADD: return lhs + rhs;
+            case common::BinaryOp::SUB: return lhs - rhs;
+            case common::BinaryOp::MUL: return lhs * rhs;
+            case common::BinaryOp::DIV:
+                if (rhs == T{0}) {
+                    report_error("division by zero");
+                    return {};
+                }
+                return lhs / rhs;
+            case common::BinaryOp::AND: return lhs && rhs;
+            case common::BinaryOp::OR: return lhs || rhs;
+            default: return {};
+            }
+        };
+
+        common::Literal result;
+        switch (lhs.type) {
+        case common::LiteralType::BOOL: {
+            result.type = common::LiteralType::BOOL;
+            std::optional<bool> val;
+            if (common::is_relational(expr.op)) {
+                val = do_rel_op(expr.op, lhs.boolean, rhs.boolean);
+            } else {
+                val = do_op(expr.op, lhs.boolean, rhs.boolean);
+            }
+            if (!val) {
+                return;
+            }
+            result.boolean = *val;
+            break;
+        }
+        case common::LiteralType::UINT: {
+            result.type = common::LiteralType::UINT;
+            std::optional<uint64_t> val;
+            if (common::is_relational(expr.op)) {
+                std::optional<bool> bool_val = do_rel_op(expr.op, lhs.integer, rhs.integer);
+                if (!bool_val) {
+                    return;
+                }
+                result.type = common::LiteralType::BOOL;
+                result.boolean = *bool_val;
+                break;
+            } else if (common::is_bitwise(expr.op) || expr.op == common::BinaryOp::REMAINDER) {
+                val = do_integer_op(expr.op, lhs.integer, rhs.integer);
+            } else {
+                val = do_op(expr.op, lhs.integer, rhs.integer);
+            }
+            if (!val) {
+                return;
+            }
+            result.integer = *val;
+            break;
+        }
+        case common::LiteralType::FLOAT: {
+            result.type = common::LiteralType::FLOAT;
+            std::optional<double> val;
+            if (common::is_relational(expr.op)) {
+                std::optional<bool> bool_val = do_rel_op(expr.op, lhs.floating, rhs.floating);
+                if (!bool_val) {
+                    return;
+                }
+                result.type = common::LiteralType::BOOL;
+                result.boolean = *bool_val;
+                break;
+            } else {
+                val = do_op(expr.op, lhs.floating, rhs.floating);
+            }
+            if (!val) {
+                return;
+            }
+            result.floating = *val;
+            break;
+        }
+        default: return;
+        }
+
+        ast_->free_literal(expr.lhs.id);
+        ast_->free_literal(expr.rhs.id);
+        ref_to_this.kind = common::ExpressionKind::LITERAL;
+        ref_to_this.id = ast_->add(result);
+    }
+
+    void Checker::try_compute(common::Cast &cast, common::Expression &ref_to_this) {
+        if (cast.from.kind != common::ExpressionKind::LITERAL) {
+            return;
+        }
+        common::Type floating_type = builtin_types_[common::BuiltinTypes::FLOAT];
+        common::Type integer_type = builtin_types_[common::BuiltinTypes::UINT];
+        common::Type boolean_type = builtin_types_[common::BuiltinTypes::BOOL];
+
+        common::Literal from = *ast_->get_literal(cast.from.id);
+        if (cast.dst_type == floating_type) {
+            switch (from.type) {
+            case common::LiteralType::UINT: from.floating = static_cast<double>(from.integer); break;
+            case common::LiteralType::FLOAT: break;
+            default: return;
+            }
+            from.type = common::LiteralType::FLOAT;
+        } else if (cast.dst_type == integer_type) {
+            switch (from.type) {
+            case common::LiteralType::UINT: break;
+            case common::LiteralType::FLOAT: from.integer = static_cast<uint64_t>(from.floating); break;
+            default: return;
+            }
+            from.type = common::LiteralType::UINT;
+        } else if (cast.dst_type == boolean_type) {
+            if (from.type != common::LiteralType::BOOL) {
+                return;
+            }
+        } else {
+            return;
+        }
+
+        ast_->free_literal(cast.from.id);
+        ref_to_this.kind = common::ExpressionKind::LITERAL;
+        ref_to_this.id = ast_->add(from);
     }
 
 } // namespace checker

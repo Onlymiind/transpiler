@@ -1,0 +1,7 @@
+func main() {
+    var a = cast<u64>(2.1);
+    var a1 = cast<u64>(1);
+    var b = cast<f64>(10);
+    var b1 = cast<f64>(10.12345);
+    var c = cast<bool>(true);
+}

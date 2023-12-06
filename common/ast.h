@@ -6,6 +6,7 @@
 #include "common/statement.h"
 #include "common/util.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <unordered_map>
@@ -75,9 +76,23 @@ namespace common {
         }
 
         ExpressionID add(Literal lit) {
+            if (!free_literals_.empty()) {
+                ExpressionID result{make_id<ExpressionID>(ExpressionKind::LITERAL, free_literals_.back())};
+                literal_exprs_[free_literals_.back()] = lit;
+                free_literals_.pop_back();
+                return result;
+            }
             ExpressionID result{make_id<ExpressionID>(ExpressionKind::LITERAL, literal_exprs_.size())};
             literal_exprs_.push_back(lit);
             return result;
+        }
+
+        void free_literal(ExpressionID expr) {
+            auto [type, idx] = decompose<ExpressionKind>(expr);
+            if (type != ExpressionKind::LITERAL) {
+                return;
+            }
+            free_literals_.push_back(idx);
         }
 
         ExpressionID add_cast(Cast cast) {
@@ -198,6 +213,8 @@ namespace common {
 
         std::vector<Branch> branches_;
         std::vector<Loop> loops_;
+
+        std::vector<uint64_t> free_literals_;
     };
 } // namespace common
 #endif

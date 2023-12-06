@@ -1,0 +1,22 @@
+func main() {
+    var a = 2 + 1;
+    var b = 3 * 6;
+    var d = 10 / 2;
+    var e = 11 < 12;
+    var e1 = 12 < 11;
+    var f = 12 > 11;
+    var f1 = 11 > 12;
+    var g = 12 >= 12;
+    var g1 = 13 >= 12;
+    var g2 = 1 >= 14;
+    var h = 13 <= 14;
+    var h1 = 1 <= 1;
+    var h2 = 1 <= 0;
+    var k = 1 == 2;
+    var k1 = 1 == 1;
+    var l = 2 != 3;
+    var l1 = 2 != 2;
+    var m = 4 % 3;
+    var n = 11 | 12;
+    var o = 6 & 4;
+}

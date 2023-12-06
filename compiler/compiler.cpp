@@ -70,8 +70,8 @@ namespace compiler {
         return parser.reset();
     }
 
-    std::optional<common::Module> check(common::AST &file, common::Identifiers &identifiers, std::istream &in_file, std::ostream &err) {
-        checker::Checker checker{file, identifiers};
+    std::optional<common::Module> check(common::AST &file, common::Identifiers &identifiers, std::istream &in_file, std::ostream &err, bool do_constant_folding) {
+        checker::Checker checker{file, identifiers, do_constant_folding};
         checker.check();
         common::Error error = checker.get_error();
         if (!error.empty()) {
@@ -90,7 +90,7 @@ namespace compiler {
         }
     }
 
-    void compile(std::istream &file, std::ostream &out, std::ostream &err) {
+    void compile(std::istream &file, std::ostream &out, std::ostream &err, bool do_constant_folding) {
         if (!file) {
             err << "can't read from input file\n";
             return;
@@ -125,7 +125,7 @@ namespace compiler {
         // not an optional, this is needed because module doesn't have default constructor
         std::optional<common::Module> mod;
         try {
-            auto m = check(*parsed, lexer_result.identifiers, file, err);
+            auto m = check(*parsed, lexer_result.identifiers, file, err, do_constant_folding);
             if (!m) {
                 return;
             }

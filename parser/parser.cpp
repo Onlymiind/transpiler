@@ -160,7 +160,7 @@ namespace parser {
             for (auto next_op = common::to_binary_op(next().type);
                  next_op && common::get_precedence(*next_op) > op_precedence;
                  next_op = common::to_binary_op(next().type)) {
-                rhs = parse_binary_expression(rhs, op_precedence);
+                rhs = parse_binary_expression(rhs, common::get_precedence(*next_op));
                 if (rhs.is_error()) {
                     return common::Expression{};
                 }

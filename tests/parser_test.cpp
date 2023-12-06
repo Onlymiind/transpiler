@@ -291,9 +291,10 @@ TEST_CASE("parser: parenthesized expressions", "[parser]") {
 
 TEST_CASE("parser: precedence", "[parser]") {
     std::vector<ParserTestCase> cases = {
-        ParserTestCase{"1234 + 5678 * true + 9012", "+ 1234 + * 5678 true 9012"},
+        ParserTestCase{"1234 + 5678 * true + 9012", "+ + 1234 * 5678 true 9012"},
         ParserTestCase{"1 || 2 && 3 == 4 + 5 * 6", "|| 1 && 2 == 3 + 4 * 5 6"},
         ParserTestCase{"1 || (2 && 3.0) == (4 + 5) * 6 = 7", "= || 1 == && 2 3.0 * + 4 5 6 7"},
+        ParserTestCase{"7 - 10 * 3 - 1", "- - 7 * 10 3 1"},
     };
 
     run_tests(cases);

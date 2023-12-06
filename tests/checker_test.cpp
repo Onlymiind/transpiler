@@ -37,7 +37,7 @@ void run_tests(const std::vector<CheckerTestCase> cases) {
         auto expr = p.parse_expression();
         REQUIRE(p.get_error().empty());
         auto ast = p.reset();
-        checker::Checker ch{ast, lexer_result.identifiers};
+        checker::Checker ch{ast, lexer_result.identifiers, false};
         ch.add_builtins();
         auto type = ch.check_expression(expr);
         INFO(ch.get_error().msg);

@@ -1,0 +1,18 @@
+// clang-format off
+#include <stdint.h>
+
+typedef uint64_t u64;
+typedef uint8_t bool;
+typedef double f64;
+
+u64 foo(void);
+u64 foo(void) {
+return (u64)0;
+}
+int main(void) {
+f64 a = (f64)1234521;
+if((bool)1) {
+u64 b = (u64)1;
+}
+for (u64 i = (u64)18446744073709551614;((bool)0 || (i > (u64)12000000));(i = (u64)5)) {}
+}

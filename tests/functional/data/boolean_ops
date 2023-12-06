@@ -1,0 +1,11 @@
+func main() {
+    var a = true || false;
+    var a1 = false || false;
+    var b = true && true;
+    var b1 = true && false;
+    var c = false == true;
+    var c1 = false == false;
+    var d = !true;
+    var e = false != true;
+    var e1 = true != true;
+}

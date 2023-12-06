@@ -18,7 +18,7 @@
             "request": "launch",
             "program": "${command:cmake.launchTargetDirectory}/compiler",
             "args": [
-                "loop_reachability_fail"
+                "example"
             ],
             "cwd": "",
         }

@@ -5,7 +5,7 @@
 
 namespace compiler {
 
-    void compile(std::istream &file, std::ostream &out, std::ostream &err);
+    void compile(std::istream &file, std::ostream &out, std::ostream &err, bool do_constant_folding = true);
 }
 
 #endif

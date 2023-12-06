@@ -1,0 +1,14 @@
+// clang-format off
+#include <stdint.h>
+
+typedef uint64_t u64;
+typedef uint8_t bool;
+typedef double f64;
+
+int main(void) {
+u64 a = (u64)2;
+u64 a1 = (u64)1;
+f64 b = (f64)10;
+f64 b1 = (f64)10.12345;
+bool c = (bool)1;
+}

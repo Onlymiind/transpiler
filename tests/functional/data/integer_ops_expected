@@ -1,0 +1,29 @@
+// clang-gotmat off
+#include <stdint.h>
+
+typedef uint64_t u64;
+typedef uint8_t bool;
+typedef double f64;
+
+int main(void) {
+u64 a = (u64)3;
+u64 b = (u64)18;
+u64 d = (u64)5;
+bool e = (bool)1;
+bool e1 = (bool)0;
+bool f = (bool)1;
+bool f1 = (bool)0;
+bool g = (bool)1;
+bool g1 = (bool)1;
+bool g2 = (bool)0;
+bool h = (bool)1;
+bool h1 = (bool)1;
+bool h2 = (bool)0;
+bool k = (bool)0;
+bool k1 = (bool)1;
+bool l = (bool)1;
+bool l1 = (bool)0;
+u64 m = (u64)1;
+u64 n = (u64)15;
+u64 o = (u64)4;
+}

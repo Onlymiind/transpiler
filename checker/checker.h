@@ -25,7 +25,8 @@ namespace checker {
 
     class Checker {
       public:
-        Checker(common::AST &ast, common::Identifiers &identifiers) : ast_(&ast), identifiers_(&identifiers) {}
+        Checker(common::AST &ast, common::Identifiers &identifiers, bool do_constant_folding = true)
+            : ast_(&ast), identifiers_(&identifiers), do_constant_folding_(do_constant_folding) {}
 
         void add_builtins();
         void add_declarations();
@@ -48,6 +49,10 @@ namespace checker {
         bool is_lvalue(common::Expression expr);
         bool is_reachable() const { return reachability_stack_.top() == Reachability::REACHABLE; }
         static Reachability unite_reachability(Reachability lhs, Reachability rhs);
+
+        void try_compute(common::UnaryExpression &expr, common::Expression &ref_to_this);
+        void try_compute(common::BinaryExpression &expr, common::Expression &ref_to_this);
+        void try_compute(common::Cast &cast, common::Expression &ref_to_this);
 
         common::Module reset() {
             common::Module result{std::move(module_)};
@@ -101,6 +106,7 @@ namespace checker {
         std::stack<Reachability> reachability_stack_;
         common::FunctionID current_function_;
         uint64_t loop_cout_ = 0;
+        bool do_constant_folding_ = false;
     };
 
 } // namespace checker

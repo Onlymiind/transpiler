@@ -11,6 +11,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
+#include <cstdint>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -33,7 +34,7 @@ void run_tests(const std::vector<GeneratorTestCase> cases) {
         auto expr = p.parse_expression();
         REQUIRE(p.get_error().empty());
         auto ast = p.reset();
-        checker::Checker ch{ast, lexer_result.identifiers};
+        checker::Checker ch{ast, lexer_result.identifiers, false};
         ch.add_declarations();
         ch.check_expression(expr);
         REQUIRE(ch.get_error().empty());

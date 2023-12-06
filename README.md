@@ -4,10 +4,10 @@ This is a work-in-progress implementation of custom compiled general-purpose lan
 
 ## Current Status
 
-The compiler in it's current state implements a significant part of basic functionality, although a large number of crucial features is (for now) missing. It also takes a number of shortcuts by transpiling source code into C instead of machine language (e.g. there is no optimization pass whatsoever).
+The compiler in it's current state implements a significant part of basic programming laguage features, although the language remains quite simplistic (for now). The compiler also takes a number of shortcuts by transpiling source code into C instead of machine language (e.g. there is no optimization pass whatsoever).
 
 Currently inmplemented:
-- Basic strict type system
+- Basic static strict type system
 - Arbitrary expressions
 - Explicit type conversions
 - Functions and function calls
@@ -17,6 +17,7 @@ Currently inmplemented:
 - If statements
 - Loops
 - Pointers
+- Basic constant folding
 
 ## Building
 
@@ -36,12 +37,11 @@ gcc <path-to-output-file>
 ```
 
 ## TODO next (roadmap):
+- allow constexpr initializers on global variables
 - arrays and slices
 - record types
 - add more built-in types
 - temporary basic built-in IO
-- constant folding
-- allow constexpr initializers on global variables
 - struct and array literals
 - all other features to make this usable :)
 
