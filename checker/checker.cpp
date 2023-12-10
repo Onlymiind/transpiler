@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <sys/types.h>
 
 namespace checker {
 
@@ -300,17 +301,15 @@ namespace checker {
     }
 
     common::Type Checker::get_type_for_literal(common::Literal lit) {
-        switch (lit.type) {
-        case common::LiteralType::BOOL:
+        if (lit.is<bool>()) {
             return builtin_types_.at(common::BuiltinTypes::BOOL);
-        case common::LiteralType::UINT:
+        } else if (lit.is<uint64_t>()) {
             return builtin_types_.at(common::BuiltinTypes::UINT);
-        case common::LiteralType::FLOAT:
+        } else if (lit.is<double>()) {
             return builtin_types_.at(common::BuiltinTypes::FLOAT);
-        default:
-            report_error("unknown literal type");
-            return common::Type{};
         }
+        report_error("unknown literal type");
+        return common::Type{};
     }
 
     common::Type Checker::check_function_call(common::FunctionCall &call, common::Expression &incoming_edge) {
@@ -616,13 +615,8 @@ namespace checker {
 
         common::Literal lit = *ast_->get_literal(expr.expr.id);
         switch (expr.op) {
-        case common::UnaryOp::NEGATE:
-            if (lit.type != common::LiteralType::FLOAT) {
-                return;
-            }
-            lit.floating = -lit.floating;
-            break;
-        case common::UnaryOp::NOT: lit.boolean = !lit.boolean; break;
+        case common::UnaryOp::NEGATE: lit = -*lit.get<double>(); break;
+        case common::UnaryOp::NOT: lit = !*lit.get<bool>(); break;
         default: return;
         }
         ast_->free_literal(expr.expr.id);
@@ -637,7 +631,7 @@ namespace checker {
 
         common::Literal lhs = *ast_->get_literal(expr.lhs.id);
         common::Literal rhs = *ast_->get_literal(expr.rhs.id);
-        if (lhs.type != rhs.type) {
+        if (!lhs.same_type(rhs)) {
             return;
         }
 
@@ -683,64 +677,52 @@ namespace checker {
         };
 
         common::Literal result;
-        switch (lhs.type) {
-        case common::LiteralType::BOOL: {
-            result.type = common::LiteralType::BOOL;
+        if (lhs.is<bool>()) {
             std::optional<bool> val;
             if (common::is_relational(expr.op)) {
-                val = do_rel_op(expr.op, lhs.boolean, rhs.boolean);
+                val = do_rel_op(expr.op, *lhs.get<bool>(), *rhs.get<bool>());
             } else {
-                val = do_op(expr.op, lhs.boolean, rhs.boolean);
+                val = do_op(expr.op, *lhs.get<bool>(), *rhs.get<bool>());
             }
             if (!val) {
                 return;
             }
-            result.boolean = *val;
-            break;
-        }
-        case common::LiteralType::UINT: {
-            result.type = common::LiteralType::UINT;
-            std::optional<uint64_t> val;
+            result = *val;
+        } else if (lhs.is<uint64_t>()) {
             if (common::is_relational(expr.op)) {
-                std::optional<bool> bool_val = do_rel_op(expr.op, lhs.integer, rhs.integer);
-                if (!bool_val) {
+                std::optional<bool> val = do_rel_op(expr.op, *lhs.get<uint64_t>(), *rhs.get<uint64_t>());
+                if (!val) {
                     return;
                 }
-                result.type = common::LiteralType::BOOL;
-                result.boolean = *bool_val;
-                break;
-            } else if (common::is_bitwise(expr.op) || expr.op == common::BinaryOp::REMAINDER) {
-                val = do_integer_op(expr.op, lhs.integer, rhs.integer);
+                result = *val;
             } else {
-                val = do_op(expr.op, lhs.integer, rhs.integer);
-            }
-            if (!val) {
-                return;
-            }
-            result.integer = *val;
-            break;
-        }
-        case common::LiteralType::FLOAT: {
-            result.type = common::LiteralType::FLOAT;
-            std::optional<double> val;
-            if (common::is_relational(expr.op)) {
-                std::optional<bool> bool_val = do_rel_op(expr.op, lhs.floating, rhs.floating);
-                if (!bool_val) {
+                std::optional<uint64_t> val;
+                if (common::is_bitwise(expr.op) || expr.op == common::BinaryOp::REMAINDER) {
+                    val = do_integer_op(expr.op, *lhs.get<uint64_t>(), *rhs.get<uint64_t>());
+                } else {
+                    val = do_op(expr.op, *lhs.get<uint64_t>(), *rhs.get<uint64_t>());
+                }
+                if (!val) {
                     return;
                 }
-                result.type = common::LiteralType::BOOL;
-                result.boolean = *bool_val;
-                break;
+                result = *val;
+            }
+        } else if (lhs.is<double>()) {
+            if (common::is_relational(expr.op)) {
+                std::optional<bool> val = do_rel_op(expr.op, *lhs.get<double>(), *rhs.get<double>());
+                if (!val) {
+                    return;
+                }
+                result = *val;
             } else {
-                val = do_op(expr.op, lhs.floating, rhs.floating);
+                std::optional<double> val = do_op(expr.op, *lhs.get<double>(), *rhs.get<double>());
+                if (!val) {
+                    return;
+                }
+                result = *val;
             }
-            if (!val) {
-                return;
-            }
-            result.floating = *val;
-            break;
-        }
-        default: return;
+        } else {
+            return;
         }
 
         ast_->free_literal(expr.lhs.id);
@@ -759,25 +741,21 @@ namespace checker {
 
         common::Literal from = *ast_->get_literal(cast.from.id);
         if (cast.dst_type == floating_type) {
-            switch (from.type) {
-            case common::LiteralType::UINT: from.floating = static_cast<double>(from.integer); break;
-            case common::LiteralType::FLOAT: break;
-            default: return;
+            if (!from.is<uint64_t>() && !from.is<double>()) {
+                return;
+            } else if (uint64_t *uint = from.get<uint64_t>(); uint) {
+                from = static_cast<double>(*uint);
             }
-            from.type = common::LiteralType::FLOAT;
         } else if (cast.dst_type == integer_type) {
-            switch (from.type) {
-            case common::LiteralType::UINT: break;
-            case common::LiteralType::FLOAT: from.integer = static_cast<uint64_t>(from.floating); break;
-            default: return;
+            if (!from.is<uint64_t>() && !from.is<double>()) {
+                return;
+            } else if (double *d = from.get<double>(); d) {
+                from = static_cast<uint64_t>(*d);
             }
-            from.type = common::LiteralType::UINT;
         } else if (cast.dst_type == boolean_type) {
-            if (from.type != common::LiteralType::BOOL) {
+            if (!from.is<bool>()) {
                 return;
             }
-        } else {
-            return;
         }
 
         ast_->free_literal(cast.from.id);

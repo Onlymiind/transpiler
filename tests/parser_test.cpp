@@ -46,11 +46,11 @@ class PolishNotationParser {
 
         auto make_literal_expr = [this](common::LiteralType type) {
             common::Token tok = next();
-            common::Literal result{.type = type};
+            common::Literal result;
             switch (type) {
-            case common::LiteralType::BOOL: result.boolean = tok.boolean; break;
-            case common::LiteralType::UINT: result.integer = tok.integer; break;
-            case common::LiteralType::FLOAT: result.floating = tok.floating; break;
+            case common::LiteralType::BOOL: result = tok.boolean; break;
+            case common::LiteralType::UINT: result = tok.integer; break;
+            case common::LiteralType::FLOAT: result = tok.floating; break;
             default: throw std::runtime_error("unknown literal type");
             }
             consume();
@@ -158,18 +158,8 @@ struct ExprComparer {
             }
             return true;
         }
-        case common::ExpressionKind::LITERAL: {
-            auto lhs_lit = *lhs_file.get_literal(lhs.id);
-            auto rhs_lit = *rhs_file.get_literal(rhs.id);
-            if (lhs_lit.type != rhs_lit.type) {
-                return false;
-            }
-            switch (lhs_lit.type) {
-            case common::LiteralType::BOOL: return lhs_lit.boolean == rhs_lit.boolean;
-            case common::LiteralType::UINT: return lhs_lit.integer == rhs_lit.integer;
-            case common::LiteralType::FLOAT: return lhs_lit.floating == rhs_lit.floating;
-            }
-        }
+        case common::ExpressionKind::LITERAL:
+            return *lhs_file.get_literal(lhs.id) == *rhs_file.get_literal(rhs.id);
         }
         return false;
     }

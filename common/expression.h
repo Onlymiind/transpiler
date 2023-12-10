@@ -8,6 +8,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <type_traits>
+#include <variant>
 
 namespace common {
 
@@ -155,17 +157,61 @@ namespace common {
     enum class LiteralType : uint8_t {
         BOOL,
         UINT,
-        FLOAT,
-        STRING,
+        FLOAT
     };
 
-    struct Literal {
-        LiteralType type{};
-        union {
-            uint64_t integer = 0;
-            double floating;
-            bool boolean;
-        };
+    class Literal {
+        using Storage = std::variant<bool, uint64_t, double>;
+
+      public:
+        Literal() = default;
+
+        template <typename T>
+        Literal(T value)
+            requires std::is_constructible_v<Storage, T>
+            : value_(value) {}
+
+        constexpr bool same_type(const Literal &other) const {
+            return value_.index() == other.value_.index();
+        }
+
+        template <typename T>
+        constexpr bool is() const
+            requires std::is_constructible_v<Storage, T>
+        {
+            return std::holds_alternative<T>(value_);
+        }
+
+        constexpr bool operator==(const Literal &other) const {
+            return value_ == other.value_;
+        }
+
+        template <typename T>
+        constexpr bool operator==(const T &value) const
+            requires std::is_convertible_v<T, Storage>
+        {
+            return value_ == value;
+        }
+
+        template <typename T>
+        constexpr T *get()
+            requires std::is_constructible_v<Storage, T>
+        {
+            return std::get_if<T>(&value_);
+        }
+
+        constexpr Literal &operator=(const Literal &other) = default;
+
+        template <typename T>
+        constexpr Literal &operator=(const T &value)
+            requires std::is_assignable_v<T, Storage>
+        {
+            value_ = value;
+            return *this;
+        }
+
+      private:
+        Storage value_;
     };
 
     struct FunctionCall {

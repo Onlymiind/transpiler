@@ -13,6 +13,7 @@ int main(void) {
 u64 a = (u64)11;
 u64* ap = &a;
 u64** app = &ap;
+u64* p_default = (u64*)0;
 f64 b = (f64)0;
 foo(&app, &b);
 }

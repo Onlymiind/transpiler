@@ -8,6 +8,7 @@
 #include "common/types.h"
 #include "common/util.h"
 #include <cstddef>
+#include <cstdint>
 #include <iomanip>
 #include <ios>
 #include <limits>
@@ -65,18 +66,16 @@ namespace codegen {
         codegen(expr.type);
         *out_ << ')';
 
-        switch (lit.type) {
-        case common::LiteralType::BOOL: *out_ << lit.boolean; break;
-        case common::LiteralType::UINT: *out_ << lit.integer; break;
-        case common::LiteralType::FLOAT: {
+        if (bool *b = lit.get<bool>(); b) {
+            *out_ << *b;
+        } else if (uint64_t *uint = lit.get<uint64_t>(); uint) {
+            *out_ << *uint;
+        } else if (double *d = lit.get<double>(); d) {
             int presicion = out_->precision();
             *out_ << std::setprecision(std::numeric_limits<double>::digits10)
-                  << lit.floating << std::setprecision(presicion);
-            break;
-        }
-        default:
-            report_error("unknown literal");
-            break;
+                  << *d << std::setprecision(presicion);
+        } else {
+            report_error("unknown literal type");
         }
     }
 

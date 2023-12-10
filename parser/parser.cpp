@@ -58,11 +58,11 @@ namespace parser {
         using enum common::TokenType;
         auto make_literal_expr = [this](common::LiteralType type) {
             common::Token tok = next();
-            common::Literal result{.type = type};
+            common::Literal result;
             switch (type) {
-            case common::LiteralType::BOOL: result.boolean = tok.boolean; break;
-            case common::LiteralType::UINT: result.integer = tok.integer; break;
-            case common::LiteralType::FLOAT: result.floating = tok.floating; break;
+            case common::LiteralType::BOOL: result = tok.boolean; break;
+            case common::LiteralType::UINT: result = tok.integer; break;
+            case common::LiteralType::FLOAT: result = tok.floating; break;
             default: report_error("unknown literal type"); break;
             }
             consume();

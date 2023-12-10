@@ -14,69 +14,6 @@
 
 namespace common {
 
-    // TODO: do string literals really need to be stored only once per unique literal?
-    class Literals {
-      public:
-        Literals() = default;
-        ~Literals() = default;
-
-        Literals(const Literals &) = delete;
-        Literals(Literals &&other) = default;
-
-        Literals &operator=(const Literals &) = delete;
-        Literals &operator=(Literals &&other) = default;
-
-        LiteralID add(double val) {
-            LiteralID result{make_id<LiteralID>(LiteralType::FLOAT, doubles_.size())};
-            doubles_.push_back(val);
-            return result;
-        }
-
-        LiteralID add(uint64_t val) {
-            LiteralID result{make_id<LiteralID>(LiteralType::UINT, integers_.size())};
-            integers_.push_back(val);
-            return result;
-        }
-
-        LiteralID add(std::string val) {
-            LiteralID result = make_id<LiteralID>(LiteralType::STRING, strings_.size());
-            auto [it, inserted] = string_storage_.try_emplace(std::move(val), result);
-            if (!inserted) {
-                return it->second;
-            }
-            strings_.push_back(&it->first);
-            return result;
-        }
-
-        std::optional<uint64_t> get_integer(LiteralID id) const {
-            auto [type, idx] = decompose<LiteralType>(id);
-            return type != LiteralType::UINT || idx >= integers_.size() ? std::optional<uint64_t>{} : integers_[idx];
-        }
-
-        std::optional<double> get_double(LiteralID id) const {
-            auto [type, idx] = decompose<LiteralType>(id);
-            return type != LiteralType::FLOAT || idx >= doubles_.size() ? std::optional<double>{} : doubles_[idx];
-        }
-
-        const std::string *get_string(LiteralID id) const {
-            auto [type, idx] = decompose<LiteralType>(id);
-            return type != LiteralType::STRING || idx >= strings_.size() ? nullptr : strings_[idx];
-        }
-
-        bool operator==(const Literals &other) const {
-            return integers_ == other.integers_ &&
-                   doubles_ == other.doubles_ &&
-                   strings_ == other.strings_ &&
-                   string_storage_ == other.string_storage_;
-        }
-
-      private:
-        std::vector<uint64_t> integers_;
-        std::vector<double> doubles_;
-        std::vector<const std::string *> strings_;
-        std::unordered_map<std::string, LiteralID> string_storage_;
-    };
-
     class Identifiers {
       public:
         Identifiers() = default;
