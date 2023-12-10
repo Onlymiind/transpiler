@@ -232,22 +232,11 @@ namespace parser {
     }
 
     void Parser::parse_global_variabe() {
-        if (!match(common::TokenType::VAR, "expected 'var' at the start of global variable declaration")) {
+        common::Variable result = parse_variable();
+        if (!err_.empty()) {
             return;
         }
-
-        common::Variable result{.pos = next().pos()};
-        result.name = match_identifier("expected variable's name");
-        if (result.name == common::IdentifierID{}) {
-            return;
-        }
-
-        result.explicit_type = parse_type();
-        if (result.explicit_type.is_error()) {
-            return;
-        }
-
-        if (!match(common::TokenType::SEMICOLON, "initializers for global variables are not supported yet")) {
+        if (!match(common::TokenType::SEMICOLON, "expected ';' after global variable definition")) {
             return;
         }
 
@@ -301,30 +290,9 @@ namespace parser {
 
     common::Statement Parser::parse_local_variable() {
         common::Statement smt{.type = common::StatementType::VARIABLE, .pos = next().pos()};
-        common::Variable result{.pos = next().pos()};
-
-        if (!match(common::TokenType::VAR, "expected 'var' at the start of local variable declaration")) {
+        common::Variable result = parse_variable();
+        if (!err_.empty()) {
             return common::Statement{};
-        }
-
-        result.name = common::IdentifierID{match_identifier("expected variable's name")};
-        if (result.name == common::IdentifierID{}) {
-            return common::Statement{};
-        }
-
-        if (!next().is(common::TokenType::ASSIGN)) {
-            result.explicit_type = parse_type();
-            if (result.explicit_type.is_error()) {
-                return common::Statement{};
-            }
-        }
-
-        if (next().is(common::TokenType::ASSIGN)) {
-            consume();
-            result.initial_value = parse_expression();
-            if (result.initial_value.is_error()) {
-                return common::Statement{};
-            }
         }
 
         smt.id = ast_.add_local(result);
@@ -510,6 +478,35 @@ namespace parser {
             return common::Expression{};
         }
         result.id = ast_.add_cast(cast);
+        return result;
+    }
+
+    common::Variable Parser::parse_variable() {
+        common::Variable result{.pos = next().pos()};
+        if (!match(common::TokenType::VAR, "expected 'var' at the start of local variable declaration")) {
+            return common::Variable{};
+        }
+
+        result.name = common::IdentifierID{match_identifier("expected variable's name")};
+        if (result.name == common::IdentifierID{}) {
+            return common::Variable{};
+        }
+
+        if (!next().is(common::TokenType::ASSIGN)) {
+            result.explicit_type = parse_type();
+            if (result.explicit_type.is_error()) {
+                return common::Variable{};
+            }
+        }
+
+        if (next().is(common::TokenType::ASSIGN)) {
+            consume();
+            result.initial_value = parse_expression();
+            if (result.initial_value.is_error()) {
+                return common::Variable{};
+            }
+        }
+
         return result;
     }
 } // namespace parser

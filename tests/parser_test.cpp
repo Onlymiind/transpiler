@@ -393,11 +393,15 @@ TEST_CASE("parser: global variables", "[parser]") {
 
     common::Identifiers ids;
     std::vector<Case> cases{
-        {"var a u64;", common::Variable{.name = ids.add("a"), .explicit_type = ids.add("u64")}},
+        {"var a u64;", common::Variable{.name = ids.add("a"), .explicit_type = common::ParsedType{ids.add("u64")}}},
         {.data = "a u64;", .should_fail = true},
         {.data = "var a", .should_fail = true},
         {.data = "var a u64", .should_fail = true},
-        {.data = "var a u64 = 1;", .should_fail = true},
+        {"var a u64 = 1;", common::Variable{
+                               .name = ids.add("a"),
+                               .explicit_type = common::ParsedType{ids.add("u64")},
+                               .initial_value = common::Expression{.kind = common::ExpressionKind::LITERAL},
+                           }},
         {.data = "var;", .should_fail = true},
         {.data = "var", .should_fail = true},
     };
@@ -424,7 +428,7 @@ TEST_CASE("parser: global variables", "[parser]") {
         auto &var = ast.variables()[0];
         REQUIRE(*lexer_result.identifiers.get(var.name) == *ids.get(c.expected.name));
         REQUIRE(*lexer_result.identifiers.get(var.explicit_type.name) == *ids.get(c.expected.explicit_type.name));
-        REQUIRE(var.initial_value == common::Expression{});
+        REQUIRE(var.initial_value.kind == c.expected.initial_value.kind);
     }
 }
 

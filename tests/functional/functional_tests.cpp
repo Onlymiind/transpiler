@@ -23,7 +23,7 @@ std::vector<FunctionalTestCase> cases{
     {"missing_return_fail"},
     {"main_return_type_fail"},
     {"semicolons_in_global_scope"},
-    {"variables"},
+    {"variables", true},
     {"variables_redeclaration_fail"},
     {"variables_wrong_init_type_fail"},
     {"assignment"},
@@ -58,6 +58,7 @@ std::vector<FunctionalTestCase> cases{
     {"division_by_zero_floats_fail", true},
     {"division_by_zero_constant_folding_integers_fail", true},
     {"division_by_zero_constant_folding_floats_fail", true},
+    {"non_constexpr_global_initializer_fail", true},
 };
 
 constexpr int i = 10 - 1 - 2;

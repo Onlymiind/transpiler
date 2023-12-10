@@ -40,7 +40,6 @@ namespace checker {
     }
 
     void Checker::add_declarations() {
-        add_builtins();
         auto &functions = ast_->functions();
         for (auto &func : functions) {
             check_function_decl(func);
@@ -51,33 +50,26 @@ namespace checker {
 
         auto &variables = ast_->global_variables();
         for (common::VariableID var_id : variables) {
-            // TODO: this should be handled by check_variable()
             common::Variable &var = *ast_->get_var(var_id);
             ErrorGuard eg{*this, var.pos};
-            if (common::Symbol sym = module_.find(var.name); !sym.is_error()) {
-                report_error("can not declare a variable: name " + *identifiers_->get(var.name) + " already used");
+            check_variable(var);
+            if (!err_.empty()) {
                 return;
             }
-
-            var.type = common::Type{module_.find(var.explicit_type.name), var.explicit_type.indirection_level};
-            if (var.type.is_error()) {
-                report_error("variable type not declared");
+            if (!var.initial_value.is_error() && var.initial_value.kind != common::ExpressionKind::LITERAL) {
+                report_error("global variable initializer must be a constant expression");
                 return;
             }
-            if (common::Scope::type(var.type.sym.id) != common::SymbolType::BUILTIN_TYPE) {
-                report_error("invalid variable type");
-                return;
-            }
-            module_.global_scope()->add(var.name, var.id);
         }
     }
 
     void Checker::check() {
+        add_builtins();
+        ScopeGuard g{*this, module_.global_scope()->id(), Reachability::REACHABLE};
         add_declarations();
         if (!err_.empty()) {
             return;
         }
-        ScopeGuard g{*this, module_.global_scope()->id(), Reachability::REACHABLE};
         auto &functions = ast_->functions();
         for (auto &func : functions) {
             ErrorGuard eg{*this, func.pos};

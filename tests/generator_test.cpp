@@ -35,6 +35,7 @@ void run_tests(const std::vector<GeneratorTestCase> cases) {
         REQUIRE(p.get_error().empty());
         auto ast = p.reset();
         checker::Checker ch{ast, lexer_result.identifiers, false};
+        ch.add_builtins();
         ch.add_declarations();
         ch.check_expression(expr);
         REQUIRE(ch.get_error().empty());

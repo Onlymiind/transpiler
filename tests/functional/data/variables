@@ -1,6 +1,8 @@
 var a bool;
 
-var b u64;
+var b u64 = 1 + 100;
+
+var b1 = 1.1;
 
 var c f64;
 

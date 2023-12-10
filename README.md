@@ -13,7 +13,7 @@ Currently inmplemented:
 - Functions and function calls
 - Statements and function return types
 - Variables
-- Basic type inference for local variables
+- Basic type inference for variables
 - If statements
 - Loops
 - Pointers
@@ -37,7 +37,6 @@ gcc <path-to-output-file>
 ```
 
 ## TODO next (roadmap):
-- allow constexpr initializers on global variables
 - arrays and slices
 - record types
 - add more built-in types
