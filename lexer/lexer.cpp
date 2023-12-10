@@ -72,21 +72,21 @@ namespace lexer {
     }
 
     static const std::unordered_map<std::string_view, common::Token> g_keywords{
-        {"true", common::Token{.type = common::TokenType::BOOL, .boolean = true}},
-        {"false", common::Token{.type = common::TokenType::BOOL, .boolean = false}},
-        {"func", common::Token{.type = common::TokenType::FUNC}},
-        {"return", common::Token{.type = common::TokenType::RETURN}},
-        {"var", common::Token{.type = common::TokenType::VAR}},
-        {"if", common::Token{.type = common::TokenType::IF}},
-        {"else", common::Token{.type = common::TokenType::ELSE}},
-        {"for", common::Token{.type = common::TokenType::FOR}},
-        {"break", common::Token{.type = common::TokenType::BREAK}},
-        {"continue", common::Token{.type = common::TokenType::CONTINUE}},
-        {"cast", common::Token{.type = common::TokenType::CAST}},
+        {"true", common::Token::with_value(true)},
+        {"false", common::Token::with_value(false)},
+        {"func", common::Token{common::TokenType::FUNC}},
+        {"return", common::Token{common::TokenType::RETURN}},
+        {"var", common::Token{common::TokenType::VAR}},
+        {"if", common::Token{common::TokenType::IF}},
+        {"else", common::Token{common::TokenType::ELSE}},
+        {"for", common::Token{common::TokenType::FOR}},
+        {"break", common::Token{common::TokenType::BREAK}},
+        {"continue", common::Token{common::TokenType::CONTINUE}},
+        {"cast", common::Token{common::TokenType::CAST}},
     };
 
     common::Token Lexer::get_identifier() {
-        common::Token result{.pos = current_pos_};
+        size_t pos = current_pos_;
         std::optional<char> c = get_char();
         if (!c || !std::isalpha(*c) && *c != '_') {
             report_error("exprected alphabetic character or _");
@@ -105,23 +105,19 @@ namespace lexer {
 
         auto it = g_keywords.find(buf);
         if (it != g_keywords.end()) {
-            size_t pos = result.pos;
-            result = it->second;
-            result.pos = pos;
+            common::Token result = it->second;
+            result.pos(pos);
             return result;
         }
 
-        result.type = common::TokenType::IDENTIFIER;
-        result.identifier = result_.identifiers.add(std::move(buf));
-
-        return result;
+        return common::Token::with_value(result_.identifiers.add(std::move(buf)), pos);
     }
 
     common::Token Lexer::get_numeric() {
-        common::Token result{.pos = current_pos_};
+        size_t pos = current_pos_;
         std::optional<char> c = get_char();
         if (!c || !std::isdigit(*c)) {
-            return result;
+            return common::Token{};
         }
         uint64_t integer = *c - '0';
 
@@ -134,12 +130,10 @@ namespace lexer {
             if (c) {
                 put_back(*c);
             }
-            result.type = common::TokenType::INTEGER;
-            result.integer = integer;
-            return result;
+            return common::Token::with_value(integer, pos);
         } else if (*c != '.') {
             report_error("expected either . or a space after numeric literal");
-            return result;
+            return common::Token{};
         }
 
         uint64_t fraction{};
@@ -152,30 +146,28 @@ namespace lexer {
 
         if (c && std::isalpha(*c)) {
             report_error("expected a space after a floating-point literal");
-            return result;
+            return common::Token{};
         }
 
         if (c) {
             put_back(*c);
         }
 
-        result.type = common::TokenType::FLOAT;
-        result.floating = static_cast<double>(integer) + static_cast<double>(fraction) / static_cast<double>(exponent);
-
-        return result;
+        return common::Token::with_value(static_cast<double>(integer) + static_cast<double>(fraction) / static_cast<double>(exponent), pos);
     }
 
     common::Token Lexer::get_op() {
-        common::Token result{.pos = current_pos_};
+        common::Token result;
+        result.pos(current_pos_);
         std::optional<char> c = get_char();
         if (!c || !std::ispunct(*c)) {
             return result;
         }
 
         auto handle_wide_op = [this, &result](common::TokenType default_type, char next, common::TokenType if_next) -> common::Token {
-            result.type = default_type;
+            result.type(default_type);
             if (file_->peek() == next) {
-                result.type = if_next;
+                result.type(if_next);
                 get_char();
             }
             return result;
@@ -183,17 +175,17 @@ namespace lexer {
 
         using enum common::TokenType;
         switch (*c) {
-        case '+': result.type = ADD; return result;
-        case '-': result.type = SUB; return result;
-        case '*': result.type = MUL; return result;
-        case '%': result.type = REMAINDER; return result;
-        case '/': result.type = DIV; return result;
-        case '(': result.type = LEFT_PARENTHESIS; return result;
-        case ')': result.type = RIGHT_PARENTHESIS; return result;
-        case ';': result.type = SEMICOLON; return result;
-        case '{': result.type = LEFT_BRACE; return result;
-        case '}': result.type = RIGHT_BRACE; return result;
-        case ',': result.type = COMMA; return result;
+        case '+': result.type(ADD); return result;
+        case '-': result.type(SUB); return result;
+        case '*': result.type(MUL); return result;
+        case '%': result.type(REMAINDER); return result;
+        case '/': result.type(DIV); return result;
+        case '(': result.type(LEFT_PARENTHESIS); return result;
+        case ')': result.type(RIGHT_PARENTHESIS); return result;
+        case ';': result.type(SEMICOLON); return result;
+        case '{': result.type(LEFT_BRACE); return result;
+        case '}': result.type(RIGHT_BRACE); return result;
+        case ',': result.type(COMMA); return result;
         case '!': return handle_wide_op(NOT, '=', NOT_EQUALS);
         case '<': return handle_wide_op(LESS, '=', LESS_EQUALS);
         case '>': return handle_wide_op(GREATER, '=', GREATER_EQUALS);

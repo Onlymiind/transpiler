@@ -12,6 +12,7 @@
 #include <catch2/generators/catch_generators.hpp>
 
 #include <cstddef>
+#include <cstdint>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -32,7 +33,7 @@ class PolishNotationParser {
     }
 
     common::Expression parse_expression() {
-        if (auto op = common::to_binary_op(next().type); op) {
+        if (auto op = common::to_binary_op(next().type()); op) {
             consume();
             return common::Expression{
                 .kind = common::ExpressionKind::BINARY,
@@ -48,20 +49,20 @@ class PolishNotationParser {
             common::Token tok = next();
             common::Literal result;
             switch (type) {
-            case common::LiteralType::BOOL: result = tok.boolean; break;
-            case common::LiteralType::UINT: result = tok.integer; break;
-            case common::LiteralType::FLOAT: result = tok.floating; break;
+            case common::LiteralType::BOOL: result = *tok.get<bool>(); break;
+            case common::LiteralType::UINT: result = *tok.get<uint64_t>(); break;
+            case common::LiteralType::FLOAT: result = *tok.get<double>(); break;
             default: throw std::runtime_error("unknown literal type");
             }
             consume();
             return common::Expression{
                 .kind = common::ExpressionKind::LITERAL,
                 .id = file_.add(result),
-                .pos = tok.pos,
+                .pos = tok.pos(),
             };
         };
 
-        switch (next().type) {
+        switch (next().type()) {
         case common::TokenType::BOOL: return make_literal_expr(common::LiteralType::BOOL);
         case common::TokenType::INTEGER: return make_literal_expr(common::LiteralType::UINT);
         case common::TokenType::FLOAT: return make_literal_expr(common::LiteralType::FLOAT);
@@ -69,7 +70,7 @@ class PolishNotationParser {
             consume();
             return parse_unary_expression();
         case common::TokenType::IDENTIFIER: {
-            common::Cast result{.to = common::ParsedType{common::IdentifierID{next().identifier}}};
+            common::Cast result{.to = common::ParsedType{*next().get<common::IdentifierID>()}};
             consume();
             result.from = parse_expression();
             return common::Expression{.kind = common::ExpressionKind::CAST, .id = file_.add_cast(result)};
@@ -79,7 +80,7 @@ class PolishNotationParser {
         return common::Expression{};
     }
     common::Expression parse_unary_expression() {
-        auto op = common::to_unary_op(next().type);
+        auto op = common::to_unary_op(next().type());
         consume();
         if (!op) {
             return common::Expression{};

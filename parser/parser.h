@@ -53,7 +53,7 @@ namespace parser {
 
         void report_error(std::string_view error) noexcept {
             err_.msg = error;
-            err_.pos = next().pos;
+            err_.pos = next().pos();
         }
         const common::Error &get_error() const noexcept { return err_; }
 
@@ -61,17 +61,17 @@ namespace parser {
         void consume() { remainder_ = remainder_.subspan(1); }
 
         common::IdentifierID match_identifier(std::string_view err_msg) {
-            if (next().type != common::TokenType::IDENTIFIER) {
+            if (!next().is(common::TokenType::IDENTIFIER)) {
                 report_error(err_msg);
                 return common::IdentifierID{};
             }
-            common::IdentifierID result = next().identifier;
+            common::IdentifierID result = *next().get<common::IdentifierID>();
             consume();
             return result;
         }
 
         bool match(common::TokenType expected, std::string_view err_msg) {
-            if (next().type != expected) {
+            if (!next().is(expected)) {
                 report_error(err_msg);
                 return false;
             }

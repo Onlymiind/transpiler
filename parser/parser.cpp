@@ -13,7 +13,7 @@
 namespace parser {
     void Parser::parse() {
         while (!next().is_eof()) {
-            switch (next().type) {
+            switch (next().type()) {
             case common::TokenType::VAR: parse_global_variabe(); break;
             case common::TokenType::FUNC: parse_function(); break;
             case common::TokenType::SEMICOLON: consume(); break;
@@ -27,21 +27,21 @@ namespace parser {
 
     common::Expression Parser::parse_expression() {
         common::Expression lhs = parse_unary_expression();
-        if (lhs.is_error() || !common::is_binary_op(next().type)) {
+        if (lhs.is_error() || !next().is_binary_op()) {
             return lhs;
         }
         return parse_binary_expression(lhs, 0);
     }
 
     common::Expression Parser::parse_unary_expression() {
-        if (!common::is_unary_op(next().type)) {
+        if (!next().is_unary_op()) {
             return parse_primary_expression();
         }
 
-        common::UnaryExpression result{.op = *common::to_unary_op(next().type)};
-        size_t pos = next().pos;
+        common::UnaryExpression result{.op = *common::to_unary_op(next().type())};
+        size_t pos = next().pos();
         consume();
-        if (common::is_unary_op(next().type)) {
+        if (next().is_unary_op()) {
             result.expr = parse_unary_expression();
         } else {
             result.expr = parse_primary_expression();
@@ -60,20 +60,20 @@ namespace parser {
             common::Token tok = next();
             common::Literal result;
             switch (type) {
-            case common::LiteralType::BOOL: result = tok.boolean; break;
-            case common::LiteralType::UINT: result = tok.integer; break;
-            case common::LiteralType::FLOAT: result = tok.floating; break;
+            case common::LiteralType::BOOL: result = *tok.get<bool>(); break;
+            case common::LiteralType::UINT: result = *tok.get<uint64_t>(); break;
+            case common::LiteralType::FLOAT: result = *tok.get<double>(); break;
             default: report_error("unknown literal type"); break;
             }
             consume();
             return common::Expression{
                 .kind = common::ExpressionKind::LITERAL,
                 .id = ast_.add(result),
-                .pos = tok.pos,
+                .pos = tok.pos(),
             };
         };
 
-        switch (next().type) {
+        switch (next().type()) {
         case LEFT_PARENTHESIS: {
             consume();
             common::Expression result = parse_expression();
@@ -100,13 +100,13 @@ namespace parser {
     }
 
     common::Expression Parser::parse_identifier_ref() {
-        size_t pos = next().pos;
+        size_t pos = next().pos();
         common::IdentifierID name = common::IdentifierID{match_identifier("function call: expected function name")};
         if (name == common::IdentifierID{}) {
             return common::Expression{};
         }
 
-        if (next().type != common::TokenType::LEFT_PARENTHESIS) {
+        if (!next().is(common::TokenType::LEFT_PARENTHESIS)) {
             return common::Expression{.kind = common::ExpressionKind::VARIABLE_REF, .id = ast_.add_variable_ref(name), .pos = pos};
         }
 
@@ -117,7 +117,7 @@ namespace parser {
             return common::Expression{};
         }
         bool first = true;
-        while (next().type != common::TokenType::RIGHT_PARENTHESIS && next().type != common::TokenType::END_OF_FILE) {
+        while (!next().is(common::TokenType::RIGHT_PARENTHESIS) && !next().is_eof()) {
             if (!first && !match(common::TokenType::COMMA, "expected comma-separated list of arguments")) {
                 return common::Expression{};
             }
@@ -125,7 +125,7 @@ namespace parser {
             if (result.args.back().is_error()) {
                 return common::Expression{};
             }
-            if (next().type == common::TokenType::RIGHT_PARENTHESIS) {
+            if (next().is(common::TokenType::RIGHT_PARENTHESIS)) {
                 break;
             }
             first = false;
@@ -138,28 +138,28 @@ namespace parser {
     }
 
     common::Expression Parser::parse_binary_expression(common::Expression lhs, uint8_t precedence) {
-        if (!common::is_binary_op(next().type)) {
+        if (!next().is_binary_op()) {
             report_error("expected binary operator");
             return common::Expression{};
         }
 
-        for (auto op = common::to_binary_op(next().type);
+        for (auto op = common::to_binary_op(next().type());
              op && common::get_precedence(*op) >= precedence;
-             op = common::to_binary_op(next().type)) {
+             op = common::to_binary_op(next().type())) {
             uint8_t op_precedence = common::get_precedence(*op);
             if (op_precedence == common::g_invalid_precedence) {
                 report_error("operator precedence not implemented");
                 return common::Expression{};
             }
-            size_t pos = next().pos;
+            size_t pos = next().pos();
             consume();
             common::Expression rhs = parse_unary_expression();
             if (rhs.is_error()) {
                 return common::Expression{};
             }
-            for (auto next_op = common::to_binary_op(next().type);
+            for (auto next_op = common::to_binary_op(next().type());
                  next_op && common::get_precedence(*next_op) > op_precedence;
-                 next_op = common::to_binary_op(next().type)) {
+                 next_op = common::to_binary_op(next().type())) {
                 rhs = parse_binary_expression(rhs, common::get_precedence(*next_op));
                 if (rhs.is_error()) {
                     return common::Expression{};
@@ -181,12 +181,12 @@ namespace parser {
     }
 
     void Parser::parse_function() {
-        common::Function result{.pos = next().pos};
+        common::Function result{.pos = next().pos()};
         if (!match(common::TokenType::FUNC, "exprected 'func' keyword")) {
             return;
         }
 
-        result.name = common::IdentifierID{match_identifier("expected function name")};
+        result.name = match_identifier("expected function name");
         if (result.name == common::IdentifierID{}) {
             return;
         }
@@ -195,7 +195,7 @@ namespace parser {
             return;
         }
         bool first = true;
-        while (next().type != common::TokenType::RIGHT_PARENTHESIS && next().type != common::TokenType::END_OF_FILE) {
+        while (!next().is(common::TokenType::RIGHT_PARENTHESIS) && !next().is_eof()) {
             if (!first && !match(common::TokenType::COMMA, "expected comma-separated list of function parameter declarations")) {
                 return;
             }
@@ -203,7 +203,7 @@ namespace parser {
             if (result.params.back() == common::VariableID{}) {
                 return;
             }
-            if (next().type == common::TokenType::RIGHT_PARENTHESIS) {
+            if (next().type() == common::TokenType::RIGHT_PARENTHESIS) {
                 break;
             }
             first = false;
@@ -212,10 +212,10 @@ namespace parser {
             return;
         }
 
-        if (!(next().type == common::TokenType::SEMICOLON || next().type == common::TokenType::LEFT_BRACE)) {
+        if (!(next().is(common::TokenType::SEMICOLON) || next().is(common::TokenType::LEFT_BRACE))) {
             result.return_typename = parse_type();
         }
-        if (next().type == common::TokenType::SEMICOLON) {
+        if (next().is(common::TokenType::SEMICOLON)) {
             consume();
             result.decl_only = true;
             ast_.add(std::move(result));
@@ -236,8 +236,8 @@ namespace parser {
             return;
         }
 
-        common::Variable result{.pos = next().pos};
-        result.name = common::IdentifierID{match_identifier("expected variable's name")};
+        common::Variable result{.pos = next().pos()};
+        result.name = match_identifier("expected variable's name");
         if (result.name == common::IdentifierID{}) {
             return;
         }
@@ -257,14 +257,14 @@ namespace parser {
     common::Statement Parser::parse_statement() {
 
         auto make_single_keyword = [this](common::StatementType type) {
-            common::Statement result{.type = type, .pos = next().pos};
+            common::Statement result{.type = type, .pos = next().pos()};
             consume();
             return result;
         };
 
-        common::Statement smt{.type = common::StatementType::EXPRESSION, .pos = next().pos};
+        common::Statement smt{.type = common::StatementType::EXPRESSION, .pos = next().pos()};
         bool needs_semicolon = true;
-        switch (next().type) {
+        switch (next().type()) {
         case common::TokenType::VAR: smt = parse_local_variable(); break;
         case common::TokenType::IF:
             smt = parse_branch();
@@ -279,7 +279,7 @@ namespace parser {
         case common::TokenType::RETURN:
             smt.type = common::StatementType::RETURN;
             consume();
-            if (next().type == common::TokenType::SEMICOLON) {
+            if (next().is(common::TokenType::SEMICOLON)) {
                 smt.id = ast_.add(common::Expression{.kind = common::ExpressionKind::EMPTY, .pos = smt.pos});
                 break;
             }
@@ -300,8 +300,8 @@ namespace parser {
     }
 
     common::Statement Parser::parse_local_variable() {
-        common::Statement smt{.type = common::StatementType::VARIABLE, .pos = next().pos};
-        common::Variable result{.pos = next().pos};
+        common::Statement smt{.type = common::StatementType::VARIABLE, .pos = next().pos()};
+        common::Variable result{.pos = next().pos()};
 
         if (!match(common::TokenType::VAR, "expected 'var' at the start of local variable declaration")) {
             return common::Statement{};
@@ -312,14 +312,14 @@ namespace parser {
             return common::Statement{};
         }
 
-        if (next().type != common::TokenType::ASSIGN) {
+        if (!next().is(common::TokenType::ASSIGN)) {
             result.explicit_type = parse_type();
             if (result.explicit_type.is_error()) {
                 return common::Statement{};
             }
         }
 
-        if (next().type == common::TokenType::ASSIGN) {
+        if (next().is(common::TokenType::ASSIGN)) {
             consume();
             result.initial_value = parse_expression();
             if (result.initial_value.is_error()) {
@@ -332,16 +332,16 @@ namespace parser {
     }
 
     common::VariableID Parser::parse_func_param() {
-        size_t pos = next().pos;
+        size_t pos = next().pos();
         common::Variable param{.pos = pos};
-        if (next().type == common::TokenType::IDENTIFIER) {
-            param.explicit_type.name = common::IdentifierID{next().identifier};
+        if (next().is(common::TokenType::IDENTIFIER)) {
+            param.explicit_type.name = *next().get<common::IdentifierID>();
             consume();
             if (param.explicit_type.name == common::IdentifierID{}) {
                 return common::VariableID{};
             }
             // unnamed parameter
-            if (next().type == common::TokenType::COMMA || next().type == common::TokenType::RIGHT_PARENTHESIS) {
+            if (next().is(common::TokenType::COMMA) || next().is(common::TokenType::RIGHT_PARENTHESIS)) {
                 return ast_.add_func_param(param);
             }
             param.name = param.explicit_type.name;
@@ -362,8 +362,8 @@ namespace parser {
         }
 
         common::Block result;
-        while (next().type != common::TokenType::RIGHT_BRACE && next().type != common::TokenType::END_OF_FILE) {
-            if (next().type == common::TokenType::SEMICOLON) {
+        while (!next().is(common::TokenType::RIGHT_BRACE) && !next().is_eof()) {
+            if (next().type() == common::TokenType::SEMICOLON) {
                 consume();
                 continue;
             }
@@ -382,7 +382,7 @@ namespace parser {
     }
 
     common::Statement Parser::parse_branch() {
-        common::Statement smt_result{.type = common::StatementType::BRANCH, .pos = next().pos};
+        common::Statement smt_result{.type = common::StatementType::BRANCH, .pos = next().pos()};
         if (!match(common::TokenType::IF, "expected 'if' keyword")) {
             return common::Statement{};
         }
@@ -396,14 +396,14 @@ namespace parser {
         if (!err_.empty()) {
             return common::Statement{};
         }
-        if (next().type != common::TokenType::ELSE) {
+        if (!next().is(common::TokenType::ELSE)) {
             smt_result.id = ast_.add(std::move(result));
             return smt_result;
         }
 
         // has "else"/"else if" branch
         consume();
-        if (next().type == common::TokenType::IF) {
+        if (next().is(common::TokenType::IF)) {
             result.otherwise.smts.push_back(parse_branch());
             if (result.otherwise.smts.back().is_error()) {
                 return common::Statement{};
@@ -421,7 +421,7 @@ namespace parser {
     }
 
     common::Statement Parser::parse_loop() {
-        size_t pos = next().pos;
+        size_t pos = next().pos();
         if (!match(common::TokenType::FOR, "expected 'for' keyword")) {
             return common::Statement{};
         }
@@ -437,11 +437,11 @@ namespace parser {
             return smt_result;
         };
 
-        if (next().type == common::TokenType::LEFT_BRACE) {
+        if (next().is(common::TokenType::LEFT_BRACE)) {
             return make_result();
-        } else if (next().type == common::TokenType::VAR) {
+        } else if (next().is(common::TokenType::VAR)) {
             result.init = parse_local_variable();
-        } else if (next().type != common::TokenType::SEMICOLON) {
+        } else if (!next().is(common::TokenType::SEMICOLON)) {
             common::Expression expr = parse_expression();
             if (expr.is_error()) {
                 return common::Statement{};
@@ -449,7 +449,7 @@ namespace parser {
             result.init = common::Statement{.type = common::StatementType::EXPRESSION, .id = ast_.add(expr), .pos = expr.pos};
         }
 
-        if (next().type == common::TokenType::LEFT_BRACE) {
+        if (next().is(common::TokenType::LEFT_BRACE)) {
             return make_result();
         } else if (!match(common::TokenType::SEMICOLON, "expected ';'")) {
             return common::Statement{};
@@ -458,7 +458,7 @@ namespace parser {
         result.condition = parse_expression();
         if (result.condition.is_error()) {
             return common::Statement{};
-        } else if (next().type == common::TokenType::LEFT_BRACE) {
+        } else if (next().is(common::TokenType::LEFT_BRACE)) {
             return make_result();
         } else if (!match(common::TokenType::SEMICOLON, "expected ';'")) {
             return common::Statement{};
@@ -473,7 +473,7 @@ namespace parser {
 
     common::ParsedType Parser::parse_type() {
         common::ParsedType result;
-        for (; next().type == common::TokenType::MUL; consume()) {
+        for (; next().is(common::TokenType::MUL); consume()) {
             ++result.indirection_level;
         }
         result.name = common::IdentifierID{match_identifier("expected type name")};
@@ -484,7 +484,7 @@ namespace parser {
     }
 
     common::Expression Parser::parse_cast() {
-        common::Expression result{.kind = common::ExpressionKind::CAST, .pos = next().pos};
+        common::Expression result{.kind = common::ExpressionKind::CAST, .pos = next().pos()};
         if (!match(common::TokenType::CAST, "expected 'cast' keyword")) {
             return common::Expression{};
         }
