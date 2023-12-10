@@ -61,8 +61,6 @@ std::vector<FunctionalTestCase> cases{
     {"non_constexpr_global_initializer_fail", true},
 };
 
-constexpr int i = 10 - 1 - 2;
-
 TEST_CASE("functional tests") {
     size_t idx = GENERATE(Catch::Generators::range(size_t(0), cases.size()));
 

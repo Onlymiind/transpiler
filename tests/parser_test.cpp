@@ -316,10 +316,18 @@ TEST_CASE("parser: functions", "[parser]") {
                 common::Function{.name = ids.add("abc")},
                 common::Function{.name = ids.add("cba"), .body = common::Block{std::vector<common::Statement>(3)}},
                 common::Function{.name = ids.add("acb"), .body = common::Block{std::vector<common::Statement>(2)}},
-                common::Function{.name = ids.add("aaa"), .return_typename = ids.add("u64"), .body = common::Block{std::vector<common::Statement>(3)}},
+                common::Function{
+                    .name = ids.add("aaa"),
+                    .return_typename = common::ParsedType{ids.add("u64")},
+                    .body = common::Block{std::vector<common::Statement>(3)},
+                },
             }},
         Case{"func a();", {common::Function{.name = ids.add("a"), .decl_only = true}}},
-        Case{"func a() u64;", {common::Function{.name = ids.add("a"), .return_typename = ids.add("u64"), .decl_only = true}}},
+        Case{"func a() u64;", {common::Function{
+                                  .name = ids.add("a"),
+                                  .return_typename = common::ParsedType{ids.add("u64")},
+                                  .decl_only = true,
+                              }}},
         Case{"func a() {return;}", {common::Function{
                                        .name = ids.add("a"),
                                        .body = common::Block{std::vector<common::Statement>(1)},
@@ -441,15 +449,15 @@ TEST_CASE("parser: local variables", "[parser]") {
 
     common::Identifiers ids;
     std::vector<Case> cases{
-        {"func main(){var a u64;}", common::Variable{.name = ids.add("a"), .explicit_type = ids.add("u64")}},
+        {"func main(){var a u64;}", common::Variable{.name = ids.add("a"), .explicit_type = common::ParsedType{ids.add("u64")}}},
         {"func main(){var a u64 = 1;}", common::Variable{
                                             .name = ids.add("a"),
-                                            .explicit_type = ids.add("u64"),
+                                            .explicit_type = common::ParsedType{ids.add("u64")},
                                             .initial_value = common::Expression{.kind = common::ExpressionKind::LITERAL},
                                         }},
         {"func main(){var a bool = true || false;}", common::Variable{
                                                          .name = ids.add("a"),
-                                                         .explicit_type = ids.add("bool"),
+                                                         .explicit_type = common::ParsedType{ids.add("bool")},
                                                          .initial_value = common::Expression{.kind = common::ExpressionKind::BINARY},
                                                      }},
         {"func main(){var a = 1.1 * 2.2;}", common::Variable{
