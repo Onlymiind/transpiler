@@ -74,6 +74,7 @@ namespace lexer {
     static const std::unordered_map<std::string_view, common::Token> g_keywords{
         {"true", common::Token::with_value(true)},
         {"false", common::Token::with_value(false)},
+        {"null", common::Token::with_value(nullptr)},
         {"func", common::Token{common::TokenType::FUNC}},
         {"return", common::Token{common::TokenType::RETURN}},
         {"var", common::Token{common::TokenType::VAR}},

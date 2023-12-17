@@ -73,6 +73,8 @@ namespace codegen {
             int presicion = out_->precision();
             *out_ << std::setprecision(std::numeric_limits<double>::digits10)
                   << *d << std::setprecision(presicion);
+        } else if (lit.is<std::nullptr_t>()) {
+            *out_ << '0';
         } else {
             report_error("unknown literal type");
         }

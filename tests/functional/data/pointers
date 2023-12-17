@@ -9,4 +9,7 @@ func main() {
     var p_default *u64;
     var b = 0.0;
     foo(&app, &b);
+
+    var c *u64 = cast<*u64>(null);
+    if ap == c {}
 }

@@ -190,6 +190,10 @@ namespace checker {
                 report_error("can't dereference type that is not a pointer");
                 return common::Type{};
             }
+            if (type.is_nullptr()) {
+                report_error("null dereference");
+                return common::Type{};
+            }
             --type.indirection_level;
             return type;
         default:
@@ -225,8 +229,14 @@ namespace checker {
             return common::Type{common::g_void};
         }
 
+        if (common::is_equality_op(expr.op())) {
+            // for now, every type is comparable
+            // later maybe should add COMPARABLE type trait
+            return builtin_types_[common::BuiltinTypes::BOOL];
+        }
+
         if (lhs.is_pointer() || rhs.is_pointer()) {
-            report_error("can not use pointers in binary expressions except for assignment");
+            report_error("can not use pointers in binary expressions except for assignment and equality tests");
             return common::Type{};
         }
 
@@ -240,10 +250,6 @@ namespace checker {
             } else {
                 return lhs;
             }
-        } else if (common::is_equality_op(expr.op())) {
-            // for now, every type is comparable
-            // later maybe should add COMPARABLE type trait
-            return builtin_types_[common::BuiltinTypes::BOOL];
         } else if (common::is_relational(expr.op())) {
             if (common::empty(traits & common::TypeTraits::ORDERED)) {
                 report_error("type mismatch: expected ordered type");
@@ -273,30 +279,34 @@ namespace checker {
 
         common::ParsedNamedType &parsed = common::downcast<common::ParsedNamedType>(*cast.to());
 
-        if (parsed.indirection_level() != 0) {
-            report_error("cats to pointer types are not allowed");
-            return common::Type{};
-        }
         common::Symbol dst_sym = module_.find(parsed.name());
-        cast.type(common::Type{dst_sym});
-        std::optional<common::BuiltinType> dst = module_.get_scope(dst_sym.scope)->get_type(dst_sym.id);
-        if (!dst) {
-            report_error("can not cast to unknown type");
+        if (dst_sym.is_error()) {
+            report_error("unknown destination type");
             return common::Type{};
         }
-
+        cast.type(common::Type{dst_sym, parsed.indirection_level()});
         common::Type src = check_expression(cast.from());
         if (src.is_error()) {
             return common::Type{};
-        } else if (src.is_pointer()) {
-            report_error("casts from pointer types are not allowed");
+        }
+        if (cast.type().is_pointer()) {
+            if (!src.is_nullptr()) {
+                report_error("casting to poiner type is allowed only for null");
+                return common::Type{};
+            }
+            return cast.type();
+        }
+
+        std::optional<common::BuiltinType> dst = module_.get_scope(dst_sym.scope)->get_type(dst_sym.id);
+        if (!dst) {
+            report_error("can not cast to unknown type");
             return common::Type{};
         }
         common::TypeTraits src_traits = module_.get_scope(src.sym.scope)->get_type(src.sym.id)->traits;
 
         // TODO: empty traits
         if (dst->traits == src_traits) {
-            return common::Type{dst_sym};
+            return cast.type();
         }
 
         if (!common::empty(dst->traits & common::TypeTraits::BOOLEAN) ||
@@ -315,6 +325,8 @@ namespace checker {
             return builtin_types_.at(common::BuiltinTypes::UINT);
         } else if (lit.is<double>()) {
             return builtin_types_.at(common::BuiltinTypes::FLOAT);
+        } else if (lit.is<std::nullptr_t>()) {
+            return common::g_nullptr_type;
         }
         report_error("unknown literal type");
         return common::Type{};
@@ -590,6 +602,10 @@ namespace checker {
         if (var.initial_value) {
             check_expression(var.initial_value);
             if (!err_.empty()) {
+                return;
+            }
+            if (var.initial_value->type().is_nullptr()) {
+                report_error("null must be explicitly converted");
                 return;
             }
             expected_type = var.initial_value->type();

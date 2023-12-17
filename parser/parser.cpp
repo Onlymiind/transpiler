@@ -85,6 +85,11 @@ namespace parser {
         case BOOL: return make_literal_expr(bool{});
         case INTEGER: return make_literal_expr(uint64_t{});
         case FLOAT: return make_literal_expr(double{});
+        case NULLPTR: {
+            auto result = std::make_unique<common::Literal>(nullptr, next().pos());
+            consume();
+            return result;
+        }
         case CAST: return parse_cast();
         default:
             report_error("expected primary expression");

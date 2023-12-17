@@ -16,4 +16,6 @@ u64** app = &ap;
 u64* p_default = (u64*)0;
 f64 b = (f64)0;
 foo(&app, &b);
+u64* c = (u64*)0;
+if((ap == c)) {}
 }

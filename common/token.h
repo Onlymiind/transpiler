@@ -14,6 +14,7 @@ namespace common {
         INTEGER,
         FLOAT,
         BOOL,
+        NULLPTR,
 
         // operators
         OP_START,
@@ -170,6 +171,14 @@ namespace common {
         Token result;
         result.type_ = TokenType::IDENTIFIER;
         result.identifier = value;
+        result.pos_ = pos;
+        return result;
+    }
+
+    template <>
+    inline Token Token::with_value(std::nullptr_t value, size_t pos) noexcept {
+        Token result;
+        result.type_ = TokenType::NULLPTR;
         result.pos_ = pos;
         return result;
     }

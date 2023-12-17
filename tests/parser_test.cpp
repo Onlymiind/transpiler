@@ -55,6 +55,11 @@ class PolishNotationParser {
         case common::TokenType::BOOL: return make_literal_expr(bool{});
         case common::TokenType::INTEGER: return make_literal_expr(uint64_t{});
         case common::TokenType::FLOAT: return make_literal_expr(double{});
+        case common::TokenType::NULLPTR: {
+            common::Literal result{nullptr, next().pos()};
+            consume();
+            return std::make_unique<common::Literal>(std::move(result));
+        }
         case common::TokenType::LEFT_PARENTHESIS:
             consume();
             return parse_unary_expression();
@@ -155,7 +160,7 @@ struct ExprComparer {
 };
 
 TEST_CASE("parser: literals", "[parser]") {
-    std::string string{GENERATE(as<std::string>{}, "1234", "true", "1234.1234")};
+    std::string string{GENERATE(as<std::string>{}, "1234", "true", "1234.1234", "null")};
 
     std::stringstream str{string};
     lexer::Lexer l{str};

@@ -198,7 +198,7 @@ namespace common {
     };
 
     class Literal final : public Expression {
-        using Storage = std::variant<bool, uint64_t, double>;
+        using Storage = std::variant<bool, uint64_t, double, std::nullptr_t>;
 
       public:
         template <typename T>

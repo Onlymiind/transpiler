@@ -60,10 +60,13 @@ namespace common {
         uint64_t indirection_level = 0;
 
         constexpr bool is_pointer() const noexcept { return indirection_level != 0; }
+        constexpr bool is_nullptr() const noexcept { return is_void() && is_pointer(); }
         constexpr bool is_error() const noexcept { return sym.is_error(); }
         constexpr bool is_void() const noexcept { return sym.is_void(); }
         constexpr bool operator==(Type rhs) const noexcept { return sym == rhs.sym && indirection_level == rhs.indirection_level; }
     };
+
+    constexpr inline Type g_nullptr_type = Type{g_void, 1};
 } // namespace common
 
 #endif
