@@ -64,26 +64,9 @@ namespace common {
         const std::vector<VariableID> &global_variables() const { return global_variables_; }
 
       private:
-        std::vector<UnaryExpression> unary_exprs_;
-        std::vector<BinaryExpression> binary_exprs_;
-        std::vector<Literal> literal_exprs_;
-        std::vector<Cast> casts_;
-        std::vector<FunctionCall> calls_;
-        std::vector<IdentifierID> variable_refs_;
-
         std::vector<Function> functions_;
         std::vector<Variable> vars_;
-
-        std::vector<Expression> statements_;
-
         std::vector<VariableID> global_variables_;
-
-        std::vector<Branch> branches_;
-        std::vector<Loop> loops_;
-
-        std::vector<uint64_t> free_literals_;
-
-        std::vector<ParsedType> parsed_types_;
     };
 } // namespace common
 #endif
