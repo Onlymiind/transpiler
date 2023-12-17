@@ -93,7 +93,10 @@ namespace checker {
     }
 
     common::Type Checker::check_expression(std::unique_ptr<common::Expression> &expr) {
-        if (!expr || expr->is_error()) {
+        if (!expr) {
+            return common::Type{common::g_void};
+        }
+        if (expr->is_error()) {
             return common::Type{};
         }
 
@@ -101,10 +104,10 @@ namespace checker {
         ErrorGuard g{*this, expr->pos()};
         switch (expr->kind()) {
         case common::ExpressionKind::LITERAL:
-            result = get_type_for_literal(static_cast<common::Literal &>(*expr));
+            result = get_type_for_literal(common::downcast<common::Literal>(*expr));
             break;
         case common::ExpressionKind::UNARY: {
-            common::UnaryExpression &unary = static_cast<common::UnaryExpression &>(*expr);
+            common::UnaryExpression &unary = common::downcast<common::UnaryExpression>(*expr);
             result = check_unary_expression(unary);
             if (!result.is_error() && do_constant_folding_) {
                 if (auto computed = try_compute(unary)) {
@@ -114,7 +117,7 @@ namespace checker {
             break;
         }
         case common::ExpressionKind::BINARY: {
-            common::BinaryExpression &binary = static_cast<common::BinaryExpression &>(*expr);
+            common::BinaryExpression &binary = common::downcast<common::BinaryExpression>(*expr);
             result = check_binary_expression(binary);
             if (!result.is_error() && do_constant_folding_) {
                 if (auto computed = try_compute(binary)) {
@@ -124,7 +127,7 @@ namespace checker {
             break;
         }
         case common::ExpressionKind::CAST: {
-            common::Cast &cast = static_cast<common::Cast &>(*expr);
+            common::Cast &cast = common::downcast<common::Cast>(*expr);
             result = check_cast(cast);
             if (!result.is_error() && do_constant_folding_) {
                 if (auto computed = try_compute(cast)) {
@@ -134,13 +137,10 @@ namespace checker {
             break;
         }
         case common::ExpressionKind::FUNCTION_CALL:
-            result = check_function_call(static_cast<common::FunctionCall &>(*expr));
+            result = check_function_call(common::downcast<common::FunctionCall>(*expr));
             break;
         case common::ExpressionKind::VARIABLE_REF:
-            result = check_variable_ref(static_cast<common::VariableReference &>(*expr));
-            break;
-        case common::ExpressionKind::EMPTY:
-            result = common::Type{common::g_void};
+            result = check_variable_ref(common::downcast<common::VariableReference>(*expr));
             break;
         default:
             report_error("unknown expression type");
@@ -271,7 +271,7 @@ namespace checker {
             return common::Type{};
         }
 
-        common::ParsedNamedType &parsed = static_cast<common::ParsedNamedType &>(*cast.to());
+        common::ParsedNamedType &parsed = common::downcast<common::ParsedNamedType>(*cast.to());
 
         if (parsed.indirection_level() != 0) {
             report_error("cats to pointer types are not allowed");
@@ -383,7 +383,7 @@ namespace checker {
         } else if (expr.kind() != common::ExpressionKind::UNARY) {
             return false;
         }
-        return static_cast<common::UnaryExpression &>(expr).op() == common::UnaryOp::DEREFERENCE;
+        return common::downcast<common::UnaryExpression>(expr).op() == common::UnaryOp::DEREFERENCE;
     }
 
     common::Type Checker::check_variable_ref(common::VariableReference &name) {
@@ -419,7 +419,7 @@ namespace checker {
                 report_error("unsupported parsed type");
                 return;
             }
-            common::ParsedNamedType &parsed = static_cast<common::ParsedNamedType &>(*func.parsed_return_type);
+            common::ParsedNamedType &parsed = common::downcast<common::ParsedNamedType>(*func.parsed_return_type);
             func.return_type = common::Type{module_.find(parsed.name()), parsed.indirection_level()};
             if (func.return_type.is_error()) {
                 report_error("unknown return type");
@@ -449,7 +449,7 @@ namespace checker {
                 report_error("unsupported parsed type");
                 return;
             }
-            common::ParsedNamedType &parsed = static_cast<common::ParsedNamedType &>(*param.explicit_type);
+            common::ParsedNamedType &parsed = common::downcast<common::ParsedNamedType>(*param.explicit_type);
 
             param.type = common::Type{module_.find(parsed.name()), parsed.indirection_level()};
             if (param.type.is_error()) {
@@ -491,7 +491,7 @@ namespace checker {
 
         // else if: do not push unneded scope
         if (branch.false_branch()->statements().size() == 1 && branch.false_branch()->statements()[0]->kind() == common::StatementType::BRANCH) {
-            check_branch(static_cast<common::Branch &>(*branch.false_branch()->statements()[0]));
+            check_branch(common::downcast<common::Branch>(*branch.false_branch()->statements()[0]));
             if (!err_.empty()) {
                 return;
             }
@@ -511,18 +511,18 @@ namespace checker {
         ErrorGuard g{*this, smt.pos()};
         switch (smt.kind()) {
         case common::StatementType::EXPRESSION:
-            check_expression(static_cast<common::ExpressionStatement &>(smt).expression());
+            check_expression(common::downcast<common::ExpressionStatement>(smt).expression());
             break;
         case common::StatementType::BRANCH:
-            check_branch(static_cast<common::Branch &>(smt));
+            check_branch(common::downcast<common::Branch>(smt));
             break;
         case common::StatementType::RETURN: {
             if (is_reachable()) {
                 reachability_stack_.top() = Reachability::RETURNS;
             }
             common::Function &func = *ast_->get_function(current_function_);
-            auto &ret_expr = static_cast<common::Return &>(smt).expression();
-            if (!ret_expr || ret_expr->kind() == common::ExpressionKind::EMPTY) {
+            auto &ret_expr = common::downcast<common::Return>(smt).expression();
+            if (!ret_expr) {
                 if (!func.return_type.is_void()) {
                     report_error("trying to return non-void expression from function with no return type");
                 }
@@ -535,10 +535,10 @@ namespace checker {
             break;
         }
         case common::StatementType::VARIABLE:
-            check_variable(*ast_->get_var(static_cast<common::VariableDeclatarion &>(smt).variable()));
+            check_variable(*ast_->get_var(common::downcast<common::VariableDeclatarion>(smt).variable()));
             break;
         case common::StatementType::LOOP:
-            check_loop(static_cast<common::Loop &>(smt));
+            check_loop(common::downcast<common::Loop>(smt));
             break;
         case common::StatementType::BREAK: [[fallthrough]];
         case common::StatementType::CONTINUE:
@@ -547,7 +547,6 @@ namespace checker {
                 report_error("'break' and 'continue' must be used only inside loops");
             }
             break;
-        case common::StatementType::EMPTY: break;
         default:
             report_error("unknown statement type");
             break;
@@ -576,7 +575,7 @@ namespace checker {
                 return;
             }
 
-            common::ParsedNamedType &parsed = static_cast<common::ParsedNamedType &>(*var.explicit_type);
+            common::ParsedNamedType &parsed = common::downcast<common::ParsedNamedType>(*var.explicit_type);
             var.type = common::Type{
                 module_.find(parsed.name(), scope_stack_.top()),
                 parsed.indirection_level(),
@@ -652,7 +651,7 @@ namespace checker {
             return nullptr;
         }
 
-        common::Literal &lit = static_cast<common::Literal &>(*expr.expression());
+        common::Literal &lit = common::downcast<common::Literal>(*expr.expression());
         switch (expr.op()) {
         case common::UnaryOp::NEGATE: return std::make_unique<common::Literal>(-*lit.get<double>(), expr.pos());
         case common::UnaryOp::NOT: return std::make_unique<common::Literal>(!*lit.get<bool>(), expr.pos());
@@ -665,8 +664,8 @@ namespace checker {
             return nullptr;
         }
 
-        common::Literal &lhs = static_cast<common::Literal &>(*expr.lhs());
-        common::Literal &rhs = static_cast<common::Literal &>(*expr.rhs());
+        common::Literal &lhs = common::downcast<common::Literal>(*expr.lhs());
+        common::Literal &rhs = common::downcast<common::Literal>(*expr.rhs());
         if (!lhs.same_type(rhs)) {
             return nullptr;
         }
@@ -768,7 +767,7 @@ namespace checker {
         common::Type integer_type = builtin_types_[common::BuiltinTypes::UINT];
         common::Type boolean_type = builtin_types_[common::BuiltinTypes::BOOL];
 
-        common::Literal &from = static_cast<common::Literal &>(*cast.from());
+        common::Literal &from = common::downcast<common::Literal>(*cast.from());
         std::optional<common::Literal> result;
         if (cast.type() == floating_type) {
             if (!from.is<uint64_t>() && !from.is<double>()) {

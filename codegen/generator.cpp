@@ -37,24 +37,23 @@ namespace codegen {
 
         switch (expr.kind()) {
         case common::ExpressionKind::BINARY:
-            codegen_binary(static_cast<const common::BinaryExpression &>(expr));
+            codegen_binary(common::downcast<common::BinaryExpression>(expr));
             break;
         case common::ExpressionKind::UNARY:
-            codegen_unary(static_cast<const common::UnaryExpression &>(expr));
+            codegen_unary(common::downcast<common::UnaryExpression>(expr));
             break;
         case common::ExpressionKind::LITERAL:
-            codegen_literal(static_cast<const common::Literal &>(expr), expr);
+            codegen_literal(common::downcast<common::Literal>(expr), expr);
             break;
         case common::ExpressionKind::CAST:
-            codegen_cast(static_cast<const common::Cast &>(expr), expr);
+            codegen_cast(common::downcast<common::Cast>(expr), expr);
             break;
         case common::ExpressionKind::FUNCTION_CALL:
-            codegen_call(static_cast<const common::FunctionCall &>(expr));
+            codegen_call(common::downcast<common::FunctionCall>(expr));
             break;
         case common::ExpressionKind::VARIABLE_REF:
-            *out_ << *identifiers_->get(static_cast<const common::VariableReference &>(expr).name());
+            *out_ << *identifiers_->get(common::downcast<common::VariableReference>(expr).name());
             break;
-        case common::ExpressionKind::EMPTY: break;
         default:
             report_error("unknown expression type");
             break;
@@ -132,7 +131,7 @@ namespace codegen {
     void Generator::codegen_cast(const common::Cast &cast, const common::Expression &expr) {
         if (cast.from()->kind() == common::ExpressionKind::LITERAL) {
             // avoid unnecessary casts
-            codegen_literal(static_cast<const common::Literal &>(*cast.from()), expr);
+            codegen_literal(common::downcast<common::Literal>(*cast.from()), expr);
             return;
         }
 
@@ -260,7 +259,7 @@ namespace codegen {
         *out_ << "else ";
         const common::Block &false_branch = *branch.false_branch();
         if (false_branch.statements().size() == 1 && false_branch.statements()[0]->kind() == common::StatementType::BRANCH) {
-            codegen_branch(static_cast<const common::Branch &>(*false_branch.statements()[0]));
+            codegen_branch(common::downcast<common::Branch>(*false_branch.statements()[0]));
         } else {
             codegen_block(false_branch);
         }
@@ -283,7 +282,7 @@ namespace codegen {
 
     void Generator::codegen_loop(const common::Loop &loop) {
         *out_ << "for (";
-        if (loop.init() && loop.init()->kind() != common::StatementType::EMPTY) {
+        if (loop.init()) {
             codegen_statement(*loop.init());
         } else {
             *out_ << ';';
@@ -303,33 +302,30 @@ namespace codegen {
         switch (smt.kind()) {
         case common::StatementType::RETURN: {
             *out_ << "return ";
-            const common::Expression *expr = static_cast<const common::Return &>(smt).expression();
-            if (expr->kind() != common::ExpressionKind::EMPTY) {
+            const common::Expression *expr = common::downcast<common::Return>(smt).expression();
+            if (expr) {
                 codegen_expression(*expr);
             }
             *out_ << ';';
             break;
         }
         case common::StatementType::EXPRESSION: {
-            const common::Expression *expr = static_cast<const common::ExpressionStatement &>(smt).expression();
-            if (expr->kind() != common::ExpressionKind::EMPTY) {
-                codegen_expression(*expr);
-            }
+            const common::Expression *expr = common::downcast<common::ExpressionStatement>(smt).expression();
+            codegen_expression(*expr);
             *out_ << ';';
             break;
         }
         case common::StatementType::VARIABLE:
-            codegen_var(*ast_->get_var(static_cast<const common::VariableDeclatarion &>(smt).variable()));
+            codegen_var(*ast_->get_var(common::downcast<common::VariableDeclatarion>(smt).variable()));
             break;
         case common::StatementType::BRANCH:
-            codegen_branch(static_cast<const common::Branch &>(smt));
+            codegen_branch(common::downcast<common::Branch>(smt));
             break;
         case common::StatementType::LOOP:
-            codegen_loop(static_cast<const common::Loop &>(smt));
+            codegen_loop(common::downcast<common::Loop>(smt));
             break;
         case common::StatementType::BREAK: *out_ << "break;"; break;
         case common::StatementType::CONTINUE: *out_ << "continue;"; break;
-        case common::StatementType::EMPTY: break;
         default:
             report_error("statement type not supported");
             return;

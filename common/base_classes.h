@@ -9,12 +9,13 @@
 
 namespace common {
 
-#define COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(class_name, copy_policy) \
-    class_name(class_name &&) noexcept = default;                             \
-    class_name(const class_name &) = copy_policy;                             \
-    ~class_name() override = default;                                         \
-    class_name &operator=(class_name &&) noexcept = default;                  \
-    class_name &operator=(const class_name &) = copy_policy;
+#define COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(class_name, kind_type, kind_name, copy_policy) \
+    class_name(class_name &&) noexcept = default;                                                   \
+    class_name(const class_name &) = copy_policy;                                                   \
+    ~class_name() override = default;                                                               \
+    class_name &operator=(class_name &&) noexcept = default;                                        \
+    class_name &operator=(const class_name &) = copy_policy;                                        \
+    constexpr static kind_type static_kind() noexcept { return kind_name; }
 
     enum class ParsedTypeKind {
         ERROR,
@@ -45,7 +46,6 @@ namespace common {
         CAST,
         FUNCTION_CALL,
         VARIABLE_REF,
-        EMPTY,
 
         ERROR = 0xff,
     };
@@ -65,6 +65,7 @@ namespace common {
       protected:
         Expression(ExpressionKind kind, size_t pos) : kind_(kind), pos_(pos) {}
 
+      private:
         ExpressionKind kind_ = ExpressionKind::ERROR;
         size_t pos_ = 1;
         Type type_;
@@ -84,7 +85,6 @@ namespace common {
         BREAK,
         CONTINUE,
         LOOP,
-        EMPTY,
     };
 
     class Statement {

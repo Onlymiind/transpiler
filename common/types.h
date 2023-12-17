@@ -36,11 +36,11 @@ namespace common {
     }
 
     struct BuiltinType {
-        IdentifierID name = IdentifierID{g_invalid_id};
+        IdentifierID name;
         BuiltinTypes type{};
         TypeTraits traits{};
 
-        constexpr bool is_error() const { return name == IdentifierID{g_invalid_id}; }
+        constexpr bool is_error() const { return name == IdentifierID{}; }
     };
 
     struct Symbol {

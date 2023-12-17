@@ -51,7 +51,7 @@ namespace common {
         }
 
       private:
-        FunctionID entrypoint_ = FunctionID{g_invalid_id};
+        FunctionID entrypoint_;
         std::vector<Scope> scopes_;
         uint64_t current_id_ = 0;
     };

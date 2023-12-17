@@ -10,8 +10,8 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <variant>
+#include <vector>
 
 namespace common {
 
@@ -103,13 +103,6 @@ namespace common {
         }
     }
 
-    class EmptyExpression final : public Expression {
-      public:
-        EmptyExpression(size_t pos)
-            : Expression(ExpressionKind::EMPTY, pos) {}
-        ~EmptyExpression() override = default;
-    };
-
     class ErrorExpression final : public Expression {
       public:
         ErrorExpression(size_t pos)
@@ -120,9 +113,9 @@ namespace common {
     class UnaryExpression final : public Expression {
       public:
         UnaryExpression(UnaryOp op, std::unique_ptr<Expression> &&expr, size_t pos)
-            : Expression(ExpressionKind::UNARY, pos), op_(op), expr_(std::move(expr)) {}
+            : Expression(static_kind(), pos), op_(op), expr_(std::move(expr)) {}
 
-        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(UnaryExpression, delete)
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(UnaryExpression, ExpressionKind, ExpressionKind::UNARY, delete)
 
         UnaryOp op() const noexcept { return op_; }
         std::unique_ptr<Expression> &expression() noexcept { return expr_; }
@@ -138,9 +131,9 @@ namespace common {
     class BinaryExpression final : public Expression {
       public:
         BinaryExpression(BinaryOp op, std::unique_ptr<Expression> &&lhs, std::unique_ptr<Expression> &&rhs, size_t pos)
-            : Expression(ExpressionKind::BINARY, pos), op_(op), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {}
+            : Expression(static_kind(), pos), op_(op), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {}
 
-        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(BinaryExpression, delete)
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(BinaryExpression, ExpressionKind, ExpressionKind::BINARY, delete)
 
         BinaryOp op() const noexcept { return op_; }
         std::unique_ptr<Expression> &lhs() noexcept { return lhs_; }
@@ -160,9 +153,9 @@ namespace common {
     class FunctionCall final : public Expression {
       public:
         FunctionCall(IdentifierID name, std::vector<std::unique_ptr<Expression>> &&args, size_t pos)
-            : Expression(ExpressionKind::FUNCTION_CALL, pos), name_(name), args_(std::move(args)) {}
+            : Expression(static_kind(), pos), name_(name), args_(std::move(args)) {}
 
-        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(FunctionCall, delete)
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(FunctionCall, ExpressionKind, ExpressionKind::FUNCTION_CALL, delete)
 
         IdentifierID name() const noexcept { return name_; }
 
@@ -177,8 +170,8 @@ namespace common {
     class Cast final : public Expression {
       public:
         Cast(std::unique_ptr<ParsedType> &&to, std::unique_ptr<Expression> &&from, size_t pos)
-            : Expression(ExpressionKind::CAST, pos), to_(std::move(to)), from_(std::move(from)) {}
-        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(Cast, delete)
+            : Expression(static_kind(), pos), to_(std::move(to)), from_(std::move(from)) {}
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(Cast, ExpressionKind, ExpressionKind::CAST, delete)
 
         ParsedType *to() noexcept { return to_.get(); }
         std::unique_ptr<Expression> &from() noexcept { return from_; }
@@ -195,8 +188,8 @@ namespace common {
     class VariableReference final : public Expression {
       public:
         VariableReference(IdentifierID name, size_t pos)
-            : Expression(ExpressionKind::VARIABLE_REF, pos), name_(name) {}
-        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(VariableReference, default)
+            : Expression(static_kind(), pos), name_(name) {}
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(VariableReference, ExpressionKind, ExpressionKind::VARIABLE_REF, default)
 
         IdentifierID name() const noexcept { return name_; }
 
@@ -211,8 +204,8 @@ namespace common {
         template <typename T>
         Literal(T value, size_t pos)
             requires std::is_constructible_v<Storage, T>
-            : Expression(ExpressionKind::LITERAL, pos), value_(value) {}
-        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(Literal, default)
+            : Expression(static_kind(), pos), value_(value) {}
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(Literal, ExpressionKind, ExpressionKind::LITERAL, default)
 
         bool same_type(const Literal &other) const noexcept {
             return value_.index() == other.value_.index();

@@ -33,12 +33,12 @@ namespace common {
         }
 
         const std::string *get(IdentifierID id) const {
-            return id == IdentifierID{g_invalid_id} || *id >= id_to_name_.size() ? nullptr : id_to_name_[*id];
+            return id == IdentifierID{} || *id >= id_to_name_.size() ? nullptr : id_to_name_[*id];
         }
 
         IdentifierID get(const std::string &name) const {
             auto it = name_to_id_.find(name);
-            return it == name_to_id_.end() ? IdentifierID{g_invalid_id} : it->second;
+            return it == name_to_id_.end() ? IdentifierID{} : it->second;
         }
 
       private:

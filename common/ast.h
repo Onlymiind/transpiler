@@ -1,16 +1,8 @@
 #ifndef COMPILER_V2_COMMON_FILE_HDR_
 #define COMPILER_V2_COMMON_FILE_HDR_
 #include "common/declarations.h"
-#include "common/expression.h"
-#include "common/literals.h"
-#include "common/parsed_types.h"
-#include "common/statement.h"
 #include "common/util.h"
 
-#include <cstddef>
-#include <cstdint>
-#include <optional>
-#include <unordered_map>
 #include <vector>
 
 namespace common {

@@ -109,31 +109,31 @@ struct ExprComparer {
 
         switch (lhs.kind()) {
         case common::ExpressionKind::BINARY: {
-            const auto &lhs_binary = static_cast<const common::BinaryExpression &>(lhs);
-            const auto &rhs_binary = static_cast<const common::BinaryExpression &>(rhs);
+            const auto &lhs_binary = common::downcast<common::BinaryExpression>(lhs);
+            const auto &rhs_binary = common::downcast<common::BinaryExpression>(rhs);
             return lhs_binary.op() == rhs_binary.op() &&
                    compare(*lhs_binary.lhs(), *rhs_binary.lhs()) &&
                    compare(*lhs_binary.rhs(), *rhs_binary.rhs());
         }
         case common::ExpressionKind::UNARY: {
-            const auto &lhs_unary = static_cast<const common::UnaryExpression &>(lhs);
-            const auto &rhs_unary = static_cast<const common::UnaryExpression &>(rhs);
+            const auto &lhs_unary = common::downcast<common::UnaryExpression>(lhs);
+            const auto &rhs_unary = common::downcast<common::UnaryExpression>(rhs);
             return lhs_unary.op() == rhs_unary.op() && compare(*lhs_unary.expression(), *rhs_unary.expression());
         }
         case common::ExpressionKind::CAST: {
-            const auto &lhs_cast = static_cast<const common::Cast &>(lhs);
-            const auto &rhs_cast = static_cast<const common::Cast &>(rhs);
+            const auto &lhs_cast = common::downcast<common::Cast>(lhs);
+            const auto &rhs_cast = common::downcast<common::Cast>(rhs);
             if (lhs_cast.to()->kind() != common::ParsedTypeKind::NAMED || rhs_cast.to()->kind() != common::ParsedTypeKind::NAMED) {
                 throw std::runtime_error("only named types are supported");
             }
-            auto str1 = *lhs_identifiers.get(static_cast<const common::ParsedNamedType &>(*lhs_cast.to()).name());
-            auto str2 = *rhs_identifiers.get(static_cast<const common::ParsedNamedType &>(*rhs_cast.to()).name());
+            auto str1 = *lhs_identifiers.get(common::downcast<common::ParsedNamedType>(*lhs_cast.to()).name());
+            auto str2 = *rhs_identifiers.get(common::downcast<common::ParsedNamedType>(*rhs_cast.to()).name());
             return str1 == str2 &&
                    compare(*lhs_cast.from(), *rhs_cast.from());
         }
         case common::ExpressionKind::FUNCTION_CALL: {
-            const auto &lhs_call = static_cast<const common::FunctionCall &>(lhs);
-            const auto &rhs_call = static_cast<const common::FunctionCall &>(rhs);
+            const auto &lhs_call = common::downcast<common::FunctionCall>(lhs);
+            const auto &rhs_call = common::downcast<common::FunctionCall>(rhs);
             if (*lhs_identifiers.get(lhs_call.name()) != *rhs_identifiers.get(rhs_call.name())) {
                 return false;
             }
@@ -148,7 +148,7 @@ struct ExprComparer {
             return true;
         }
         case common::ExpressionKind::LITERAL:
-            return static_cast<const common::Literal &>(lhs) == static_cast<const common::Literal &>(rhs);
+            return common::downcast<common::Literal>(lhs) == common::downcast<common::Literal>(rhs);
         }
         return false;
     }
@@ -421,7 +421,7 @@ TEST_CASE("parser: function call and variable ref distinction", "[parser]") {
         REQUIRE(p.get_error().empty());
         REQUIRE(expr->kind() == common::ExpressionKind::VARIABLE_REF);
         auto ast = p.reset();
-        REQUIRE(static_cast<common::VariableReference &>(*expr).name() != common::IdentifierID{});
+        REQUIRE(common::downcast<common::VariableReference>(*expr).name() != common::IdentifierID{});
     }
     SECTION("function call") {
         std::stringstream str{"x()"};
@@ -435,7 +435,7 @@ TEST_CASE("parser: function call and variable ref distinction", "[parser]") {
         REQUIRE(p.get_error().empty());
         REQUIRE(expr->kind() == common::ExpressionKind::FUNCTION_CALL);
         auto ast = p.reset();
-        REQUIRE(static_cast<common::FunctionCall &>(*expr).name() != common::IdentifierID{});
+        REQUIRE(common::downcast<common::FunctionCall>(*expr).name() != common::IdentifierID{});
     }
 }
 

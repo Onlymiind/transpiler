@@ -253,7 +253,7 @@ namespace parser {
         case common::TokenType::RETURN:
             consume();
             if (next().is(common::TokenType::SEMICOLON)) {
-                smt = std::make_unique<common::Return>(std::make_unique<common::EmptyExpression>(next().pos()), pos);
+                smt = std::make_unique<common::Return>(nullptr, pos);
             } else {
                 std::unique_ptr<common::Expression> expr = parse_expression();
                 if (!expr || expr->is_error()) {

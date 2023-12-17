@@ -17,36 +17,29 @@ namespace common {
     class BreakStatement final : public Statement {
       public:
         BreakStatement(size_t pos)
-            : Statement(StatementType::BREAK, pos, true) {}
-        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(BreakStatement, default)
-    };
-
-    class EmptyStatement final : public Statement {
-      public:
-        EmptyStatement(size_t pos)
-            : Statement(StatementType::EMPTY, pos, true) {}
-        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(EmptyStatement, default)
+            : Statement(static_kind(), pos, true) {}
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(BreakStatement, StatementType, StatementType::BREAK, default)
     };
 
     class ErrorStatement final : public Statement {
       public:
         ErrorStatement(size_t pos)
-            : Statement(StatementType::ERROR, pos, true) {}
-        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(ErrorStatement, default)
+            : Statement(static_kind(), pos, true) {}
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(ErrorStatement, StatementType, StatementType::ERROR, default)
     };
 
     class ContinueStatement final : public Statement {
       public:
         ContinueStatement(size_t pos)
-            : Statement(StatementType::CONTINUE, pos, true) {}
-        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(ContinueStatement, default)
+            : Statement(static_kind(), pos, true) {}
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(ContinueStatement, StatementType, StatementType::CONTINUE, default)
     };
 
     class ExpressionStatement final : public Statement {
       public:
         ExpressionStatement(std::unique_ptr<Expression> &&expr, size_t pos)
-            : Statement(StatementType::EXPRESSION, pos, true), expr_(std::move(expr)) {}
-        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(ExpressionStatement, delete)
+            : Statement(static_kind(), pos, true), expr_(std::move(expr)) {}
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(ExpressionStatement, StatementType, StatementType::EXPRESSION, delete)
 
         std::unique_ptr<Expression> &expression() noexcept { return expr_; }
         const Expression *expression() const noexcept { return expr_.get(); }
@@ -60,8 +53,8 @@ namespace common {
     class Return final : public Statement {
       public:
         Return(std::unique_ptr<Expression> &&expr, size_t pos)
-            : Statement(StatementType::RETURN, pos, true), expr_(std::move(expr)) {}
-        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(Return, delete)
+            : Statement(static_kind(), pos, true), expr_(std::move(expr)) {}
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(Return, StatementType, StatementType::RETURN, delete)
 
         std::unique_ptr<Expression> &expression() noexcept { return expr_; }
         const Expression *expression() const noexcept { return expr_.get(); }
@@ -75,9 +68,9 @@ namespace common {
     class Block final : public Statement {
       public:
         Block(size_t pos, std::vector<std::unique_ptr<Statement>> &&smts = {})
-            : Statement(StatementType::BLOCK, pos, true), smts_(std::move(smts)) {}
+            : Statement(static_kind(), pos, true), smts_(std::move(smts)) {}
 
-        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(Block, delete)
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(Block, StatementType, StatementType::BLOCK, delete)
 
         std::vector<std::unique_ptr<Statement>> &statements() noexcept { return smts_; }
         const std::vector<std::unique_ptr<Statement>> &statements() const noexcept { return smts_; }
@@ -89,10 +82,10 @@ namespace common {
     class Branch final : public Statement {
       public:
         Branch(std::unique_ptr<Expression> &&predicate, Block &&true_branch, std::optional<Block> &&false_branch, size_t pos)
-            : Statement(StatementType::BRANCH, pos, true), predicate_(std::move(predicate)),
+            : Statement(static_kind(), pos, true), predicate_(std::move(predicate)),
               true_branch_(std::move(true_branch)), false_branch_(std::move(false_branch)) {}
 
-        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(Branch, delete)
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(Branch, StatementType, StatementType::BRANCH, delete)
 
         std::unique_ptr<Expression> &predicate() noexcept { return predicate_; }
         const Expression *predicate() const noexcept { return predicate_.get(); }
@@ -112,9 +105,9 @@ namespace common {
     class VariableDeclatarion final : public Statement {
       public:
         VariableDeclatarion(VariableID var, size_t pos)
-            : Statement(StatementType::VARIABLE, pos, true), var_(var) {}
+            : Statement(static_kind(), pos, true), var_(var) {}
 
-        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(VariableDeclatarion, default)
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(VariableDeclatarion, StatementType, StatementType::VARIABLE, default)
 
         VariableID variable() const noexcept { return var_; }
 
@@ -125,9 +118,9 @@ namespace common {
     class Loop final : public Statement {
       public:
         Loop(size_t pos)
-            : Statement(StatementType::LOOP, pos, true), body_(pos) {}
+            : Statement(static_kind(), pos, true), body_(pos) {}
 
-        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(Loop, delete)
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(Loop, StatementType, StatementType::LOOP, delete)
 
         Statement *init() noexcept { return init_.get(); }
         std::unique_ptr<Expression> &condition() noexcept { return condition_; }

@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <unordered_map>
 #include <vector>
 
 namespace common {
@@ -24,7 +25,7 @@ namespace common {
         SymbolID add(BuiltinType type) {
             SymbolID result{make_id<SymbolID>(SymbolType::BUILTIN_TYPE, builtin_types_.size())};
             if (!name_to_symbol_.try_emplace(type.name, result).second) {
-                return SymbolID{g_invalid_id};
+                return SymbolID{};
             }
             builtin_types_.push_back(type);
             return result;
@@ -33,7 +34,7 @@ namespace common {
         SymbolID add(IdentifierID name, FunctionID function) {
             SymbolID result{make_id<SymbolID>(SymbolType::FUNCTION, functions_.size())};
             if (!name_to_symbol_.try_emplace(name, result).second) {
-                return SymbolID{g_invalid_id};
+                return SymbolID{};
             }
             functions_.push_back(function);
             return result;
@@ -42,7 +43,7 @@ namespace common {
         SymbolID add(IdentifierID name, VariableID var) {
             SymbolID result{make_id<SymbolID>(SymbolType::VARIABLE, variables_.size())};
             if (!name_to_symbol_.try_emplace(name, result).second) {
-                return SymbolID{g_invalid_id};
+                return SymbolID{};
             }
             variables_.push_back(var);
             return result;
@@ -76,13 +77,13 @@ namespace common {
 
         ScopeID parent() const noexcept { return parent_; }
         ScopeID id() const noexcept { return self_; }
-        bool is_global() const noexcept { return parent_ == ScopeID{g_invalid_id}; }
+        bool is_global() const noexcept { return parent_ == ScopeID{}; }
 
         constexpr static SymbolType type(SymbolID id) noexcept { return decompose<SymbolType>(id).first; }
 
         SymbolID find(IdentifierID id) const noexcept {
             auto it = name_to_symbol_.find(id);
-            return it == name_to_symbol_.end() ? SymbolID{g_invalid_id} : it->second;
+            return it == name_to_symbol_.end() ? SymbolID{} : it->second;
         }
 
         const std::vector<FunctionID> &functions() const { return functions_; }

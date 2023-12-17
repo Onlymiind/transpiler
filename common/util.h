@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -80,22 +81,13 @@ namespace common {
 
     template <size_t TAG>
     using IDBase = Distinct<uint64_t, TAG, static_cast<uint64_t>(-1)>;
-    using GenericID = IDBase<IDType::GENERIC>;
-    using LiteralID = IDBase<IDType::LITERAL>;
     using IdentifierID = IDBase<IDType::IDENTIFIER>;
-    using ExpressionID = IDBase<IDType::EXPRESSION>;
     using FunctionID = IDBase<IDType::FUNCTION>;
     using TypeID = IDBase<IDType::TYPE>;
-    using StatementID = IDBase<IDType::STATEMENT>;
     using ScopeID = IDBase<IDType::SCOPE>;
     using SymbolID = IDBase<IDType::SYMBOL>;
     using VariableID = IDBase<IDType::VARIABLE>;
     using BasicBlockID = IDBase<IDType::BASIC_BLOCK>;
-    using ParsedTypeID = IDBase<IDType::PARSED_TYPE>;
-
-    constexpr inline GenericID g_invalid_id{static_cast<uint64_t>(-1)};
-    constexpr inline LiteralID g_false_id{2};
-    constexpr inline LiteralID g_true_id{1};
 
     template <typename ID, typename Type>
     constexpr inline ID make_id(Type tag, uint64_t idx)
@@ -109,6 +101,26 @@ namespace common {
         requires std::is_enum_v<Type> && std::is_same_v<std::underlying_type_t<Type>, uint8_t>
     {
         return {static_cast<Type>(*id >> 56), *id & 0xffffffffffffff};
+    }
+
+    template <typename Derived, typename Base>
+    inline Derived &downcast(Base &base)
+        requires std::is_base_of_v<Base, Derived>
+    {
+        if (base.kind() != Derived::static_kind()) {
+            throw std::runtime_error("downcasting to wrong derived type");
+        }
+        return static_cast<Derived &>(base);
+    }
+
+    template <typename Derived, typename Base>
+    inline const Derived &downcast(const Base &base)
+        requires std::is_base_of_v<Base, Derived>
+    {
+        if (base.kind() != Derived::static_kind()) {
+            throw std::runtime_error("downcasting to wrong derived type");
+        }
+        return static_cast<const Derived &>(base);
     }
 
 } // namespace common

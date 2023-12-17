@@ -12,7 +12,8 @@ namespace common {
     class ParsedNamedType final : public ParsedType {
       public:
         explicit ParsedNamedType(IdentifierID name, uint64_t indirection_level = 0)
-            : ParsedType(ParsedTypeKind::NAMED, indirection_level), name_(name) {}
+            : ParsedType(static_kind(), indirection_level), name_(name) {}
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(ParsedNamedType, ParsedTypeKind, ParsedTypeKind::NAMED, default)
 
         IdentifierID name() const noexcept { return name_; }
 
