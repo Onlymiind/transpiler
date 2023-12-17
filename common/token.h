@@ -61,6 +61,8 @@ namespace common {
         SEMICOLON,
         LEFT_BRACE,
         RIGHT_BRACE,
+        LEFT_BRACKET,
+        RIGHT_BRACKET,
         COLON,
         COMMA,
 

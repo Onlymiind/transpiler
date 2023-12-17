@@ -56,7 +56,7 @@ Precedence:
 
 ## Type syntax
 ```
-<type> = u64 | bool | f64 | (* <type>)
+<type> = u64 | bool | f64 | (* <type>) | ( '[' <expression> ']' <type>)
 ```
 
 ## Notes

@@ -43,7 +43,7 @@ void run_tests(const std::vector<GeneratorTestCase> cases) {
         std::stringstream out;
         auto mod = ch.reset();
         codegen::Generator g{out, mod, ast, lexer_result.identifiers};
-        g.codegen(expr);
+        g.codegen_expression(*expr);
         REQUIRE(!g.error_occured());
         std::string result = out.str();
         INFO(result);

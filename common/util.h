@@ -71,6 +71,7 @@ namespace common {
             SYMBOL,
             VARIABLE,
             BASIC_BLOCK,
+            PARSED_TYPE,
 
             COUNT,
         };
@@ -90,6 +91,7 @@ namespace common {
     using SymbolID = IDBase<IDType::SYMBOL>;
     using VariableID = IDBase<IDType::VARIABLE>;
     using BasicBlockID = IDBase<IDType::BASIC_BLOCK>;
+    using ParsedTypeID = IDBase<IDType::PARSED_TYPE>;
 
     constexpr inline GenericID g_invalid_id{static_cast<uint64_t>(-1)};
     constexpr inline LiteralID g_false_id{2};

@@ -2,6 +2,7 @@
 #include "common/declarations.h"
 #include "common/expression.h"
 #include "common/literals.h"
+#include "common/parsed_types.h"
 #include "common/statement.h"
 #include "common/token.h"
 #include "common/util.h"
@@ -9,6 +10,9 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
+#include <optional>
+#include <utility>
 
 namespace parser {
     void Parser::parse() {
@@ -25,59 +29,50 @@ namespace parser {
         }
     }
 
-    common::Expression Parser::parse_expression() {
-        common::Expression lhs = parse_unary_expression();
-        if (lhs.is_error() || !next().is_binary_op()) {
+    std::unique_ptr<common::Expression> Parser::parse_expression() {
+        std::unique_ptr<common::Expression> lhs = parse_unary_expression();
+        if (!lhs || lhs->is_error() || !next().is_binary_op()) {
             return lhs;
         }
-        return parse_binary_expression(lhs, 0);
+        return parse_binary_expression(std::move(lhs), 0);
     }
 
-    common::Expression Parser::parse_unary_expression() {
+    std::unique_ptr<common::Expression> Parser::parse_unary_expression() {
         if (!next().is_unary_op()) {
             return parse_primary_expression();
         }
 
-        common::UnaryExpression result{.op = *common::to_unary_op(next().type())};
         size_t pos = next().pos();
+        common::UnaryOp op = *common::to_unary_op(next().type());
+        std::unique_ptr<common::Expression> expr;
         consume();
         if (next().is_unary_op()) {
-            result.expr = parse_unary_expression();
+            expr = parse_unary_expression();
         } else {
-            result.expr = parse_primary_expression();
+            expr = parse_primary_expression();
         }
 
-        if (result.expr.is_error()) {
-            return common::Expression{};
+        if (!expr || expr->is_error()) {
+            return std::make_unique<common::ErrorExpression>(pos);
         }
 
-        return common::Expression{.kind = common::ExpressionKind::UNARY, .id = ast_.add(result), .pos = pos};
+        return std::make_unique<common::UnaryExpression>(op, std::move(expr), pos);
     }
 
-    common::Expression Parser::parse_primary_expression() {
+    std::unique_ptr<common::Expression> Parser::parse_primary_expression() {
         using enum common::TokenType;
-        auto make_literal_expr = [this](common::LiteralType type) {
+        auto make_literal_expr = [this]<typename T>(T) -> std::unique_ptr<common::Expression> {
             common::Token tok = next();
-            common::Literal result;
-            switch (type) {
-            case common::LiteralType::BOOL: result = *tok.get<bool>(); break;
-            case common::LiteralType::UINT: result = *tok.get<uint64_t>(); break;
-            case common::LiteralType::FLOAT: result = *tok.get<double>(); break;
-            default: report_error("unknown literal type"); break;
-            }
+            common::Literal result{*tok.get<T>(), tok.pos()};
             consume();
-            return common::Expression{
-                .kind = common::ExpressionKind::LITERAL,
-                .id = ast_.add(result),
-                .pos = tok.pos(),
-            };
+            return std::make_unique<common::Literal>(std::move(result));
         };
 
         switch (next().type()) {
         case LEFT_PARENTHESIS: {
             consume();
-            common::Expression result = parse_expression();
-            if (result.is_error()) {
+            std::unique_ptr<common::Expression> result = parse_expression();
+            if (!result || result->is_error()) {
                 break;
             }
             if (!match(RIGHT_PARENTHESIS, "expected ')'")) {
@@ -87,43 +82,41 @@ namespace parser {
         }
 
         case IDENTIFIER: return parse_identifier_ref();
-        case BOOL: return make_literal_expr(common::LiteralType::BOOL);
-        case INTEGER: return make_literal_expr(common::LiteralType::UINT);
-        case FLOAT: return make_literal_expr(common::LiteralType::FLOAT);
+        case BOOL: return make_literal_expr(bool{});
+        case INTEGER: return make_literal_expr(uint64_t{});
+        case FLOAT: return make_literal_expr(double{});
         case CAST: return parse_cast();
         default:
             report_error("expected primary expression");
             break;
         }
 
-        return common::Expression{};
+        return std::make_unique<common::ErrorExpression>(next().pos());
     }
 
-    common::Expression Parser::parse_identifier_ref() {
+    std::unique_ptr<common::Expression> Parser::parse_identifier_ref() {
         size_t pos = next().pos();
         common::IdentifierID name = common::IdentifierID{match_identifier("function call: expected function name")};
         if (name == common::IdentifierID{}) {
-            return common::Expression{};
+            return std::make_unique<common::ErrorExpression>(pos);
         }
 
         if (!next().is(common::TokenType::LEFT_PARENTHESIS)) {
-            return common::Expression{.kind = common::ExpressionKind::VARIABLE_REF, .id = ast_.add_variable_ref(name), .pos = pos};
+            return std::make_unique<common::VariableReference>(name, pos);
         }
 
-        common::FunctionCall result{
-            .name = name,
-        };
         if (!match(common::TokenType::LEFT_PARENTHESIS, "function call: expected '('")) {
-            return common::Expression{};
+            return std::make_unique<common::ErrorExpression>(next().pos());
         }
+        std::vector<std::unique_ptr<common::Expression>> args;
         bool first = true;
         while (!next().is(common::TokenType::RIGHT_PARENTHESIS) && !next().is_eof()) {
             if (!first && !match(common::TokenType::COMMA, "expected comma-separated list of arguments")) {
-                return common::Expression{};
+                return std::make_unique<common::ErrorExpression>(next().pos());
             }
-            result.args.push_back(parse_expression());
-            if (result.args.back().is_error()) {
-                return common::Expression{};
+            args.push_back(parse_expression());
+            if (!args.back() || args.back()->is_error()) {
+                return std::make_unique<common::ErrorExpression>(next().pos());
             }
             if (next().is(common::TokenType::RIGHT_PARENTHESIS)) {
                 break;
@@ -131,16 +124,16 @@ namespace parser {
             first = false;
         }
         if (!match(common::TokenType::RIGHT_PARENTHESIS, "function call: expected ')'")) {
-            return common::Expression{};
+            return std::make_unique<common::ErrorExpression>(next().pos());
         }
 
-        return common::Expression{.kind = common::ExpressionKind::FUNCTION_CALL, .id = ast_.add(result), .pos = pos};
+        return std::make_unique<common::FunctionCall>(name, std::move(args), pos);
     }
 
-    common::Expression Parser::parse_binary_expression(common::Expression lhs, uint8_t precedence) {
+    std::unique_ptr<common::Expression> Parser::parse_binary_expression(std::unique_ptr<common::Expression> &&lhs, uint8_t precedence) {
         if (!next().is_binary_op()) {
             report_error("expected binary operator");
-            return common::Expression{};
+            return std::make_unique<common::ErrorExpression>(next().pos());
         }
 
         for (auto op = common::to_binary_op(next().type());
@@ -149,32 +142,24 @@ namespace parser {
             uint8_t op_precedence = common::get_precedence(*op);
             if (op_precedence == common::g_invalid_precedence) {
                 report_error("operator precedence not implemented");
-                return common::Expression{};
+                return std::make_unique<common::ErrorExpression>(next().pos());
             }
             size_t pos = next().pos();
             consume();
-            common::Expression rhs = parse_unary_expression();
-            if (rhs.is_error()) {
-                return common::Expression{};
+            std::unique_ptr<common::Expression> rhs = parse_unary_expression();
+            if (!rhs || rhs->is_error()) {
+                return std::make_unique<common::ErrorExpression>(next().pos());
             }
             for (auto next_op = common::to_binary_op(next().type());
                  next_op && common::get_precedence(*next_op) > op_precedence;
                  next_op = common::to_binary_op(next().type())) {
-                rhs = parse_binary_expression(rhs, common::get_precedence(*next_op));
-                if (rhs.is_error()) {
-                    return common::Expression{};
+                rhs = parse_binary_expression(std::move(rhs), common::get_precedence(*next_op));
+                if (!rhs || rhs->is_error()) {
+                    return std::make_unique<common::ErrorExpression>(next().pos());
                 }
             }
 
-            lhs = common::Expression{
-                .kind = common::ExpressionKind::BINARY,
-                .id = ast_.add(common::BinaryExpression{
-                    .op = *op,
-                    .lhs = lhs,
-                    .rhs = rhs,
-                }),
-                .pos = pos,
-            };
+            lhs = std::make_unique<common::BinaryExpression>(*op, std::move(lhs), std::move(rhs), pos);
         }
 
         return lhs;
@@ -213,7 +198,7 @@ namespace parser {
         }
 
         if (!(next().is(common::TokenType::SEMICOLON) || next().is(common::TokenType::LEFT_BRACE))) {
-            result.return_typename = parse_type();
+            result.parsed_return_type = parse_type();
         }
         if (next().is(common::TokenType::SEMICOLON)) {
             consume();
@@ -243,16 +228,10 @@ namespace parser {
         ast_.add_global(std::move(result));
     }
 
-    common::Statement Parser::parse_statement() {
-
-        auto make_single_keyword = [this](common::StatementType type) {
-            common::Statement result{.type = type, .pos = next().pos()};
-            consume();
-            return result;
-        };
-
-        common::Statement smt{.type = common::StatementType::EXPRESSION, .pos = next().pos()};
+    std::unique_ptr<common::Statement> Parser::parse_statement() {
+        size_t pos = next().pos();
         bool needs_semicolon = true;
+        std::unique_ptr<common::Statement> smt;
         switch (next().type()) {
         case common::TokenType::VAR: smt = parse_local_variable(); break;
         case common::TokenType::IF:
@@ -263,222 +242,218 @@ namespace parser {
             smt = parse_loop();
             needs_semicolon = false;
             break;
-        case common::TokenType::BREAK: smt = make_single_keyword(common::StatementType::BREAK); break;
-        case common::TokenType::CONTINUE: smt = make_single_keyword(common::StatementType::CONTINUE); break;
+        case common::TokenType::BREAK:
+            smt = std::make_unique<common::BreakStatement>(pos);
+            consume();
+            break;
+        case common::TokenType::CONTINUE:
+            smt = std::make_unique<common::ContinueStatement>(pos);
+            consume();
+            break;
         case common::TokenType::RETURN:
-            smt.type = common::StatementType::RETURN;
             consume();
             if (next().is(common::TokenType::SEMICOLON)) {
-                smt.id = ast_.add(common::Expression{.kind = common::ExpressionKind::EMPTY, .pos = smt.pos});
-                break;
+                smt = std::make_unique<common::Return>(std::make_unique<common::EmptyExpression>(next().pos()), pos);
+            } else {
+                std::unique_ptr<common::Expression> expr = parse_expression();
+                if (!expr || expr->is_error()) {
+                    return std::make_unique<common::ErrorStatement>(pos);
+                }
+                smt = std::make_unique<common::Return>(std::move(expr), pos);
             }
-            [[fallthrough]];
+            break;
         default: {
-            common::Expression expr = parse_expression();
-            if (expr.is_error()) {
-                return common::Statement{};
+            std::unique_ptr<common::Expression> expr = parse_expression();
+            if (!expr || expr->is_error()) {
+                return std::make_unique<common::ErrorStatement>(pos);
             }
-            smt.id = ast_.add(expr);
+            smt = std::make_unique<common::ExpressionStatement>(std::move(expr), pos);
+            break;
         }
         }
-        if (smt.is_error() ||
+        if (!smt || smt->is_error() ||
             (needs_semicolon && !match(common::TokenType::SEMICOLON, "expected ';' at the end of the statement"))) {
-            return common::Statement{};
+            return std::make_unique<common::ErrorStatement>(pos);
         }
         return smt;
     }
 
-    common::Statement Parser::parse_local_variable() {
-        common::Statement smt{.type = common::StatementType::VARIABLE, .pos = next().pos()};
+    std::unique_ptr<common::Statement> Parser::parse_local_variable() {
+        size_t pos = next().pos();
         common::Variable result = parse_variable();
         if (!err_.empty()) {
-            return common::Statement{};
+            return std::make_unique<common::ErrorStatement>(pos);
         }
-
-        smt.id = ast_.add_local(result);
-        return smt;
+        return std::make_unique<common::VariableDeclatarion>(ast_.add_local(std::move(result)), pos);
     }
 
     common::VariableID Parser::parse_func_param() {
         size_t pos = next().pos();
         common::Variable param{.pos = pos};
         if (next().is(common::TokenType::IDENTIFIER)) {
-            param.explicit_type.name = *next().get<common::IdentifierID>();
+            common::IdentifierID name = *next().get<common::IdentifierID>();
             consume();
-            if (param.explicit_type.name == common::IdentifierID{}) {
-                return common::VariableID{};
-            }
+
             // unnamed parameter
             if (next().is(common::TokenType::COMMA) || next().is(common::TokenType::RIGHT_PARENTHESIS)) {
-                return ast_.add_func_param(param);
+                param.explicit_type = std::make_unique<common::ParsedNamedType>(name, 0);
+                return ast_.add_func_param(std::move(param));
             }
-            param.name = param.explicit_type.name;
-            param.explicit_type = common::ParsedType{};
+            param.name = name;
         }
 
-        // can't fail
         param.explicit_type = parse_type();
-        if (param.explicit_type.is_error()) {
+        if (!param.explicit_type || param.explicit_type->is_error()) {
             return common::VariableID{};
         }
-        return ast_.add_func_param(param);
+        return ast_.add_func_param(std::move(param));
     }
 
     common::Block Parser::parse_block() {
+        common::Block result{next().pos()};
         if (!match(common::TokenType::LEFT_BRACE, "expected '{'")) {
-            return common::Block{};
+            return result;
         }
 
-        common::Block result;
         while (!next().is(common::TokenType::RIGHT_BRACE) && !next().is_eof()) {
             if (next().type() == common::TokenType::SEMICOLON) {
                 consume();
                 continue;
             }
-            common::Statement smt = parse_statement();
-            if (smt.is_error()) {
-                return common::Block{};
+            std::unique_ptr<common::Statement> smt = parse_statement();
+            if (!smt || smt->is_error()) {
+                return result;
             }
-            result.smts.push_back(smt);
+            result.statements().push_back(std::move(smt));
         }
 
-        if (!match(common::TokenType::RIGHT_BRACE, "expected '}' at the end of a block")) {
-            return common::Block{};
-        }
-
+        match(common::TokenType::RIGHT_BRACE, "expected '}' at the end of a block");
         return result;
     }
 
-    common::Statement Parser::parse_branch() {
-        common::Statement smt_result{.type = common::StatementType::BRANCH, .pos = next().pos()};
+    std::unique_ptr<common::Statement> Parser::parse_branch() {
+        size_t pos = next().pos();
         if (!match(common::TokenType::IF, "expected 'if' keyword")) {
-            return common::Statement{};
+            return std::make_unique<common::ErrorStatement>(pos);
         }
 
-        common::Branch result;
-        result.predicate = parse_expression();
-        if (result.predicate.is_error()) {
-            return common::Statement{};
+        std::unique_ptr<common::Expression> predicate = parse_expression();
+        if (!predicate || predicate->is_error()) {
+            return std::make_unique<common::ErrorStatement>(pos);
         }
-        result.then = parse_block();
+        common::Block then = parse_block();
         if (!err_.empty()) {
-            return common::Statement{};
+            return std::make_unique<common::ErrorStatement>(pos);
         }
         if (!next().is(common::TokenType::ELSE)) {
-            smt_result.id = ast_.add(std::move(result));
-            return smt_result;
+            return std::make_unique<common::Branch>(std::move(predicate), std::move(then), std::nullopt, pos);
         }
 
         // has "else"/"else if" branch
         consume();
+        std::optional<common::Block> otherwise;
         if (next().is(common::TokenType::IF)) {
-            result.otherwise.smts.push_back(parse_branch());
-            if (result.otherwise.smts.back().is_error()) {
-                return common::Statement{};
+
+            std::unique_ptr<common::Statement> smt = parse_branch();
+            if (!smt || smt->is_error()) {
+                return std::make_unique<common::ErrorStatement>(pos);
             }
-            smt_result.id = ast_.add(std::move(result));
-            return smt_result;
+            otherwise = common::Block{smt->pos()};
+            otherwise->statements().push_back(std::move(smt));
+            return std::make_unique<common::Branch>(std::move(predicate), std::move(then), std::move(otherwise), pos);
         }
 
-        result.otherwise = parse_block();
+        otherwise = parse_block();
         if (!err_.empty()) {
-            return common::Statement{};
+            return std::make_unique<common::ErrorStatement>(pos);
         }
-        smt_result.id = ast_.add(std::move(result));
-        return smt_result;
+        return std::make_unique<common::Branch>(std::move(predicate), std::move(then), std::move(otherwise), pos);
     }
 
-    common::Statement Parser::parse_loop() {
+    std::unique_ptr<common::Statement> Parser::parse_loop() {
         size_t pos = next().pos();
         if (!match(common::TokenType::FOR, "expected 'for' keyword")) {
-            return common::Statement{};
+            return std::make_unique<common::ErrorStatement>(pos);
         }
 
-        common::Loop result;
+        common::Loop result{pos};
         auto make_result = [this, &result, pos]() {
-            common::Statement smt_result{.type = common::StatementType::LOOP, .pos = pos};
-            result.body = parse_block();
-            if (!err_.empty()) {
-                return common::Statement{};
-            }
-            smt_result.id = ast_.add(std::move(result));
-            return smt_result;
+            result.body() = parse_block();
+            return std::make_unique<common::Loop>(std::move(result));
         };
 
         if (next().is(common::TokenType::LEFT_BRACE)) {
             return make_result();
         } else if (next().is(common::TokenType::VAR)) {
-            result.init = parse_local_variable();
+            result.set_init(parse_local_variable());
         } else if (!next().is(common::TokenType::SEMICOLON)) {
-            common::Expression expr = parse_expression();
-            if (expr.is_error()) {
-                return common::Statement{};
+            std::unique_ptr<common::Expression> expr = parse_expression();
+            if (!expr || expr->is_error()) {
+                return std::make_unique<common::ErrorStatement>(pos);
             }
-            result.init = common::Statement{.type = common::StatementType::EXPRESSION, .id = ast_.add(expr), .pos = expr.pos};
+            result.set_init(std::make_unique<common::ExpressionStatement>(std::move(expr), expr->pos()));
         }
 
         if (next().is(common::TokenType::LEFT_BRACE)) {
             return make_result();
         } else if (!match(common::TokenType::SEMICOLON, "expected ';'")) {
-            return common::Statement{};
+            return std::make_unique<common::ErrorStatement>(pos);
         }
 
-        result.condition = parse_expression();
-        if (result.condition.is_error()) {
-            return common::Statement{};
+        result.set_condition(parse_expression());
+        if (!result.condition() || result.condition()->is_error()) {
+            return std::make_unique<common::ErrorStatement>(pos);
         } else if (next().is(common::TokenType::LEFT_BRACE)) {
             return make_result();
         } else if (!match(common::TokenType::SEMICOLON, "expected ';'")) {
-            return common::Statement{};
+            return std::make_unique<common::ErrorStatement>(pos);
         }
 
-        result.iteration = parse_expression();
-        if (result.iteration.is_error()) {
-            return common::Statement{};
+        result.set_iteration(parse_expression());
+        if (!result.iteration() || result.iteration()->is_error()) {
+            return std::make_unique<common::ErrorStatement>(pos);
         }
         return make_result();
     }
 
-    common::ParsedType Parser::parse_type() {
-        common::ParsedType result;
+    std::unique_ptr<common::ParsedType> Parser::parse_type() {
+        uint64_t indirection_level = 0;
         for (; next().is(common::TokenType::MUL); consume()) {
-            ++result.indirection_level;
+            ++indirection_level;
         }
-        result.name = common::IdentifierID{match_identifier("expected type name")};
-        if (result.name == common::IdentifierID{}) {
-            return common::ParsedType{};
+        common::IdentifierID name = match_identifier("expected type name");
+        if (name == common::IdentifierID{}) {
+            return std::make_unique<common::ParsedErrorType>();
         }
-        return result;
+        return std::make_unique<common::ParsedNamedType>(name, indirection_level);
     }
 
-    common::Expression Parser::parse_cast() {
-        common::Expression result{.kind = common::ExpressionKind::CAST, .pos = next().pos()};
+    std::unique_ptr<common::Expression> Parser::parse_cast() {
+        size_t pos = next().pos();
         if (!match(common::TokenType::CAST, "expected 'cast' keyword")) {
-            return common::Expression{};
+            return std::make_unique<common::ErrorExpression>(pos);
         }
         if (!match(common::TokenType::LESS, "expected '<'")) {
-            return common::Expression{};
+            return std::make_unique<common::ErrorExpression>(pos);
         }
-        common::Cast cast;
-        cast.to = parse_type();
-        if (cast.to.is_error()) {
-            return common::Expression{};
+        std::unique_ptr<common::ParsedType> to = parse_type();
+        if (!to || to->is_error()) {
+            return std::make_unique<common::ErrorExpression>(pos);
         }
         if (!match(common::TokenType::GREATER, "expected '>'")) {
-            return common::Expression{};
+            return std::make_unique<common::ErrorExpression>(pos);
         }
         if (!match(common::TokenType::LEFT_PARENTHESIS, "expected '('")) {
-            return common::Expression{};
+            return std::make_unique<common::ErrorExpression>(pos);
         }
-        cast.from = parse_expression();
-        if (cast.from.is_error()) {
-            return common::Expression{};
+        std::unique_ptr<common::Expression> from = parse_expression();
+        if (!from || from->is_error()) {
+            return std::make_unique<common::ErrorExpression>(pos);
         }
         if (!match(common::TokenType::RIGHT_PARENTHESIS, "expected ')'")) {
-            return common::Expression{};
+            return std::make_unique<common::ErrorExpression>(pos);
         }
-        result.id = ast_.add_cast(cast);
-        return result;
+        return std::make_unique<common::Cast>(std::move(to), std::move(from), pos);
     }
 
     common::Variable Parser::parse_variable() {
@@ -494,7 +469,7 @@ namespace parser {
 
         if (!next().is(common::TokenType::ASSIGN)) {
             result.explicit_type = parse_type();
-            if (result.explicit_type.is_error()) {
+            if (!result.explicit_type || result.explicit_type->is_error()) {
                 return common::Variable{};
             }
         }
@@ -502,7 +477,7 @@ namespace parser {
         if (next().is(common::TokenType::ASSIGN)) {
             consume();
             result.initial_value = parse_expression();
-            if (result.initial_value.is_error()) {
+            if (!result.initial_value || result.initial_value->is_error()) {
                 return common::Variable{};
             }
         }

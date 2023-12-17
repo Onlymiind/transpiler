@@ -9,14 +9,15 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 
 namespace common {
     struct Function {
 
         FunctionID id;
         IdentifierID name;
-        ParsedType return_typename;
-        Block body{};
+        std::unique_ptr<ParsedType> parsed_return_type;
+        Block body{1};
 
         size_t pos = 0;
         bool decl_only = false;
@@ -27,15 +28,15 @@ namespace common {
         std::vector<VariableID> params;
 
         constexpr bool is_error() const { return id == FunctionID{}; }
-        constexpr bool operator==(Function other) const { return id == other.id && name == other.name; }
+        constexpr bool operator==(const Function &other) const { return id == other.id && name == other.name; }
     };
 
     struct Variable {
 
         VariableID id;
         IdentifierID name;
-        ParsedType explicit_type;
-        Expression initial_value;
+        std::unique_ptr<ParsedType> explicit_type;
+        std::unique_ptr<Expression> initial_value;
         size_t pos = 0;
         Type type;
     };

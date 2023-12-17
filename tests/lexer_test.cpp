@@ -80,6 +80,8 @@ TEST_CASE("lexer: punctuation", "[lexer]") {
         {"{", common::Token{common::TokenType::LEFT_BRACE}},
         {"}", common::Token{common::TokenType::RIGHT_BRACE}},
         {",", common::Token{common::TokenType::COMMA}},
+        {"[", common::Token{common::TokenType::LEFT_BRACKET}},
+        {"]", common::Token{common::TokenType::RIGHT_BRACKET}},
     };
 
     for (auto c : cases) {

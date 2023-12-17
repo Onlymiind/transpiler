@@ -1,34 +1,19 @@
 #ifndef COMPILER_V2_COMMON_EXPRESSION_HDR_
 #define COMPILER_V2_COMMON_EXPRESSION_HDR_
 
+#include "common/base_classes.h"
 #include "common/token.h"
 #include "common/types.h"
 #include "common/util.h"
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <type_traits>
 #include <variant>
 
 namespace common {
-
-    struct ParsedType {
-        IdentifierID name;
-        uint64_t indirection_level = 0;
-        constexpr bool is_error() const noexcept { return name == common::IdentifierID{}; }
-    };
-
-    enum class ExpressionKind : uint8_t {
-        ERROR,
-        BINARY,
-        UNARY,
-        LITERAL,
-        CAST,
-        FUNCTION_CALL,
-        VARIABLE_REF,
-        EMPTY,
-    };
 
     enum class BinaryOp {
         ADD,
@@ -118,93 +103,156 @@ namespace common {
         }
     }
 
-    struct Expression {
-
-        ExpressionKind kind = ExpressionKind::ERROR;
-        ExpressionID id = ExpressionID{g_invalid_id};
-        size_t pos = 0;
-
-        Type type;
-
-        constexpr bool is_error() const {
-            return kind == ExpressionKind::ERROR;
-        }
-
-        constexpr bool operator==(Expression other) const noexcept {
-            return id == other.id && kind == other.kind;
-        }
+    class EmptyExpression final : public Expression {
+      public:
+        EmptyExpression(size_t pos)
+            : Expression(ExpressionKind::EMPTY, pos) {}
+        ~EmptyExpression() override = default;
     };
 
-    struct BinaryExpression {
-        BinaryOp op{};
-        Expression lhs{};
-        Expression rhs{};
-
-        constexpr bool operator==(BinaryExpression other) const noexcept {
-            return op == other.op && lhs == other.lhs && rhs == other.rhs;
-        }
+    class ErrorExpression final : public Expression {
+      public:
+        ErrorExpression(size_t pos)
+            : Expression(ExpressionKind::ERROR, pos) {}
+        ~ErrorExpression() override = default;
     };
 
-    struct UnaryExpression {
-        UnaryOp op{};
-        Expression expr{};
+    class UnaryExpression final : public Expression {
+      public:
+        UnaryExpression(UnaryOp op, std::unique_ptr<Expression> &&expr, size_t pos)
+            : Expression(ExpressionKind::UNARY, pos), op_(op), expr_(std::move(expr)) {}
 
-        constexpr bool operator==(UnaryExpression other) const noexcept {
-            return op == other.op && expr == other.expr;
-        }
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(UnaryExpression, delete)
+
+        UnaryOp op() const noexcept { return op_; }
+        std::unique_ptr<Expression> &expression() noexcept { return expr_; }
+        const Expression *expression() const noexcept { return expr_.get(); }
+
+        void set_expression(std::unique_ptr<Expression> &&expr) { expr_ = std::move(expr); }
+
+      private:
+        UnaryOp op_{};
+        std::unique_ptr<Expression> expr_;
     };
 
-    enum class LiteralType : uint8_t {
-        BOOL,
-        UINT,
-        FLOAT
+    class BinaryExpression final : public Expression {
+      public:
+        BinaryExpression(BinaryOp op, std::unique_ptr<Expression> &&lhs, std::unique_ptr<Expression> &&rhs, size_t pos)
+            : Expression(ExpressionKind::BINARY, pos), op_(op), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {}
+
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(BinaryExpression, delete)
+
+        BinaryOp op() const noexcept { return op_; }
+        std::unique_ptr<Expression> &lhs() noexcept { return lhs_; }
+        std::unique_ptr<Expression> &rhs() noexcept { return rhs_; }
+        const Expression *lhs() const noexcept { return lhs_.get(); }
+        const Expression *rhs() const noexcept { return rhs_.get(); }
+
+        void set_lhs(std::unique_ptr<Expression> &&expr) noexcept { lhs_ = std::move(expr); }
+        void set_rhs(std::unique_ptr<Expression> &&expr) noexcept { rhs_ = std::move(expr); }
+
+      private:
+        BinaryOp op_{};
+        std::unique_ptr<Expression> lhs_;
+        std::unique_ptr<Expression> rhs_;
     };
 
-    class Literal {
+    class FunctionCall final : public Expression {
+      public:
+        FunctionCall(IdentifierID name, std::vector<std::unique_ptr<Expression>> &&args, size_t pos)
+            : Expression(ExpressionKind::FUNCTION_CALL, pos), name_(name), args_(std::move(args)) {}
+
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(FunctionCall, delete)
+
+        IdentifierID name() const noexcept { return name_; }
+
+        std::vector<std::unique_ptr<Expression>> &arguments() noexcept { return args_; }
+        const std::vector<std::unique_ptr<Expression>> &arguments() const noexcept { return args_; }
+
+      private:
+        IdentifierID name_;
+        std::vector<std::unique_ptr<Expression>> args_;
+    };
+
+    class Cast final : public Expression {
+      public:
+        Cast(std::unique_ptr<ParsedType> &&to, std::unique_ptr<Expression> &&from, size_t pos)
+            : Expression(ExpressionKind::CAST, pos), to_(std::move(to)), from_(std::move(from)) {}
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(Cast, delete)
+
+        ParsedType *to() noexcept { return to_.get(); }
+        std::unique_ptr<Expression> &from() noexcept { return from_; }
+        const ParsedType *to() const noexcept { return to_.get(); }
+        const Expression *from() const noexcept { return from_.get(); }
+
+        void set_expression(std::unique_ptr<Expression> &&expr) { from_ = std::move(expr); }
+
+      private:
+        std::unique_ptr<ParsedType> to_;
+        std::unique_ptr<Expression> from_;
+    };
+
+    class VariableReference final : public Expression {
+      public:
+        VariableReference(IdentifierID name, size_t pos)
+            : Expression(ExpressionKind::VARIABLE_REF, pos), name_(name) {}
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(VariableReference, default)
+
+        IdentifierID name() const noexcept { return name_; }
+
+      private:
+        IdentifierID name_;
+    };
+
+    class Literal final : public Expression {
         using Storage = std::variant<bool, uint64_t, double>;
 
       public:
-        Literal() = default;
-
         template <typename T>
-        Literal(T value)
+        Literal(T value, size_t pos)
             requires std::is_constructible_v<Storage, T>
-            : value_(value) {}
+            : Expression(ExpressionKind::LITERAL, pos), value_(value) {}
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(Literal, default)
 
-        constexpr bool same_type(const Literal &other) const {
+        bool same_type(const Literal &other) const noexcept {
             return value_.index() == other.value_.index();
         }
 
         template <typename T>
-        constexpr bool is() const
+        bool is() const noexcept
             requires std::is_constructible_v<Storage, T>
         {
             return std::holds_alternative<T>(value_);
         }
 
-        constexpr bool operator==(const Literal &other) const {
+        bool operator==(const Literal &other) const {
             return value_ == other.value_;
         }
 
         template <typename T>
-        constexpr bool operator==(const T &value) const
-            requires std::is_convertible_v<T, Storage>
+        bool operator==(const T &value) const
+            requires std::is_convertible_v<Storage, T>
         {
             return value_ == value;
         }
 
         template <typename T>
-        constexpr T *get()
+        T *get() noexcept
             requires std::is_constructible_v<Storage, T>
         {
             return std::get_if<T>(&value_);
         }
 
-        constexpr Literal &operator=(const Literal &other) = default;
+        template <typename T>
+        const T *get() const noexcept
+            requires std::is_constructible_v<Storage, T>
+        {
+            return std::get_if<T>(&value_);
+        }
 
         template <typename T>
-        constexpr Literal &operator=(const T &value)
-            requires std::is_assignable_v<T, Storage>
+        Literal &operator=(const T &value)
+            requires std::is_assignable_v<Storage, T>
         {
             value_ = value;
             return *this;
@@ -212,23 +260,6 @@ namespace common {
 
       private:
         Storage value_;
-    };
-
-    struct FunctionCall {
-        IdentifierID name = IdentifierID{g_invalid_id};
-        std::vector<Expression> args;
-    };
-
-    // probably should implement separate ID for identifiers
-    struct Cast {
-        ParsedType to;
-        Expression from;
-        Type dst_type;
-    };
-
-    struct ParsedArray {
-        Literal length;
-        ParsedType type;
     };
 
 } // namespace common

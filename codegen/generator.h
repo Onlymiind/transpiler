@@ -32,32 +32,32 @@ namespace codegen {
 
         void codegen();
 
-        void codegen(common::Expression expr);
+        void codegen_expression(const common::Expression &expr);
 
         // expr parameter is needed to cast literal to the correct type
-        void codegen(common::Literal lit, common::Expression expr);
+        void codegen_literal(const common::Literal &lit, const common::Expression &expr);
 
-        void codegen(common::UnaryExpression expr);
+        void codegen_unary(const common::UnaryExpression &expr);
 
-        void codegen(common::BinaryExpression expr);
+        void codegen_binary(const common::BinaryExpression &expr);
 
-        void codegen(common::Cast cast, common::Expression expr);
+        void codegen_cast(const common::Cast &cast, const common::Expression &expr);
 
-        void codegen(const common::Function &func);
+        void codegen_function(const common::Function &func);
 
-        void codegen(const common::FunctionCall &call);
+        void codegen_call(const common::FunctionCall &call);
 
-        void codegen(const common::Variable &var);
+        void codegen_var(const common::Variable &var);
 
-        void codegen(const common::Branch &branch);
+        void codegen_branch(const common::Branch &branch);
 
-        void codegen(const common::Block &block);
+        void codegen_block(const common::Block &block);
 
-        void codegen(common::Statement smt);
+        void codegen_statement(const common::Statement &smt);
 
-        void codegen(const common::Loop &loop);
+        void codegen_loop(const common::Loop &loop);
 
-        void codegen(common::Type type);
+        void codegen_type(common::Type type);
 
         void codegen_function_decl(const common::Function &func);
 

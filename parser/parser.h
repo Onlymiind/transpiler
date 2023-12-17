@@ -8,6 +8,7 @@
 #include "common/token.h"
 #include "common/util.h"
 
+#include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -27,24 +28,24 @@ namespace parser {
 
         void parse();
 
-        common::Expression parse_expression();
-        common::Expression parse_unary_expression();
-        common::Expression parse_primary_expression();
-        common::Expression parse_identifier_ref();
-        common::Expression parse_cast();
+        std::unique_ptr<common::Expression> parse_expression();
+        std::unique_ptr<common::Expression> parse_unary_expression();
+        std::unique_ptr<common::Expression> parse_primary_expression();
+        std::unique_ptr<common::Expression> parse_identifier_ref();
+        std::unique_ptr<common::Expression> parse_cast();
 
         void parse_function();
         void parse_global_variabe();
 
-        common::Statement parse_local_variable();
-        common::Statement parse_statement();
-        common::Statement parse_branch();
-        common::Statement parse_loop();
+        std::unique_ptr<common::Statement> parse_local_variable();
+        std::unique_ptr<common::Statement> parse_statement();
+        std::unique_ptr<common::Statement> parse_branch();
+        std::unique_ptr<common::Statement> parse_loop();
 
         common::Block parse_block();
 
         common::VariableID parse_func_param();
-        common::ParsedType parse_type();
+        std::unique_ptr<common::ParsedType> parse_type();
 
         common::Variable parse_variable();
 
@@ -82,7 +83,7 @@ namespace parser {
         }
 
       private:
-        common::Expression parse_binary_expression(common::Expression lhs, uint8_t precedence);
+        std::unique_ptr<common::Expression> parse_binary_expression(std::unique_ptr<common::Expression> &&lhs, uint8_t precedence);
 
         std::vector<common::Token> tokens_{};
         common::Tokens remainder_{};

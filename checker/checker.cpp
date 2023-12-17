@@ -1,12 +1,15 @@
 #include "checker/checker.h"
+#include "common/base_classes.h"
 #include "common/declarations.h"
 #include "common/expression.h"
+#include "common/parsed_types.h"
 #include "common/scope.h"
 #include "common/statement.h"
 #include "common/types.h"
 #include "common/util.h"
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <string>
 #include <sys/types.h>
@@ -56,7 +59,7 @@ namespace checker {
             if (!err_.empty()) {
                 return;
             }
-            if (!var.initial_value.is_error() && var.initial_value.kind != common::ExpressionKind::LITERAL) {
+            if (var.initial_value && !var.initial_value->is_error() && var.initial_value->kind() != common::ExpressionKind::LITERAL) {
                 report_error("global variable initializer must be a constant expression");
                 return;
             }
@@ -89,46 +92,52 @@ namespace checker {
         }
     }
 
-    common::Type Checker::check_expression(common::Expression &expr) {
-        if (expr.is_error()) {
+    common::Type Checker::check_expression(std::unique_ptr<common::Expression> &expr) {
+        if (!expr || expr->is_error()) {
             return common::Type{};
         }
 
         common::Type result{};
-        ErrorGuard g{*this, expr.pos};
-        switch (expr.kind) {
+        ErrorGuard g{*this, expr->pos()};
+        switch (expr->kind()) {
         case common::ExpressionKind::LITERAL:
-            result = get_type_for_literal(*ast_->get_literal(expr.id));
+            result = get_type_for_literal(static_cast<common::Literal &>(*expr));
             break;
         case common::ExpressionKind::UNARY: {
-            common::UnaryExpression &unary = *ast_->get_unary_expression(expr.id);
+            common::UnaryExpression &unary = static_cast<common::UnaryExpression &>(*expr);
             result = check_unary_expression(unary);
             if (!result.is_error() && do_constant_folding_) {
-                try_compute(unary, expr);
+                if (auto computed = try_compute(unary)) {
+                    expr = std::move(computed);
+                }
             }
             break;
         }
         case common::ExpressionKind::BINARY: {
-            common::BinaryExpression &binary = *ast_->get_binary_expression(expr.id);
+            common::BinaryExpression &binary = static_cast<common::BinaryExpression &>(*expr);
             result = check_binary_expression(binary);
             if (!result.is_error() && do_constant_folding_) {
-                try_compute(binary, expr);
+                if (auto computed = try_compute(binary)) {
+                    expr = std::move(computed);
+                }
             }
             break;
         }
         case common::ExpressionKind::CAST: {
-            common::Cast &cast = *ast_->get_cast(expr.id);
+            common::Cast &cast = static_cast<common::Cast &>(*expr);
             result = check_cast(cast);
             if (!result.is_error() && do_constant_folding_) {
-                try_compute(cast, expr);
+                if (auto computed = try_compute(cast)) {
+                    expr = std::move(computed);
+                }
             }
             break;
         }
         case common::ExpressionKind::FUNCTION_CALL:
-            result = check_function_call(*ast_->get_call(expr.id), expr);
+            result = check_function_call(static_cast<common::FunctionCall &>(*expr));
             break;
         case common::ExpressionKind::VARIABLE_REF:
-            result = check_variable_ref(ast_->get_variable_ref(expr.id));
+            result = check_variable_ref(static_cast<common::VariableReference &>(*expr));
             break;
         case common::ExpressionKind::EMPTY:
             result = common::Type{common::g_void};
@@ -141,21 +150,21 @@ namespace checker {
         if (result.is_error()) {
             return result;
         }
-        expr.type = result;
+        expr->type(result);
         return result;
     }
 
     common::Type Checker::check_unary_expression(common::UnaryExpression &expr) {
-        if (expr.expr.is_error()) {
+        if (!expr.expression() || expr.expression()->is_error()) {
             return common::Type{};
         }
-        common::Type type = check_expression(expr.expr);
+        common::Type type = check_expression(expr.expression());
         if (type.is_error()) {
             return common::Type{};
         }
 
         common::TypeTraits traits = module_.get_scope(type.sym.scope)->get_traits(type.sym.id);
-        switch (expr.op) {
+        switch (expr.op()) {
         case common::UnaryOp::NOT:
             if (common::empty(traits & common::TypeTraits::BOOLEAN)) {
                 report_error("operator ! is defined only for booleans");
@@ -170,7 +179,7 @@ namespace checker {
             }
             return type;
         case common::UnaryOp::ADDRESS_OF:
-            if (!is_lvalue(expr.expr)) {
+            if (!is_lvalue(*expr.expression())) {
                 report_error("can't take address of an rvalue");
                 return common::Type{};
             }
@@ -190,15 +199,15 @@ namespace checker {
     }
 
     common::Type Checker::check_binary_expression(common::BinaryExpression &expr) {
-        if (expr.lhs.is_error() || expr.rhs.is_error()) {
+        if (!expr.lhs() || expr.lhs()->is_error() || !expr.rhs() || expr.rhs()->is_error()) {
             return common::Type{};
         }
 
-        common::Type lhs = check_expression(expr.lhs);
+        common::Type lhs = check_expression(expr.lhs());
         if (lhs.is_error()) {
             return common::Type{};
         }
-        common::Type rhs = check_expression(expr.rhs);
+        common::Type rhs = check_expression(expr.rhs());
         if (rhs.is_error()) {
             return common::Type{};
         }
@@ -208,8 +217,8 @@ namespace checker {
             return common::Type{};
         }
 
-        if (expr.op == common::BinaryOp::ASSIGN) {
-            if (!is_lvalue(expr.lhs)) {
+        if (expr.op() == common::BinaryOp::ASSIGN) {
+            if (!is_lvalue(*expr.lhs())) {
                 report_error("can not assing to rvalue");
                 return common::Type{};
             }
@@ -223,7 +232,7 @@ namespace checker {
 
         common::TypeTraits traits = module_.get_scope(lhs.sym.scope)->get_traits(lhs.sym.id);
 
-        if (common::is_logic_op(expr.op)) {
+        if (common::is_logic_op(expr.op())) {
             if (common::empty(traits & common::TypeTraits::BOOLEAN)) {
 
                 report_error("type mismatch: expected boolean");
@@ -231,21 +240,21 @@ namespace checker {
             } else {
                 return lhs;
             }
-        } else if (common::is_equality_op(expr.op)) {
+        } else if (common::is_equality_op(expr.op())) {
             // for now, every type is comparable
             // later maybe should add COMPARABLE type trait
             return builtin_types_[common::BuiltinTypes::BOOL];
-        } else if (common::is_relational(expr.op)) {
+        } else if (common::is_relational(expr.op())) {
             if (common::empty(traits & common::TypeTraits::ORDERED)) {
                 report_error("type mismatch: expected ordered type");
                 return common::Type{};
             } else {
                 return builtin_types_[common::BuiltinTypes::BOOL];
             }
-        } else if (common::is_bitwise(expr.op) && common::empty(traits & common::TypeTraits::INTEGER)) {
+        } else if (common::is_bitwise(expr.op()) && common::empty(traits & common::TypeTraits::INTEGER)) {
             report_error("bitwise operations are allowed only on integers");
             return common::Type{};
-        } else if (expr.op == common::BinaryOp::REMAINDER && common::empty(traits & common::TypeTraits::INTEGER)) {
+        } else if (expr.op() == common::BinaryOp::REMAINDER && common::empty(traits & common::TypeTraits::INTEGER)) {
             report_error("type mismatch: expected integer operands for % operator");
             return common::Type{};
         } else if (common::empty(traits & common::TypeTraits::NUMERIC)) {
@@ -257,19 +266,26 @@ namespace checker {
     }
 
     common::Type Checker::check_cast(common::Cast &cast) {
-        if (cast.to.indirection_level != 0) {
+        if (!cast.to() || cast.to()->kind() != common::ParsedTypeKind::NAMED) {
+            report_error("unsupported parsed type");
+            return common::Type{};
+        }
+
+        common::ParsedNamedType &parsed = static_cast<common::ParsedNamedType &>(*cast.to());
+
+        if (parsed.indirection_level() != 0) {
             report_error("cats to pointer types are not allowed");
             return common::Type{};
         }
-        common::Symbol dst_sym = module_.find(cast.to.name);
-        cast.dst_type = common::Type{dst_sym};
+        common::Symbol dst_sym = module_.find(parsed.name());
+        cast.type(common::Type{dst_sym});
         std::optional<common::BuiltinType> dst = module_.get_scope(dst_sym.scope)->get_type(dst_sym.id);
         if (!dst) {
             report_error("can not cast to unknown type");
             return common::Type{};
         }
 
-        common::Type src = check_expression(cast.from);
+        common::Type src = check_expression(cast.from());
         if (src.is_error()) {
             return common::Type{};
         } else if (src.is_pointer()) {
@@ -289,7 +305,7 @@ namespace checker {
             return common::Type{};
         }
 
-        return cast.dst_type;
+        return cast.type();
     }
 
     common::Type Checker::get_type_for_literal(common::Literal lit) {
@@ -304,13 +320,13 @@ namespace checker {
         return common::Type{};
     }
 
-    common::Type Checker::check_function_call(common::FunctionCall &call, common::Expression &incoming_edge) {
-        if (common::Scope::type(module_.global_scope()->find(call.name)) != common::SymbolType::FUNCTION) {
-            report_error(*identifiers_->get(call.name) + " is not a function");
+    common::Type Checker::check_function_call(common::FunctionCall &call) {
+        if (common::Scope::type(module_.global_scope()->find(call.name())) != common::SymbolType::FUNCTION) {
+            report_error(*identifiers_->get(call.name()) + " is not a function");
             return common::Type{};
         }
 
-        common::FunctionID func_id = module_.global_scope()->get_function(call.name);
+        common::FunctionID func_id = module_.global_scope()->get_function(call.name());
         if (func_id == common::FunctionID{}) {
             report_error("function not defined");
             return common::Type{};
@@ -325,17 +341,17 @@ namespace checker {
             report_error("main() must not be called");
             return common::Type{};
         }
-
-        if (call.args.size() != func.params.size()) {
+        auto &args = call.arguments();
+        if (args.size() != func.params.size()) {
             report_error("function call argument count mismatch, expected " +
-                         std::to_string(func.params.size()) + ", got " + std::to_string(call.args.size()));
+                         std::to_string(func.params.size()) + ", got " + std::to_string(args.size()));
             return common::Type{};
         }
         for (size_t i = 0; i < func.params.size(); ++i) {
-            ErrorGuard eg{*this, call.args[i].pos};
+            ErrorGuard eg{*this, args[i]->pos()};
             common::Variable &param = *ast_->get_var(func.params[i]);
 
-            common::Type type = check_expression(call.args[i]);
+            common::Type type = check_expression(args[i]);
             if (type.is_error()) {
                 return common::Type{};
             }
@@ -361,18 +377,17 @@ namespace checker {
         }
     }
 
-    bool Checker::is_lvalue(common::Expression expr) {
-        if (expr.kind == common::ExpressionKind::VARIABLE_REF) {
+    bool Checker::is_lvalue(common::Expression &expr) {
+        if (expr.kind() == common::ExpressionKind::VARIABLE_REF) {
             return true;
-        } else if (expr.kind != common::ExpressionKind::UNARY) {
+        } else if (expr.kind() != common::ExpressionKind::UNARY) {
             return false;
         }
-        const common::UnaryExpression &unary = *ast_->get_unary_expression(expr.id);
-        return unary.op == common::UnaryOp::DEREFERENCE;
+        return static_cast<common::UnaryExpression &>(expr).op() == common::UnaryOp::DEREFERENCE;
     }
 
-    common::Type Checker::check_variable_ref(common::IdentifierID name) {
-        common::Symbol sym = module_.find(name, scope_stack_.top());
+    common::Type Checker::check_variable_ref(common::VariableReference &name) {
+        common::Symbol sym = module_.find(name.name(), scope_stack_.top());
         if (sym.is_error() || common::Scope::type(sym.id) != common::SymbolType::VARIABLE) {
             report_error("identifier does not name a variable");
             return common::Type{};
@@ -391,7 +406,7 @@ namespace checker {
         module_.global_scope()->add(func.name, func.id);
         const std::string &name = *identifiers_->get(func.name);
         if (name == "main") {
-            if (!func.return_typename.is_error()) {
+            if (func.parsed_return_type) {
                 report_error("main() must return void");
                 return;
             } else if (!func.params.empty()) {
@@ -399,8 +414,13 @@ namespace checker {
                 return;
             }
         }
-        if (!func.return_typename.is_error()) {
-            func.return_type = common::Type{module_.find(func.return_typename.name), func.return_typename.indirection_level};
+        if (func.parsed_return_type) {
+            if (func.parsed_return_type->is_error() || func.parsed_return_type->kind() != common::ParsedTypeKind::NAMED) {
+                report_error("unsupported parsed type");
+                return;
+            }
+            common::ParsedNamedType &parsed = static_cast<common::ParsedNamedType &>(*func.parsed_return_type);
+            func.return_type = common::Type{module_.find(parsed.name()), parsed.indirection_level()};
             if (func.return_type.is_error()) {
                 report_error("unknown return type");
                 return;
@@ -421,16 +441,22 @@ namespace checker {
                 report_error("can't declare function parameter: name already declared");
                 return;
             }
-            if (param.explicit_type.is_error()) {
+            if (!param.explicit_type) {
                 report_error("function parameters must be explicitly typed");
                 return;
             }
-            param.type = common::Type{module_.find(param.explicit_type.name), param.explicit_type.indirection_level};
+            if (param.explicit_type->kind() != common::ParsedTypeKind::NAMED) {
+                report_error("unsupported parsed type");
+                return;
+            }
+            common::ParsedNamedType &parsed = static_cast<common::ParsedNamedType &>(*param.explicit_type);
+
+            param.type = common::Type{module_.find(parsed.name()), parsed.indirection_level()};
             if (param.type.is_error()) {
                 report_error("invalid function parameter type");
                 return;
             }
-            if (!param.initial_value.is_error()) {
+            if (param.initial_value) {
                 report_error("default values for function parameters are not supported");
                 return;
             }
@@ -439,13 +465,13 @@ namespace checker {
     }
 
     void Checker::check_branch(common::Branch &branch) {
-        common::Type type = check_expression(branch.predicate);
-        branch.predicate.type = type;
+        common::Type type = check_expression(branch.predicate());
+        branch.predicate()->type(type);
         if (type.is_error()) {
             return;
         } else if (type.is_pointer() ||
                    common::empty(module_.get_scope(type.sym.scope)->get_traits(type.sym.id) & common::TypeTraits::BOOLEAN)) {
-            ErrorGuard eg{*this, branch.predicate.pos};
+            ErrorGuard eg{*this, branch.predicate()->pos()};
             report_error("expected boolean expression in an if statement");
             return;
         }
@@ -453,26 +479,26 @@ namespace checker {
         Reachability reachability = reachability_stack_.top();
         {
             ScopeGuard g{*this, module_.make_scope(scope_stack_.top()), reachability_stack_.top()};
-            check_block(branch.then);
+            check_block(branch.true_branch());
             if (!err_.empty()) {
                 return;
             }
             reachability = reachability_stack_.top();
         }
-        if (branch.otherwise.smts.empty()) {
+        if (!branch.false_branch()) {
             return;
         }
 
         // else if: do not push unneded scope
-        if (branch.otherwise.smts.size() == 1 && branch.otherwise.smts[0].type == common::StatementType::BRANCH) {
-            check_branch(*ast_->get_branch(branch.otherwise.smts[0].id));
+        if (branch.false_branch()->statements().size() == 1 && branch.false_branch()->statements()[0]->kind() == common::StatementType::BRANCH) {
+            check_branch(static_cast<common::Branch &>(*branch.false_branch()->statements()[0]));
             if (!err_.empty()) {
                 return;
             }
             reachability = unite_reachability(reachability, reachability_stack_.top());
         } else {
             ScopeGuard g{*this, module_.make_scope(scope_stack_.top()), reachability_stack_.top()};
-            check_block(branch.otherwise);
+            check_block(*branch.false_branch());
             if (!err_.empty()) {
                 return;
             }
@@ -482,30 +508,37 @@ namespace checker {
     }
 
     void Checker::check_statement(common::Statement &smt) {
-        ErrorGuard g{*this, smt.pos};
-        switch (smt.type) {
+        ErrorGuard g{*this, smt.pos()};
+        switch (smt.kind()) {
         case common::StatementType::EXPRESSION:
-            check_expression(*ast_->get_expression(smt.id));
+            check_expression(static_cast<common::ExpressionStatement &>(smt).expression());
             break;
         case common::StatementType::BRANCH:
-            check_branch(*ast_->get_branch(smt.id));
+            check_branch(static_cast<common::Branch &>(smt));
             break;
         case common::StatementType::RETURN: {
             if (is_reachable()) {
                 reachability_stack_.top() = Reachability::RETURNS;
             }
             common::Function &func = *ast_->get_function(current_function_);
-            common::Type ret = check_expression(*ast_->get_expression(smt.id));
+            auto &ret_expr = static_cast<common::Return &>(smt).expression();
+            if (!ret_expr || ret_expr->kind() == common::ExpressionKind::EMPTY) {
+                if (!func.return_type.is_void()) {
+                    report_error("trying to return non-void expression from function with no return type");
+                }
+                break;
+            }
+            common::Type ret = check_expression(ret_expr);
             if (!ret.is_error() && func.return_type != ret) {
                 report_error("wrong return type");
             }
             break;
         }
         case common::StatementType::VARIABLE:
-            check_variable(*ast_->get_var(smt.id));
+            check_variable(*ast_->get_var(static_cast<common::VariableDeclatarion &>(smt).variable()));
             break;
         case common::StatementType::LOOP:
-            check_loop(*ast_->get_loop(smt.id));
+            check_loop(static_cast<common::Loop &>(smt));
             break;
         case common::StatementType::BREAK: [[fallthrough]];
         case common::StatementType::CONTINUE:
@@ -522,9 +555,9 @@ namespace checker {
     }
 
     void Checker::check_block(common::Block &block) {
-        for (common::Statement &smt : block.smts) {
-            smt.is_reachable = is_reachable();
-            check_statement(smt);
+        for (auto &smt : block.statements()) {
+            smt->reachable(is_reachable());
+            check_statement(*smt);
             if (!err_.empty()) {
                 return;
             }
@@ -537,10 +570,16 @@ namespace checker {
             return;
         }
 
-        if (!var.explicit_type.is_error()) {
+        if (var.explicit_type) {
+            if (var.explicit_type->kind() != common::ParsedTypeKind::NAMED) {
+                report_error("unsupported parsed type");
+                return;
+            }
+
+            common::ParsedNamedType &parsed = static_cast<common::ParsedNamedType &>(*var.explicit_type);
             var.type = common::Type{
-                module_.find(var.explicit_type.name, scope_stack_.top()),
-                var.explicit_type.indirection_level,
+                module_.find(parsed.name(), scope_stack_.top()),
+                parsed.indirection_level(),
             };
             if (var.type.is_error() || common::Scope::type(var.type.sym.id) != common::SymbolType::BUILTIN_TYPE) {
                 report_error("invalid variable type");
@@ -549,11 +588,14 @@ namespace checker {
         }
 
         common::Type expected_type = var.type;
-        if (!var.initial_value.is_error()) {
-            var.initial_value.type = check_expression(var.initial_value);
-            expected_type = var.initial_value.type;
+        if (var.initial_value) {
+            check_expression(var.initial_value);
+            if (!err_.empty()) {
+                return;
+            }
+            expected_type = var.initial_value->type();
         }
-        if (!var.explicit_type.is_error()) {
+        if (!var.type.is_error()) {
             if (var.type != expected_type) {
                 report_error("type mismatch: can not initialize variabe with expression of wrong type");
                 return;
@@ -567,27 +609,32 @@ namespace checker {
 
     void Checker::check_loop(common::Loop &loop) {
         ScopeGuard g{*this, module_.make_scope(scope_stack_.top()), reachability_stack_.top()};
-        check_statement(loop.init);
-        if (!err_.empty()) {
-            return;
+        if (loop.init()) {
+            check_statement(*loop.init());
+            if (!err_.empty()) {
+                return;
+            }
         }
-        loop.condition.type = check_expression(loop.condition);
-        if (loop.condition.type.is_error()) {
-            return;
-        } else if (!loop.condition.type.is_void()) {
-            ErrorGuard eg{*this, loop.condition.pos};
-            common::Scope &scope = *module_.get_scope(loop.condition.type.sym.scope);
-            if (loop.condition.type.is_pointer() || common::empty(scope.get_traits(loop.condition.type.sym.id) & common::TypeTraits::BOOLEAN)) {
+        if (loop.condition()) {
+            common::Type type = check_expression(loop.condition());
+            if (!err_.empty()) {
+                return;
+            }
+            ErrorGuard eg{*this, loop.condition()->pos()};
+            common::Scope &scope = *module_.get_scope(type.sym.scope);
+            if (type.is_pointer() || common::empty(scope.get_traits(type.sym.id) & common::TypeTraits::BOOLEAN)) {
                 report_error("loop's condition must have boolean type");
                 return;
             }
         }
-        loop.iteration.type = check_expression(loop.iteration);
-        if (loop.iteration.type.is_error()) {
-            return;
+        if (loop.iteration()) {
+            check_expression(loop.iteration());
+            if (!err_.empty()) {
+                return;
+            }
         }
         ++loop_cout_;
-        check_block(loop.body);
+        check_block(loop.body());
         --loop_cout_;
     }
 
@@ -600,31 +647,28 @@ namespace checker {
         return Reachability::UNREACHABLE;
     }
 
-    void Checker::try_compute(common::UnaryExpression &expr, common::Expression &ref_to_this) {
-        if (expr.expr.kind != common::ExpressionKind::LITERAL) {
-            return;
+    std::unique_ptr<common::Expression> Checker::try_compute(common::UnaryExpression &expr) {
+        if (expr.expression()->kind() != common::ExpressionKind::LITERAL) {
+            return nullptr;
         }
 
-        common::Literal lit = *ast_->get_literal(expr.expr.id);
-        switch (expr.op) {
-        case common::UnaryOp::NEGATE: lit = -*lit.get<double>(); break;
-        case common::UnaryOp::NOT: lit = !*lit.get<bool>(); break;
-        default: return;
+        common::Literal &lit = static_cast<common::Literal &>(*expr.expression());
+        switch (expr.op()) {
+        case common::UnaryOp::NEGATE: return std::make_unique<common::Literal>(-*lit.get<double>(), expr.pos());
+        case common::UnaryOp::NOT: return std::make_unique<common::Literal>(!*lit.get<bool>(), expr.pos());
+        default: return nullptr;
         }
-        ast_->free_literal(expr.expr.id);
-        ref_to_this.kind = common::ExpressionKind::LITERAL;
-        ref_to_this.id = ast_->add(lit);
     }
 
-    void Checker::try_compute(common::BinaryExpression &expr, common::Expression &ref_to_this) {
-        if (expr.lhs.kind != common::ExpressionKind::LITERAL || expr.rhs.kind != common::ExpressionKind::LITERAL) {
-            return;
+    std::unique_ptr<common::Expression> Checker::try_compute(common::BinaryExpression &expr) {
+        if (expr.lhs()->kind() != common::ExpressionKind::LITERAL || expr.rhs()->kind() != common::ExpressionKind::LITERAL) {
+            return nullptr;
         }
 
-        common::Literal lhs = *ast_->get_literal(expr.lhs.id);
-        common::Literal rhs = *ast_->get_literal(expr.rhs.id);
+        common::Literal &lhs = static_cast<common::Literal &>(*expr.lhs());
+        common::Literal &rhs = static_cast<common::Literal &>(*expr.rhs());
         if (!lhs.same_type(rhs)) {
-            return;
+            return nullptr;
         }
 
         auto do_rel_op = []<typename T>(common::BinaryOp op, T lhs, T rhs) -> std::optional<bool> {
@@ -668,91 +712,88 @@ namespace checker {
             }
         };
 
-        common::Literal result;
         if (lhs.is<bool>()) {
             std::optional<bool> val;
-            if (common::is_relational(expr.op)) {
-                val = do_rel_op(expr.op, *lhs.get<bool>(), *rhs.get<bool>());
+            if (common::is_relational(expr.op())) {
+                val = do_rel_op(expr.op(), *lhs.get<bool>(), *rhs.get<bool>());
             } else {
-                val = do_op(expr.op, *lhs.get<bool>(), *rhs.get<bool>());
+                val = do_op(expr.op(), *lhs.get<bool>(), *rhs.get<bool>());
             }
             if (!val) {
-                return;
+                return nullptr;
             }
-            result = *val;
+            return std::make_unique<common::Literal>(*val, expr.pos());
         } else if (lhs.is<uint64_t>()) {
-            if (common::is_relational(expr.op)) {
-                std::optional<bool> val = do_rel_op(expr.op, *lhs.get<uint64_t>(), *rhs.get<uint64_t>());
+            if (common::is_relational(expr.op())) {
+                std::optional<bool> val = do_rel_op(expr.op(), *lhs.get<uint64_t>(), *rhs.get<uint64_t>());
                 if (!val) {
-                    return;
+                    return nullptr;
                 }
-                result = *val;
+                return std::make_unique<common::Literal>(*val, expr.pos());
             } else {
                 std::optional<uint64_t> val;
-                if (common::is_bitwise(expr.op) || expr.op == common::BinaryOp::REMAINDER) {
-                    val = do_integer_op(expr.op, *lhs.get<uint64_t>(), *rhs.get<uint64_t>());
+                if (common::is_bitwise(expr.op()) || expr.op() == common::BinaryOp::REMAINDER) {
+                    val = do_integer_op(expr.op(), *lhs.get<uint64_t>(), *rhs.get<uint64_t>());
                 } else {
-                    val = do_op(expr.op, *lhs.get<uint64_t>(), *rhs.get<uint64_t>());
+                    val = do_op(expr.op(), *lhs.get<uint64_t>(), *rhs.get<uint64_t>());
                 }
                 if (!val) {
-                    return;
+                    return nullptr;
                 }
-                result = *val;
+                return std::make_unique<common::Literal>(*val, expr.pos());
             }
         } else if (lhs.is<double>()) {
-            if (common::is_relational(expr.op)) {
-                std::optional<bool> val = do_rel_op(expr.op, *lhs.get<double>(), *rhs.get<double>());
+            if (common::is_relational(expr.op())) {
+                std::optional<bool> val = do_rel_op(expr.op(), *lhs.get<double>(), *rhs.get<double>());
                 if (!val) {
-                    return;
+                    return nullptr;
                 }
-                result = *val;
+                return std::make_unique<common::Literal>(*val, expr.pos());
             } else {
-                std::optional<double> val = do_op(expr.op, *lhs.get<double>(), *rhs.get<double>());
+                std::optional<double> val = do_op(expr.op(), *lhs.get<double>(), *rhs.get<double>());
                 if (!val) {
-                    return;
+                    return nullptr;
                 }
-                result = *val;
+                return std::make_unique<common::Literal>(*val, expr.pos());
             }
-        } else {
-            return;
         }
-
-        ast_->free_literal(expr.lhs.id);
-        ast_->free_literal(expr.rhs.id);
-        ref_to_this.kind = common::ExpressionKind::LITERAL;
-        ref_to_this.id = ast_->add(result);
+        return nullptr;
     }
 
-    void Checker::try_compute(common::Cast &cast, common::Expression &ref_to_this) {
-        if (cast.from.kind != common::ExpressionKind::LITERAL) {
-            return;
+    std::unique_ptr<common::Expression> Checker::try_compute(common::Cast &cast) {
+        if (cast.from()->kind() != common::ExpressionKind::LITERAL) {
+            return nullptr;
         }
         common::Type floating_type = builtin_types_[common::BuiltinTypes::FLOAT];
         common::Type integer_type = builtin_types_[common::BuiltinTypes::UINT];
         common::Type boolean_type = builtin_types_[common::BuiltinTypes::BOOL];
 
-        common::Literal from = *ast_->get_literal(cast.from.id);
-        if (cast.dst_type == floating_type) {
+        common::Literal &from = static_cast<common::Literal &>(*cast.from());
+        std::optional<common::Literal> result;
+        if (cast.type() == floating_type) {
             if (!from.is<uint64_t>() && !from.is<double>()) {
-                return;
+                return nullptr;
             } else if (uint64_t *uint = from.get<uint64_t>(); uint) {
-                from = static_cast<double>(*uint);
+                result = common::Literal{static_cast<double>(*uint), cast.pos()};
+            } else {
+                result = common::Literal{*from.get<double>(), cast.pos()};
             }
-        } else if (cast.dst_type == integer_type) {
+        } else if (cast.type() == integer_type) {
             if (!from.is<uint64_t>() && !from.is<double>()) {
-                return;
+                return nullptr;
             } else if (double *d = from.get<double>(); d) {
-                from = static_cast<uint64_t>(*d);
+                result = common::Literal{static_cast<uint64_t>(*d), cast.pos()};
+            } else {
+                result = common::Literal{*from.get<uint64_t>(), cast.pos()};
             }
-        } else if (cast.dst_type == boolean_type) {
+        } else if (cast.type() == boolean_type) {
             if (!from.is<bool>()) {
-                return;
+                return nullptr;
             }
+            result = common::Literal{*from.get<bool>(), cast.pos()};
         }
 
-        ast_->free_literal(cast.from.id);
-        ref_to_this.kind = common::ExpressionKind::LITERAL;
-        ref_to_this.id = ast_->add(from);
+        return result ? std::make_unique<common::Literal>(std::move(*result)) : nullptr;
     }
 
 } // namespace checker
