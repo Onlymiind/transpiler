@@ -1,5 +1,6 @@
 // clang-format off
-int main(void) {
+void func_main(void);
+void func_main(void) {
 if(((bool)1 || (bool)0)) {
 if(!(bool)0) {
 (u64)1;
@@ -13,8 +14,8 @@ if((((u64)1 + (u64)2) == (u64)3)) {
 (u64)1000;
 }
 }else if((bool)0) {
-u64 x = (((u64)1 * (u64)2) - (u64)3);
-if((x > (u64)1000)) {
+u64 var_x = (((u64)1 * (u64)2) - (u64)3);
+if((var_x > (u64)1000)) {
 -(f64)1.1;
 }else {
 (bool)1;
@@ -29,4 +30,7 @@ if(((f64)1.1 == (f64)2.2)) {
 }
 }
 }
+}
+int main(void) {
+func_main();
 }

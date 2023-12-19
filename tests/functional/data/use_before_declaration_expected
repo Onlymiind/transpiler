@@ -1,8 +1,12 @@
 // clang-format off
-void a(void);
-int main(void) {
-a();
+void func_main(void);
+void func_a(void);
+void func_main(void) {
+func_a();
 }
-void a(void) {
+void func_a(void) {
 (u64)1;
+}
+int main(void) {
+func_main();
 }

@@ -28,6 +28,7 @@ namespace codegen {
                 break;
             }
         }
+        *out_ << g_main;
     }
 
     void Generator::codegen_expression(const common::Expression &expr) {
@@ -52,7 +53,7 @@ namespace codegen {
             codegen_call(common::downcast<common::FunctionCall>(expr));
             break;
         case common::ExpressionKind::VARIABLE_REF:
-            *out_ << *identifiers_->get(common::downcast<common::VariableReference>(expr).name());
+            codegen_var_name(common::downcast<common::VariableReference>(expr).name());
             break;
         default:
             report_error("unknown expression type");
@@ -140,34 +141,8 @@ namespace codegen {
     void Generator::codegen_decls() {
         const auto &functions = mod_->global_scope()->functions();
         for (const common::FunctionID &func_id : functions) {
-            const common::Function &func = *ast_->get_function(func_id);
-            const std::string &name = *identifiers_->get(func.name);
-            if (name == "main") {
-                continue;
-            }
-
-            if (func.return_type.is_void()) {
-                *out_ << "void";
-            } else {
-                codegen_type(func.return_type);
-            }
-            *out_ << ' ';
-            *out_ << name;
-            *out_ << '(';
-            for (size_t i = 0; i < func.params.size(); ++i) {
-                common::Variable &param = *ast_->get_var(func.params[i]);
-                if (i != 0) {
-                    *out_ << ", ";
-                }
-                codegen_type(param.type);
-                if (param.name != common::IdentifierID{}) {
-                    *out_ << ' ' << *identifiers_->get(param.name);
-                }
-            }
-            if (func.params.empty()) {
-                *out_ << "void";
-            }
-            *out_ << ");\n";
+            codegen_function_decl(*ast_->get_function(func_id));
+            *out_ << ";\n";
         }
 
         const auto &variables = mod_->global_scope()->variables();
@@ -183,18 +158,15 @@ namespace codegen {
         }
 
         const std::string &name = *identifiers_->get(func.name);
-        if (name == "main") {
-            *out_ << "int main(void)";
-        } else {
-            codegen_function_decl(func);
-        }
+        codegen_function_decl(func);
         *out_ << ' ';
         codegen_block(func.body);
         *out_ << '\n';
     }
 
     void Generator::codegen_call(const common::FunctionCall &call) {
-        *out_ << *identifiers_->get(call.name()) << '(';
+        codegen_func_name(call.name());
+        *out_ << '(';
         const auto &args = call.arguments();
         for (size_t i = 0; i < args.size(); ++i) {
             if (i != 0) {
@@ -207,7 +179,9 @@ namespace codegen {
 
     void Generator::codegen_var(const common::Variable &var) {
         codegen_type(var.type);
-        *out_ << ' ' << *identifiers_->get(var.name) << " = ";
+        *out_ << ' ';
+        codegen_var_name(var.name);
+        *out_ << " = ";
         if (!var.initial_value) {
             // TODO: proper zero-initialization
             *out_ << '(';
@@ -220,13 +194,9 @@ namespace codegen {
     }
 
     void Generator::codegen_function_decl(const common::Function &func) {
-        if (func.return_type.is_void()) {
-            *out_ << "void";
-        } else {
-            codegen_type(func.return_type);
-        }
+        codegen_type(func.return_type);
         *out_ << ' ';
-        *out_ << *identifiers_->get(func.name);
+        codegen_func_name(func.name);
         *out_ << '(';
         for (size_t i = 0; i < func.params.size(); ++i) {
             common::Variable &param = *ast_->get_var(func.params[i]);
@@ -235,7 +205,7 @@ namespace codegen {
             }
             codegen_type(param.type);
             if (param.name != common::IdentifierID{}) {
-                *out_ << ' ' << *identifiers_->get(param.name);
+                codegen_var_name(param.name);
             }
         }
         if (func.params.empty()) {
@@ -329,14 +299,27 @@ namespace codegen {
     }
 
     void Generator::codegen_type(common::Type type) {
-        if (!type.is_nullptr()) {
-            *out_ << *identifiers_->get(mod_->get_scope(type.sym.scope)->get_type(type.sym.id)->name);
-        } else {
+        if (type.is_nullptr()) {
             *out_ << "void*";
             return;
+        } else if (type.is_void()) {
+            *out_ << "void";
+            return;
+        } else if (type.is_error()) {
+            report_error("trying to generate error type");
+            return;
         }
+        *out_ << *identifiers_->get(mod_->get_scope(type.sym.scope)->get_type(type.sym.id)->name);
         for (uint64_t i = 0; i < type.indirection_level; ++i) {
             *out_ << '*';
         }
+    }
+
+    void Generator::codegen_var_name(common::IdentifierID name) {
+        *out_ << "var_" << *identifiers_->get(name);
+    }
+
+    void Generator::codegen_func_name(common::IdentifierID name) {
+        *out_ << "func_" << *identifiers_->get(name);
     }
 } // namespace codegen

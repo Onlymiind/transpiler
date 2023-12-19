@@ -8,6 +8,7 @@
 #include "common/module.h"
 #include "common/statement.h"
 #include "common/types.h"
+#include "common/util.h"
 #include <ostream>
 #include <string_view>
 
@@ -23,6 +24,11 @@ namespace codegen {
         "#endif\n"
         "#endif\n"
         "typedef double f64;\n\n";
+
+    constexpr std::string_view g_main =
+        "int main(void) {\n"
+        "func_main();\n"
+        "}\n";
 
     class Generator {
       public:
@@ -68,6 +74,9 @@ namespace codegen {
         void codegen_function_decl(const common::Function &func);
 
         void codegen_decls();
+
+        void codegen_var_name(common::IdentifierID name);
+        void codegen_func_name(common::IdentifierID name);
 
         void report_error(std::string_view err) { err_ = err; }
         std::string_view get_error() const { return err_; }

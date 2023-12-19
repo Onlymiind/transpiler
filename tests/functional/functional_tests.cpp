@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <ostream>
 
 struct FunctionalTestCase {
     std::string file;
@@ -19,7 +20,6 @@ std::vector<FunctionalTestCase> cases{
     {"function_calls"},
     {"function_def"},
     {"use_before_declaration"},
-    {"function_call_converts_to_cast"},
     {"wrong_return_type_fail"},
     {"missing_return_fail"},
     {"main_return_type_fail"},

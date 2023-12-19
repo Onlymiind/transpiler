@@ -1,12 +1,16 @@
 // clang-format off
-u64 a(void);
-f64 b(void);
-u64 a(void) {
+u64 func_a(void);
+f64 func_b(void);
+void func_main(void);
+u64 func_a(void) {
 return ((u64)1 + (u64)2);
 }
-f64 b(void) {
+f64 func_b(void) {
 return -(f64)1.1;
 }
+void func_main(void) {
+(func_b() == (f64)func_a());
+}
 int main(void) {
-(b() == (f64)a());
+func_main();
 }

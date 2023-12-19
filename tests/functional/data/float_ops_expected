@@ -1,21 +1,25 @@
 // clang-format off
+void func_main(void);
+void func_main(void) {
+f64 var_a = (f64)3.3234;
+f64 var_b = (f64)18.3;
+f64 var_c = (f64)-3.3;
+f64 var_d = (f64)4;
+bool var_e = (bool)1;
+bool var_e1 = (bool)0;
+bool var_f = (bool)1;
+bool var_f1 = (bool)0;
+bool var_g = (bool)1;
+bool var_g1 = (bool)1;
+bool var_g2 = (bool)0;
+bool var_h = (bool)1;
+bool var_h1 = (bool)1;
+bool var_h2 = (bool)0;
+bool var_k = (bool)0;
+bool var_k1 = (bool)1;
+bool var_l = (bool)1;
+bool var_l1 = (bool)0;
+}
 int main(void) {
-f64 a = (f64)3.3234;
-f64 b = (f64)18.3;
-f64 c = (f64)-3.3;
-f64 d = (f64)4;
-bool e = (bool)1;
-bool e1 = (bool)0;
-bool f = (bool)1;
-bool f1 = (bool)0;
-bool g = (bool)1;
-bool g1 = (bool)1;
-bool g2 = (bool)0;
-bool h = (bool)1;
-bool h1 = (bool)1;
-bool h2 = (bool)0;
-bool k = (bool)0;
-bool k1 = (bool)1;
-bool l = (bool)1;
-bool l1 = (bool)0;
+func_main();
 }

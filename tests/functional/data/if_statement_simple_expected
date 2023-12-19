@@ -1,32 +1,33 @@
 // clang-format off
-int main(void) {
-bool a = (bool)0;
-if(a) {
+void func_main(void);
+void func_main(void) {
+bool var_a = (bool)0;
+if(var_a) {
 ((u64)1 + (u64)2);
 }
-if((a && !(bool)1)) {
+if((var_a && !(bool)1)) {
 ((u64)1 + ((u64)2 * (u64)3));
 }else {
 (u64)1;
 }
-if((a && !(bool)1)) {
+if((var_a && !(bool)1)) {
 ((u64)1 + ((u64)2 * (u64)3));
 }
-if((a && !(bool)1)) {
-((u64)1 + ((u64)2 * (u64)3));
-}else if(((u64)10 == (u64)11)) {
-(u64)10;
-}else {
-(u64)11;
-}
-if((a && !(bool)1)) {
+if((var_a && !(bool)1)) {
 ((u64)1 + ((u64)2 * (u64)3));
 }else if(((u64)10 == (u64)11)) {
 (u64)10;
 }else {
 (u64)11;
 }
-if((a && !(bool)1)) {
+if((var_a && !(bool)1)) {
+((u64)1 + ((u64)2 * (u64)3));
+}else if(((u64)10 == (u64)11)) {
+(u64)10;
+}else {
+(u64)11;
+}
+if((var_a && !(bool)1)) {
 ((u64)1 + ((u64)2 * (u64)3));
 }else {
 if(((u64)10 == (u64)11)) {
@@ -36,4 +37,7 @@ if(((u64)10 == (u64)11)) {
 }
 (u64)1;
 }
+}
+int main(void) {
+func_main();
 }

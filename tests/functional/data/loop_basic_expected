@@ -1,26 +1,30 @@
 // clang-format off
-int main(void) {
+void func_main(void);
+void func_main(void) {
 for (;;) {
-u64 x = (u64)1;
+u64 var_x = (u64)1;
 break;
 }
-for (u64 y = (u64)2;;) {
-u64 x = (u64)2;
-if((x == (u64)2)) {
-break;
-}
-}
-for (u64 y = (u64)3;(bool)1;) {
-u64 x = (u64)3;
-if((y == x)) {
+for (u64 var_y = (u64)2;;) {
+u64 var_x = (u64)2;
+if((var_x == (u64)2)) {
 break;
 }
 }
-u64 x = (u64)0;
-for (u64 i = (u64)0;(i < (u64)100);(i = (i + (u64)1))) {
-if(((i % (u64)2) == (u64)0)) {
+for (u64 var_y = (u64)3;(bool)1;) {
+u64 var_x = (u64)3;
+if((var_y == var_x)) {
+break;
+}
+}
+u64 var_x = (u64)0;
+for (u64 var_i = (u64)0;(var_i < (u64)100);(var_i = (var_i + (u64)1))) {
+if(((var_i % (u64)2) == (u64)0)) {
 continue;
 }
-(x = (x + (u64)1));
+(var_x = (var_x + (u64)1));
 }
+}
+int main(void) {
+func_main();
 }

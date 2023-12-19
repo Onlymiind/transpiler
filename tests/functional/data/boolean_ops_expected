@@ -1,12 +1,16 @@
 // clang-format off
+void func_main(void);
+void func_main(void) {
+bool var_a = (bool)1;
+bool var_a1 = (bool)0;
+bool var_b = (bool)1;
+bool var_b1 = (bool)0;
+bool var_c = (bool)0;
+bool var_c1 = (bool)1;
+bool var_d = (bool)0;
+bool var_e = (bool)1;
+bool var_e1 = (bool)0;
+}
 int main(void) {
-bool a = (bool)1;
-bool a1 = (bool)0;
-bool b = (bool)1;
-bool b1 = (bool)0;
-bool c = (bool)0;
-bool c1 = (bool)1;
-bool d = (bool)0;
-bool e = (bool)1;
-bool e1 = (bool)0;
+func_main();
 }

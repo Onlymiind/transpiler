@@ -1,21 +1,25 @@
 // clang-format off
-void foo(u64*** a, f64* b);
-void foo(u64*** a, f64* b) {
-(*b = (f64)((u64)1000 * ***a));
+void func_foo(u64***var_a, f64*var_b);
+void func_main(void);
+void func_foo(u64***var_a, f64*var_b) {
+(*var_b = (f64)((u64)1000 * ***var_a));
+}
+void func_main(void) {
+u64 var_a = (u64)11;
+u64* var_ap = &var_a;
+u64** var_app = &var_ap;
+u64* var_p_default = (u64*)0;
+f64 var_b = (f64)0;
+func_foo(&var_app, &var_b);
+u64* var_c = (u64*)(void*)0;
+if((var_ap == var_c)) {}
+f64* var_c1 = (f64*)0;
+(var_c1 == (f64*)0);
+((f64*)0 == var_c1);
+(var_c1 = (f64*)0);
+bool** var_c2 = (bool**)0;
+(*var_c2 = (bool*)0);
 }
 int main(void) {
-u64 a = (u64)11;
-u64* ap = &a;
-u64** app = &ap;
-u64* p_default = (u64*)0;
-f64 b = (f64)0;
-foo(&app, &b);
-u64* c = (u64*)(void*)0;
-if((ap == c)) {}
-f64* c1 = (f64*)0;
-(c1 == (f64*)0);
-((f64*)0 == c1);
-(c1 = (f64*)0);
-bool** c2 = (bool**)0;
-(*c2 = (bool*)0);
+func_main();
 }
