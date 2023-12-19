@@ -43,10 +43,10 @@ namespace codegen {
             codegen_unary(common::downcast<common::UnaryExpression>(expr));
             break;
         case common::ExpressionKind::LITERAL:
-            codegen_literal(common::downcast<common::Literal>(expr), expr);
+            codegen_literal(common::downcast<common::Literal>(expr));
             break;
         case common::ExpressionKind::CAST:
-            codegen_cast(common::downcast<common::Cast>(expr), expr);
+            codegen_cast(common::downcast<common::Cast>(expr));
             break;
         case common::ExpressionKind::FUNCTION_CALL:
             codegen_call(common::downcast<common::FunctionCall>(expr));
@@ -60,9 +60,9 @@ namespace codegen {
         }
     }
 
-    void Generator::codegen_literal(const common::Literal &lit, const common::Expression &expr) {
+    void Generator::codegen_literal(const common::Literal &lit) {
         *out_ << '(';
-        codegen_type(expr.type());
+        codegen_type(lit.type());
         *out_ << ')';
 
         if (const bool *b = lit.get<bool>(); b) {
@@ -130,13 +130,7 @@ namespace codegen {
         *out_ << ')';
     }
 
-    void Generator::codegen_cast(const common::Cast &cast, const common::Expression &expr) {
-        if (cast.from()->kind() == common::ExpressionKind::LITERAL) {
-            // avoid unnecessary casts
-            codegen_literal(common::downcast<common::Literal>(*cast.from()), expr);
-            return;
-        }
-
+    void Generator::codegen_cast(const common::Cast &cast) {
         *out_ << '(';
         codegen_type(cast.type());
         *out_ << ')';
@@ -335,7 +329,12 @@ namespace codegen {
     }
 
     void Generator::codegen_type(common::Type type) {
-        *out_ << *identifiers_->get(mod_->get_scope(type.sym.scope)->get_type(type.sym.id)->name);
+        if (!type.is_nullptr()) {
+            *out_ << *identifiers_->get(mod_->get_scope(type.sym.scope)->get_type(type.sym.id)->name);
+        } else {
+            *out_ << "void*";
+            return;
+        }
         for (uint64_t i = 0; i < type.indirection_level; ++i) {
             *out_ << '*';
         }

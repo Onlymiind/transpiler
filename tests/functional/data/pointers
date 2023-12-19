@@ -12,4 +12,11 @@ func main() {
 
     var c *u64 = cast<*u64>(null);
     if ap == c {}
+
+    var c1 *f64 = null;
+    c1 == null;
+    null == c1;
+    c1 = null;
+    var c2 **bool = null;
+    *c2 = null;
 }

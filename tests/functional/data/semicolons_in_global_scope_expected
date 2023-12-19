@@ -7,7 +7,7 @@ u64 b(void) {
 return ((u64)1 + (u64)2);
 }
 bool c(void) {
-return (bool)((f64)1 == (f64)2);
+return (bool)((f64)(u64)1 == (f64)(u64)2);
 }
 f64 d(void) {
 return -(f64)1.1;

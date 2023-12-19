@@ -216,7 +216,13 @@ namespace checker {
             return common::Type{};
         }
 
-        if (lhs != rhs) {
+        if (lhs.is_nullptr() && rhs.is_pointer() && !rhs.is_nullptr()) {
+            lhs = rhs;
+            expr.lhs()->type(rhs);
+        } else if (rhs.is_nullptr() && lhs.is_pointer() && !lhs.is_nullptr()) {
+            rhs = lhs;
+            expr.rhs()->type(lhs);
+        } else if (lhs != rhs) {
             report_error("type mismatch: can not convert types");
             return common::Type{};
         }
@@ -605,10 +611,14 @@ namespace checker {
                 return;
             }
             if (var.initial_value->type().is_nullptr()) {
-                report_error("null must be explicitly converted");
-                return;
+                if (var.type.is_error()) {
+                    report_error("null must be explicitly converted when initializing implicitly-typed variable");
+                    return;
+                }
+                var.initial_value->type(var.type);
+            } else {
+                expected_type = var.initial_value->type();
             }
-            expected_type = var.initial_value->type();
         }
         if (!var.type.is_error()) {
             if (var.type != expected_type) {

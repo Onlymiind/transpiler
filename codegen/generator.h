@@ -41,13 +41,13 @@ namespace codegen {
         void codegen_expression(const common::Expression &expr);
 
         // expr parameter is needed to cast literal to the correct type
-        void codegen_literal(const common::Literal &lit, const common::Expression &expr);
+        void codegen_literal(const common::Literal &lit);
 
         void codegen_unary(const common::UnaryExpression &expr);
 
         void codegen_binary(const common::BinaryExpression &expr);
 
-        void codegen_cast(const common::Cast &cast, const common::Expression &expr);
+        void codegen_cast(const common::Cast &cast);
 
         void codegen_function(const common::Function &func);
 
