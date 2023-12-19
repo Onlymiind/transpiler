@@ -86,7 +86,14 @@ namespace codegen {
         case common::UnaryOp::NOT: *out_ << '!'; break;
         case common::UnaryOp::NEGATE: *out_ << '-'; break;
         case common::UnaryOp::ADDRESS_OF: *out_ << '&'; break;
-        case common::UnaryOp::DEREFERENCE: *out_ << '*'; break;
+        case common::UnaryOp::DEREFERENCE:
+            *out_ << '*';
+            *out_ << '(';
+            codegen_type(expr.expression()->type());
+            *out_ << ")check_pointer(";
+            codegen_expression(*expr.expression());
+            *out_ << ')';
+            return;
         default:
             report_error("unknown unary operator");
             break;

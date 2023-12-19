@@ -2,7 +2,7 @@
 void func_foo(u64***var_a, f64*var_b);
 void func_main(void);
 void func_foo(u64***var_a, f64*var_b) {
-(*var_b = (f64)((u64)1000 * ***var_a));
+(*(f64*)check_pointer(var_b) = (f64)((u64)1000 * *(u64*)check_pointer(*(u64**)check_pointer(*(u64***)check_pointer(var_a)))));
 }
 void func_main(void) {
 u64 var_a = (u64)11;
@@ -18,7 +18,7 @@ f64* var_c1 = (f64*)0;
 ((f64*)0 == var_c1);
 (var_c1 = (f64*)0);
 bool** var_c2 = (bool**)0;
-(*var_c2 = (bool*)0);
+(*(bool**)check_pointer(var_c2) = (bool*)0);
 }
 int main(void) {
 func_main();

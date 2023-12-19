@@ -14,8 +14,9 @@
 
 namespace codegen {
     constexpr std::string_view g_prelude =
-        "#include <stdint.h>\n\n"
-        "typedef uint64_t u64;\n"
+        "#include <stdint.h>\n"
+        "#include <stdio.h>\n"
+        "#include <stdlib.h>\n"
         "#ifndef __cplusplus\n"
         "#if __STDC_VERSION__ >= 199901L\n"
         "#include <stdbool.h>\n"
@@ -23,7 +24,18 @@ namespace codegen {
         "typedef uint8_t bool;\n"
         "#endif\n"
         "#endif\n"
-        "typedef double f64;\n\n";
+        "typedef uint64_t u64;\n"
+        "typedef double f64;\n\n"
+        "u64 check_index(u64 idx, u64 size) {\n"
+        "    if(idx >= size) {\n"
+        "        printf(\"index out of bounds\\n\");\n"
+        "        exit(1);\n    }\n"
+        "    return idx;\n}\n"
+        "void* check_pointer(void* ptr) {\n"
+        "    if(!ptr) {\n"
+        "        printf(\"null pointer dereference\\n\");\n"
+        "        exit(1);\n    }\n"
+        "    return ptr;\n}\n";
 
     constexpr std::string_view g_main =
         "int main(void) {\n"
