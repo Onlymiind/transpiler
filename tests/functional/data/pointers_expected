@@ -1,10 +1,4 @@
 // clang-format off
-#include <stdint.h>
-
-typedef uint64_t u64;
-typedef uint8_t bool;
-typedef double f64;
-
 void foo(u64*** a, f64* b);
 void foo(u64*** a, f64* b) {
 (*b = (f64)((u64)1000 * ***a));

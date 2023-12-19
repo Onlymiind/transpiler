@@ -1,3 +1,4 @@
+#include "codegen/generator.h"
 #include "compiler/compiler.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -95,6 +96,6 @@ TEST_CASE("functional tests") {
     }
 
     REQUIRE(!expected_str.empty());
-    std::string result = out.str();
+    std::string result = out.str().substr(codegen::g_prelude.size());
     REQUIRE(result == expected_str);
 }

@@ -15,7 +15,13 @@ namespace codegen {
     constexpr std::string_view g_prelude =
         "#include <stdint.h>\n\n"
         "typedef uint64_t u64;\n"
+        "#ifndef __cplusplus\n"
+        "#if __STDC_VERSION__ >= 199901L\n"
+        "#include <stdbool.h>\n"
+        "#else\n"
         "typedef uint8_t bool;\n"
+        "#endif\n"
+        "#endif\n"
         "typedef double f64;\n\n";
 
     class Generator {

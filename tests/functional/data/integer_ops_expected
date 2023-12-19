@@ -1,10 +1,4 @@
 // clang-gotmat off
-#include <stdint.h>
-
-typedef uint64_t u64;
-typedef uint8_t bool;
-typedef double f64;
-
 int main(void) {
 u64 a = (u64)3;
 u64 b = (u64)18;
