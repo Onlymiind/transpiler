@@ -63,3 +63,5 @@ Precedence:
 
 - Only variable and function declarations are allowed in global scope
 - All variables are zero-initialized if no initial value was provided
+- Attempting to dereference null directly is compile-time error
+- Attempting to dereference null pointer terminates the program with an error message

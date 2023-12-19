@@ -1,6 +1,6 @@
 ## About
 
-This is a work-in-progress implementation of custom compiled general-purpose language. For up-to-date examples check files in ```tests/functional/data``` directory (files with ```_fail``` postfix are examples of invalid programs, files with ```_expected``` postfix contain expected C output). Supported syntax is described in ```desing_doc.md``` file.
+This is a work-in-progress implementation of custom compiled general-purpose language. For up-to-date examples check files in ```tests/functional/data``` directory (files with ```_fail``` postfix are examples of invalid programs, files with ```_expected``` postfix contain expected C output). Supported syntax is described in ```design_doc.md``` file.
 
 ## Current Status
 
@@ -18,6 +18,7 @@ Currently inmplemented:
 - Loops
 - Pointers
 - Basic constant folding
+- Runtime checks for null pointer dereference
 
 ## Building
 
