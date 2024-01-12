@@ -52,7 +52,7 @@ AttributeMacros:
 BinPackArguments: true
 BinPackParameters: true
 BitFieldColonSpacing: Both
-ColumnLimit: 0
+ColumnLimit: 80
 BraceWrapping:
   AfterCaseLabel:  false
   AfterClass:      false

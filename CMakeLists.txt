@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 
-project(compiler_v2 CXX)
+project(compiler_v2 C CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -17,6 +17,7 @@ set(COMPILER_SRC
     common/scope.h
     common/statement.h
     common/base_classes.h
+    common/base_classes.cpp
 
     lexer/lexer.h
     lexer/lexer.cpp

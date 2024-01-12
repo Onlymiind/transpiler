@@ -66,6 +66,7 @@ namespace common {
         RIGHT_BRACKET,
         COLON,
         COMMA,
+	DOT,
 
         // eof
         END_OF_FILE

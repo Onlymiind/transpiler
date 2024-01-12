@@ -158,12 +158,15 @@ namespace common {
         COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(FunctionCall, ExpressionKind, ExpressionKind::FUNCTION_CALL, delete)
 
         IdentifierID name() const noexcept { return name_; }
+        FunctionID id() const noexcept { return id_; }
+        void id(FunctionID id) noexcept { id_ = id; }
 
         std::vector<std::unique_ptr<Expression>> &arguments() noexcept { return args_; }
         const std::vector<std::unique_ptr<Expression>> &arguments() const noexcept { return args_; }
 
       private:
         IdentifierID name_;
+        FunctionID id_;
         std::vector<std::unique_ptr<Expression>> args_;
     };
 
@@ -192,9 +195,12 @@ namespace common {
         COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(VariableReference, ExpressionKind, ExpressionKind::VARIABLE_REF, default)
 
         IdentifierID name() const noexcept { return name_; }
+        VariableID id() const noexcept { return id_; }
+        void id(VariableID id) noexcept { id_ = id; }
 
       private:
         IdentifierID name_;
+        VariableID id_;
     };
 
     class Literal final : public Expression {

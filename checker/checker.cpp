@@ -179,7 +179,7 @@ namespace checker {
             }
             return type;
         case common::UnaryOp::ADDRESS_OF:
-            if (!is_lvalue(*expr.expression())) {
+            if (!expr.expression()->is_lvalue()) {
                 report_error("can't take address of an rvalue");
                 return common::Type{};
             }
@@ -228,7 +228,7 @@ namespace checker {
         }
 
         if (expr.op() == common::BinaryOp::ASSIGN) {
-            if (!is_lvalue(*expr.lhs())) {
+            if (!expr.lhs()->is_lvalue()) {
                 report_error("can not assing to rvalue");
                 return common::Type{};
             }
@@ -350,6 +350,7 @@ namespace checker {
             return common::Type{};
         }
         common::Function &func = *ast_->get_function(func_id);
+        call.id(func.id);
         if (func.decl_only) {
             // function declared, but not defined
             report_error("function not defined");
@@ -395,15 +396,6 @@ namespace checker {
         }
     }
 
-    bool Checker::is_lvalue(common::Expression &expr) {
-        if (expr.kind() == common::ExpressionKind::VARIABLE_REF) {
-            return true;
-        } else if (expr.kind() != common::ExpressionKind::UNARY) {
-            return false;
-        }
-        return common::downcast<common::UnaryExpression>(expr).op() == common::UnaryOp::DEREFERENCE;
-    }
-
     common::Type Checker::check_variable_ref(common::VariableReference &name) {
         common::Symbol sym = module_.find(name.name(), scope_stack_.top());
         if (sym.is_error() || common::Scope::type(sym.id) != common::SymbolType::VARIABLE) {
@@ -412,6 +404,7 @@ namespace checker {
         }
 
         common::Variable &var = *ast_->get_var(module_.get_scope(sym.scope)->get_variable(sym.id));
+        name.id(var.id);
         return var.type;
     }
 

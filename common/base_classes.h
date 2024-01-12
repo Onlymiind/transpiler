@@ -19,7 +19,8 @@ namespace common {
 
     enum class ParsedTypeKind {
         ERROR,
-        NAMED
+        NAMED,
+	ARRAY
     };
 
     class ParsedType {
@@ -62,6 +63,8 @@ namespace common {
         const Type &type() const noexcept { return type_; }
         void type(Type type) noexcept { type_ = type; }
 
+        bool is_lvalue() const;
+
       protected:
         Expression(ExpressionKind kind, size_t pos) : kind_(kind), pos_(pos) {}
 
@@ -73,7 +76,6 @@ namespace common {
 
     // NOTE: since return and expression statements are internally just expressions
     // there is no separate struct for them, just get ExpressionID from AST
-
     enum class StatementType : uint8_t {
         ERROR,
 

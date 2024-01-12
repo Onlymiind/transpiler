@@ -3,7 +3,9 @@
 
 #include "common/util.h"
 
+#include <cstddef>
 #include <cstdint>
+#include <functional>
 
 namespace common {
     enum class BuiltinTypes {
@@ -68,5 +70,15 @@ namespace common {
 
     constexpr inline Type g_nullptr_type = Type{g_void, 1};
 } // namespace common
+
+namespace std {
+    template <>
+    struct hash<common::Type> {
+        size_t operator()(const common::Type &type) const {
+            std::hash<uint64_t> h{};
+            return (h(*type.sym.scope) * 7919 + h(*type.sym.id)) * 7919 + h(type.indirection_level);
+        }
+    };
+} // namespace std
 
 #endif

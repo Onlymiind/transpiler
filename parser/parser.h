@@ -2,6 +2,7 @@
 #define COMPILER_V2_PARSES_PARSER_HDR_
 
 #include "common/ast.h"
+#include "common/base_classes.h"
 #include "common/declarations.h"
 #include "common/expression.h"
 #include "common/statement.h"
@@ -33,6 +34,7 @@ namespace parser {
         std::unique_ptr<common::Expression> parse_primary_expression();
         std::unique_ptr<common::Expression> parse_identifier_ref();
         std::unique_ptr<common::Expression> parse_cast();
+        std::unique_ptr<common::Expression> parse_function_call(common::IdentifierID name = {}, size_t pos = 0);
 
         void parse_function();
         void parse_global_variabe();

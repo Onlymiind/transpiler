@@ -46,7 +46,6 @@ namespace checker {
         void check_block(common::Block &block);
         void check_loop(common::Loop &loop);
 
-        bool is_lvalue(common::Expression &expr);
         bool is_reachable() const { return reachability_stack_.top() == Reachability::REACHABLE; }
         static Reachability unite_reachability(Reachability lhs, Reachability rhs);
 

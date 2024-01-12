@@ -189,13 +189,14 @@ namespace lexer {
         case ',': result.type(COMMA); return result;
         case '[': result.type(LEFT_BRACKET); return result;
         case ']': result.type(RIGHT_BRACKET); return result;
+	case '.': result.type(DOT); return result;
         case '!': return handle_wide_op(NOT, '=', NOT_EQUALS);
         case '<': return handle_wide_op(LESS, '=', LESS_EQUALS);
         case '>': return handle_wide_op(GREATER, '=', GREATER_EQUALS);
         case '=': return handle_wide_op(ASSIGN, '=', EQUALS);
         case '&': return handle_wide_op(BITWISE_AND, '&', AND);
         case '|': return handle_wide_op(BITWISE_OR, '|', OR);
-        default:
+	default:
             put_back(*c);
             report_error("unknown symbol");
             return result;

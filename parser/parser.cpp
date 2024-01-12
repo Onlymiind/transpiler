@@ -1,4 +1,5 @@
 #include "parser/parser.h"
+#include "common/base_classes.h"
 #include "common/declarations.h"
 #include "common/expression.h"
 #include "common/literals.h"
@@ -68,35 +69,49 @@ namespace parser {
             return std::make_unique<common::Literal>(std::move(result));
         };
 
+        std::unique_ptr<common::Expression> result;
         switch (next().type()) {
-        case LEFT_PARENTHESIS: {
+        case LEFT_PARENTHESIS:
             consume();
-            std::unique_ptr<common::Expression> result = parse_expression();
+            result = parse_expression();
             if (!result || result->is_error()) {
                 break;
             }
             if (!match(RIGHT_PARENTHESIS, "expected ')'")) {
-                break;
+                result = std::make_unique<common::ErrorExpression>(next().pos());
             }
-            return result;
-        }
-
-        case IDENTIFIER: return parse_identifier_ref();
-        case BOOL: return make_literal_expr(bool{});
-        case INTEGER: return make_literal_expr(uint64_t{});
-        case FLOAT: return make_literal_expr(double{});
-        case NULLPTR: {
-            auto result = std::make_unique<common::Literal>(nullptr, next().pos());
+            break;
+        case IDENTIFIER: result = parse_identifier_ref(); break;
+        case BOOL: result = make_literal_expr(bool{}); break;
+        case INTEGER: result = make_literal_expr(uint64_t{}); break;
+        case FLOAT: result = make_literal_expr(double{}); break;
+        case NULLPTR:
+            result = std::make_unique<common::Literal>(nullptr, next().pos());
             consume();
-            return result;
-        }
-        case CAST: return parse_cast();
+            break;
+        case CAST: result = parse_cast(); break;
         default:
             report_error("expected primary expression");
             break;
         }
+        if (!result) {
+            return std::make_unique<common::ErrorExpression>(next().pos());
+        } else if (result->is_error()) {
+            return result;
+        }
 
-        return std::make_unique<common::ErrorExpression>(next().pos());
+        while (next().type() == common::TokenType::DOT) {
+            consume();
+            std::unique_ptr<common::Expression> first_argument = std::move(result);
+            result = parse_function_call();
+	    if (result->is_error()) {
+                return result;
+            }
+	    common::FunctionCall& call = common::downcast<common::FunctionCall>(*result);
+            call.arguments().emplace(call.arguments().begin(),std::move(first_argument));
+        }
+
+        return result; 
     }
 
     std::unique_ptr<common::Expression> Parser::parse_identifier_ref() {
@@ -108,6 +123,17 @@ namespace parser {
 
         if (!next().is(common::TokenType::LEFT_PARENTHESIS)) {
             return std::make_unique<common::VariableReference>(name, pos);
+        }
+        return parse_function_call(name, pos);
+    }
+
+    std::unique_ptr<common::Expression> Parser::parse_function_call(common::IdentifierID name, size_t pos) {
+        if (name == common::IdentifierID{}) {
+            pos = next().pos();
+            name = match_identifier("function call: expected function name");
+            if (name == common::IdentifierID{}) {
+                return std::make_unique<common::ErrorExpression>(pos);
+            }
         }
 
         if (!match(common::TokenType::LEFT_PARENTHESIS, "function call: expected '('")) {

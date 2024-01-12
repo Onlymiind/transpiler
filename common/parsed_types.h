@@ -6,6 +6,7 @@
 #include "common/util.h"
 
 #include <cstdint>
+#include <memory>
 
 namespace common {
 
@@ -19,6 +20,24 @@ namespace common {
 
       private:
         IdentifierID name_;
+    };
+
+    class ParsedArrayType final : public ParsedType {
+      public:
+        ParsedArrayType(std::unique_ptr<Expression> &&size, std::unique_ptr<ParsedType> base, uint64_t indirection_level = 0)
+            : ParsedType(static_kind(), indirection_level), size_(std::move(size)), base_(std::move(base)) {}
+
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(ParsedArrayType, ParsedTypeKind, ParsedTypeKind::ARRAY, delete)
+
+        std::unique_ptr<Expression> &size() noexcept { return size_; }
+        std::unique_ptr<ParsedType> &base() noexcept { return base_; }
+
+        const Expression *size() const noexcept { return size_.get(); }
+        const ParsedType *base() const noexcept { return base_.get(); }
+
+      private:
+        std::unique_ptr<Expression> size_;
+        std::unique_ptr<ParsedType> base_;
     };
 
     class ParsedErrorType final : public ParsedType {

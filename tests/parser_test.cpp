@@ -1,3 +1,4 @@
+#include "catch2/generators/catch_generators_range.hpp"
 #include "common/ast.h"
 #include "common/base_classes.h"
 #include "common/declarations.h"
@@ -31,7 +32,8 @@ class PolishNotationParser {
     std::pair<common::AST, std::unique_ptr<common::Expression>> parse() {
         std::unique_ptr<common::Expression> start = parse_expression();
 
-        std::pair<common::AST, std::unique_ptr<common::Expression>> result = {std::move(ast_), std::move(start)};
+        std::pair<common::AST, std::unique_ptr<common::Expression>> result =
+            {std::move(ast_), std::move(start)};
         return result;
     }
 
@@ -41,7 +43,10 @@ class PolishNotationParser {
             consume();
             auto lhs = parse_expression();
             auto rhs = parse_expression();
-            return std::make_unique<common::BinaryExpression>(*op, std::move(lhs), std::move(rhs), pos);
+            return std::make_unique<common::BinaryExpression>(*op,
+                                                              std::move(lhs),
+                                                              std::move(rhs),
+                                                              pos);
         }
 
         auto make_literal_expr = [this]<typename T>(T) {
@@ -68,7 +73,9 @@ class PolishNotationParser {
             common::ParsedNamedType to{*next().get<common::IdentifierID>()};
             consume();
             auto from = parse_expression();
-            return std::make_unique<common::Cast>(std::make_unique<common::ParsedNamedType>(to), std::move(from), pos);
+            return std::make_unique<
+                common::Cast>(std::make_unique<common::ParsedNamedType>(to),
+                              std::move(from), pos);
         }
         }
 
@@ -81,7 +88,9 @@ class PolishNotationParser {
         if (!op) {
             return nullptr;
         }
-        return std::make_unique<common::UnaryExpression>(*op, parse_expression(), pos);
+        return std::make_unique<common::UnaryExpression>(*op,
+                                                         parse_expression(),
+                                                         pos);
     }
 
     common::Token consume() {
@@ -114,60 +123,80 @@ struct ExprComparer {
 
         switch (lhs.kind()) {
         case common::ExpressionKind::BINARY: {
-            const auto &lhs_binary = common::downcast<common::BinaryExpression>(lhs);
-            const auto &rhs_binary = common::downcast<common::BinaryExpression>(rhs);
+            const auto &lhs_binary = common::downcast<common::BinaryExpression>(
+                lhs);
+            const auto &rhs_binary = common::downcast<common::BinaryExpression>(
+                rhs);
             return lhs_binary.op() == rhs_binary.op() &&
                    compare(*lhs_binary.lhs(), *rhs_binary.lhs()) &&
                    compare(*lhs_binary.rhs(), *rhs_binary.rhs());
         }
         case common::ExpressionKind::UNARY: {
-            const auto &lhs_unary = common::downcast<common::UnaryExpression>(lhs);
-            const auto &rhs_unary = common::downcast<common::UnaryExpression>(rhs);
-            return lhs_unary.op() == rhs_unary.op() && compare(*lhs_unary.expression(), *rhs_unary.expression());
+            const auto &lhs_unary = common::downcast<common::UnaryExpression>(
+                lhs);
+            const auto &rhs_unary = common::downcast<common::UnaryExpression>(
+                rhs);
+            return lhs_unary.op() == rhs_unary.op() &&
+                   compare(*lhs_unary.expression(), *rhs_unary.expression());
         }
         case common::ExpressionKind::CAST: {
             const auto &lhs_cast = common::downcast<common::Cast>(lhs);
             const auto &rhs_cast = common::downcast<common::Cast>(rhs);
-            if (lhs_cast.to()->kind() != common::ParsedTypeKind::NAMED || rhs_cast.to()->kind() != common::ParsedTypeKind::NAMED) {
+            if (lhs_cast.to()->kind() != common::ParsedTypeKind::NAMED ||
+                rhs_cast.to()->kind() != common::ParsedTypeKind::NAMED) {
                 throw std::runtime_error("only named types are supported");
             }
-            auto str1 = *lhs_identifiers.get(common::downcast<common::ParsedNamedType>(*lhs_cast.to()).name());
-            auto str2 = *rhs_identifiers.get(common::downcast<common::ParsedNamedType>(*rhs_cast.to()).name());
-            return str1 == str2 &&
-                   compare(*lhs_cast.from(), *rhs_cast.from());
+            auto str1 = *lhs_identifiers.get(
+                common::downcast<common::ParsedNamedType>(*lhs_cast.to())
+                    .name());
+            auto str2 = *rhs_identifiers.get(
+                common::downcast<common::ParsedNamedType>(*rhs_cast.to())
+                    .name());
+            return str1 == str2 && compare(*lhs_cast.from(), *rhs_cast.from());
         }
         case common::ExpressionKind::FUNCTION_CALL: {
             const auto &lhs_call = common::downcast<common::FunctionCall>(lhs);
             const auto &rhs_call = common::downcast<common::FunctionCall>(rhs);
-            if (*lhs_identifiers.get(lhs_call.name()) != *rhs_identifiers.get(rhs_call.name())) {
+            if (*lhs_identifiers.get(lhs_call.name()) !=
+                *rhs_identifiers.get(rhs_call.name())) {
                 return false;
             }
             if (lhs_call.arguments().size() != rhs_call.arguments().size()) {
                 return false;
             }
             for (size_t i = 0; i < lhs_call.arguments().size(); ++i) {
-                if (!compare(*lhs_call.arguments()[i], *rhs_call.arguments()[i])) {
+                if (!compare(*lhs_call.arguments()[i],
+                             *rhs_call.arguments()[i])) {
                     return false;
                 }
             }
             return true;
         }
+        case common::ExpressionKind::VARIABLE_REF:
+            return *lhs_identifiers.get(
+                       common::downcast<common::VariableReference>(lhs)
+                           .name()) ==
+                   *rhs_identifiers.get(
+                       common::downcast<common::VariableReference>(rhs).name());
         case common::ExpressionKind::LITERAL:
-            return common::downcast<common::Literal>(lhs) == common::downcast<common::Literal>(rhs);
+            return common::downcast<common::Literal>(lhs) ==
+                   common::downcast<common::Literal>(rhs);
         }
         return false;
     }
 };
 
 TEST_CASE("parser: literals", "[parser]") {
-    std::string string{GENERATE(as<std::string>{}, "1234", "true", "1234.1234", "null")};
+    std::string string{
+        GENERATE(as<std::string>{}, "1234", "true", "1234.1234", "null")};
 
     std::stringstream str{string};
     lexer::Lexer l{str};
     l.split();
     REQUIRE(l.get_error().empty());
     auto lexer_result1 = l.reset();
-    auto expected = PolishNotationParser{std::move(lexer_result1.tokens)}.parse();
+    auto expected = PolishNotationParser{std::move(lexer_result1.tokens)}
+                        .parse();
 
     str.str(string);
     str.clear();
@@ -180,7 +209,9 @@ TEST_CASE("parser: literals", "[parser]") {
     auto result = p.parse_expression();
     REQUIRE(p.get_error().empty());
     auto file = p.reset();
-    REQUIRE(ExprComparer{file, lexer_result2.identifiers, expected.first, lexer_result1.identifiers}.compare(*result, *expected.second));
+    REQUIRE(ExprComparer{file, lexer_result2.identifiers, expected.first,
+                         lexer_result1.identifiers}
+                .compare(*result, *expected.second));
 }
 
 struct ParserTestCase {
@@ -196,7 +227,8 @@ void run_tests(const std::vector<ParserTestCase> &cases) {
         REQUIRE(l.get_error().empty());
         auto lexer_result1 = l.reset();
 
-        auto expected = PolishNotationParser{std::move(lexer_result1.tokens)}.parse();
+        auto expected = PolishNotationParser{std::move(lexer_result1.tokens)}
+                            .parse();
 
         str.clear();
         str.str(c.expr);
@@ -209,7 +241,9 @@ void run_tests(const std::vector<ParserTestCase> &cases) {
         auto result = p.parse_expression();
         REQUIRE(p.get_error().empty());
         auto file = p.reset();
-        REQUIRE(ExprComparer{file, lexer_result2.identifiers, expected.first, lexer_result1.identifiers}.compare(*result, *expected.second));
+        REQUIRE(ExprComparer{file, lexer_result2.identifiers, expected.first,
+                             lexer_result1.identifiers}
+                    .compare(*result, *expected.second));
     }
 }
 
@@ -275,13 +309,54 @@ TEST_CASE("parser: parenthesized expressions", "[parser]") {
 
 TEST_CASE("parser: precedence", "[parser]") {
     std::vector<ParserTestCase> cases = {
-        ParserTestCase{"1234 + 5678 * true + 9012", "+ + 1234 * 5678 true 9012"},
+        ParserTestCase{"1234 + 5678 * true + 9012",
+                       "+ + 1234 * 5678 true 9012"},
         ParserTestCase{"1 || 2 && 3 == 4 + 5 * 6", "|| 1 && 2 == 3 + 4 * 5 6"},
-        ParserTestCase{"1 || (2 && 3.0) == (4 + 5) * 6 = 7", "= || 1 == && 2 3.0 * + 4 5 6 7"},
+        ParserTestCase{"1 || (2 && 3.0) == (4 + 5) * 6 = 7",
+                       "= || 1 == && 2 3.0 * + 4 5 6 7"},
         ParserTestCase{"7 - 10 * 3 - 1", "- - 7 * 10 3 1"},
     };
 
     run_tests(cases);
+}
+
+std::pair<parser::Parser, common::Identifiers> parse(const std::string &str) {
+    INFO(str);
+    std::stringstream in(str);
+    lexer::Lexer l{in};
+    l.split();
+    INFO(l.get_error().msg);
+    REQUIRE(l.get_error().empty());
+    auto lexer_result = l.reset();
+
+    parser::Parser p{std::move(lexer_result.tokens)};
+    p.parse();
+    INFO(p.get_error().msg);
+    return std::pair<parser::Parser,
+                     common::Identifiers>{std::move(p),
+                                          std::move(lexer_result.identifiers)};
+}
+
+std::tuple<parser::Parser, common::Identifiers,
+           std::unique_ptr<common::Expression>>
+parse_expression(const std::string &str) {
+    INFO(str);
+    std::stringstream in(str);
+    lexer::Lexer l{in};
+    l.split();
+    INFO(l.get_error().msg);
+    REQUIRE(l.get_error().empty());
+    auto lexer_result = l.reset();
+
+    parser::Parser p{std::move(lexer_result.tokens)};
+    auto expr = p.parse_expression();
+    INFO(p.get_error().msg);
+    return std::tuple<
+        parser::Parser, common::Identifiers,
+        std::unique_ptr<common::Expression>>{std::move(p),
+                                             std::move(
+                                                 lexer_result.identifiers),
+                                             std::move(expr)};
 }
 
 TEST_CASE("parser: functions", "[parser]") {
@@ -292,7 +367,8 @@ TEST_CASE("parser: functions", "[parser]") {
     };
     std::vector<Case> cases{
         Case{"func abc() {1;}"},
-        Case{"func abc() {} func cba() {-1.1; 1; 2;} func acb() {;;;;;1 + 2;;;;;1;} func aaa() u64 {1;;; return 2;; 1+ 3;}"},
+        Case{"func abc() {} func cba() {-1.1; 1; 2;} func acb() {;;;;;1 + "
+             "2;;;;;1;} func aaa() u64 {1;;; return 2;; 1+ 3;}"},
         Case{"func a();"},
         Case{"func a() u64;"},
         Case{"func a() {return;}"},
@@ -311,16 +387,7 @@ TEST_CASE("parser: functions", "[parser]") {
     };
 
     for (auto &c : cases) {
-        INFO(c.str);
-        std::stringstream str(c.str);
-        lexer::Lexer l{str};
-        l.split();
-        REQUIRE(l.get_error().empty());
-        auto lexer_result = l.reset();
-
-        parser::Parser p{std::move(lexer_result.tokens)};
-        p.parse();
-        INFO(p.get_error().msg);
+        auto [p, ident] = parse(c.str);
         if (c.should_fail) {
             REQUIRE(!p.get_error().empty());
             continue;
@@ -394,16 +461,7 @@ TEST_CASE("parser: local variables", "[parser]") {
     };
 
     for (auto &c : cases) {
-        INFO(c.data);
-        std::stringstream str(c.data);
-        lexer::Lexer l{str};
-        l.split();
-        REQUIRE(l.get_error().empty());
-        auto lexer_result = l.reset();
-
-        parser::Parser p{std::move(lexer_result.tokens)};
-        p.parse();
-        INFO(p.get_error().msg);
+        auto [p, idents] = parse(c.data);
         if (c.should_fail) {
             REQUIRE(!p.get_error().empty());
             continue;
@@ -415,32 +473,20 @@ TEST_CASE("parser: local variables", "[parser]") {
 
 TEST_CASE("parser: function call and variable ref distinction", "[parser]") {
     SECTION("variable reference") {
-        std::stringstream str{"x"};
-        lexer::Lexer l{str};
-        l.split();
-        REQUIRE(l.get_error().empty());
-        auto lexer_result = l.reset();
-
-        parser::Parser p{std::move(lexer_result.tokens)};
-        auto expr = p.parse_expression();
+        auto [p, idents, expr] = parse_expression("x");
         REQUIRE(p.get_error().empty());
         REQUIRE(expr->kind() == common::ExpressionKind::VARIABLE_REF);
         auto ast = p.reset();
-        REQUIRE(common::downcast<common::VariableReference>(*expr).name() != common::IdentifierID{});
+        REQUIRE(common::downcast<common::VariableReference>(*expr).name() !=
+                common::IdentifierID{});
     }
     SECTION("function call") {
-        std::stringstream str{"x()"};
-        lexer::Lexer l{str};
-        l.split();
-        REQUIRE(l.get_error().empty());
-        auto lexer_result = l.reset();
-
-        parser::Parser p{std::move(lexer_result.tokens)};
-        auto expr = p.parse_expression();
+        auto [p, idents, expr] = parse_expression("x()");
         REQUIRE(p.get_error().empty());
         REQUIRE(expr->kind() == common::ExpressionKind::FUNCTION_CALL);
         auto ast = p.reset();
-        REQUIRE(common::downcast<common::FunctionCall>(*expr).name() != common::IdentifierID{});
+        REQUIRE(common::downcast<common::FunctionCall>(*expr).name() !=
+                common::IdentifierID{});
     }
 }
 
@@ -461,16 +507,7 @@ TEST_CASE("parser: function calls", "[parser]") {
     };
 
     for (const auto &c : cases) {
-        std::stringstream str{c.str};
-        lexer::Lexer l{str};
-        l.split();
-        REQUIRE(l.get_error().empty());
-        auto lexer_result = l.reset();
-
-        parser::Parser p{std::move(lexer_result.tokens)};
-        auto expr = p.parse_expression();
-        INFO(p.get_error().msg);
-
+        auto [p, idents, expr] = parse_expression(c.str);
         if (c.should_fail) {
             REQUIRE(!p.get_error().empty());
             REQUIRE(expr->is_error());
@@ -529,7 +566,8 @@ TEST_CASE("parser: if statements", "[parser]") {
 }
 
 TEST_CASE("parser: fails", "[parser]") {
-    std::stringstream in{GENERATE(as<std::string>{}, "1 +", "-", "(1 + 3", "true && ==", "!*", "bool(1")};
+    std::stringstream in{GENERATE(as<std::string>{}, "1 +", "-", "(1 + 3",
+                                  "true && ==", "!*", "bool(1")};
     lexer::Lexer l{in};
     l.split();
     REQUIRE(l.get_error().empty());
@@ -596,4 +634,36 @@ TEST_CASE("parser: loops", "[parser]") {
         REQUIRE(p.get_error().empty());
         REQUIRE(loop_smt->kind() == common::StatementType::LOOP);
     }
+}
+TEST_CASE("parser: universal call syntax", "[parser]") {
+    struct Case {
+        std::string dot_call;
+        std::string normal_call;
+        bool should_fail = false;
+    };
+    std::vector<Case> cases{
+        Case{"(1).foo()", "foo(1)"},
+        Case{"a.foo()", "foo(a)"},
+        Case{"a.foo(1, 2, 3)", "foo(a, 1, 2, 3)"},
+        Case{"a.foo(1).bar(2, 3)", "bar(foo(a, 1), 2, 3)"},
+        Case{.dot_call = ".foo()", .should_fail = true},
+    };
+    size_t i = GENERATE(Catch::Generators::range(0, 5));
+    INFO(cases[i].dot_call);
+    auto [p, idents, result] = parse_expression(cases[i].dot_call);
+    if (cases[i].should_fail) {
+        REQUIRE(!p.get_error().empty());
+        REQUIRE(result->is_error());
+        return;
+    }
+
+    REQUIRE(p.get_error().empty());
+    REQUIRE(!result->is_error());
+    REQUIRE(result->kind() == common::ExpressionKind::FUNCTION_CALL);
+
+    auto [p2, idents2, expected] = parse_expression(cases[i].normal_call);
+    auto got_ast = p.reset();
+    auto expected_ast = p2.reset();
+    REQUIRE(ExprComparer{got_ast, idents, expected_ast, idents2}
+                .compare(*result, *expected));
 }

@@ -1,0 +1,19 @@
+{
+    "configurations": {
+        "tests": {
+            "adapter": "CodeLLDB",
+            "filetypes": [
+                "cpp"
+            ],
+            "default": true,
+            "configuration": {
+                "request": "launch",
+                "protocol": "auto",
+                "stopOnEntry": false,
+                "console": "integratedTerminal",
+                "program": "${workspaceRoot}/build/tests",
+                "cwd": "${workspaceRoot}/tests/functional"
+            }
+        }
+    }
+}
