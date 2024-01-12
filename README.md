@@ -19,6 +19,7 @@ Currently inmplemented:
 - Pointers
 - Basic constant folding
 - Runtime checks for null pointer dereference
+- Universal function call syntax
 
 ## Building
 
