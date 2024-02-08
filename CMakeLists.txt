@@ -15,7 +15,6 @@ set(COMPILER_SRC
     common/module.h
     common/module.cpp
     common/literals.h
-    common/scope.h
     common/statement.h
     common/base_classes.h
     common/base_classes.cpp

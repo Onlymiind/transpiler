@@ -23,7 +23,6 @@ namespace common {
         bool decl_only = false;
 
         const Type *return_type = nullptr;
-        ScopeID scope;
 
         std::vector<VariableID> params;
 

@@ -679,6 +679,8 @@ TEST_CASE("parser: types", "[parser]") {
         Case{"[1]foo", common::ParsedTypeKind::ARRAY},
         Case{"[1 + 2 * 3]foo", common::ParsedTypeKind::ARRAY},
         Case{"**[1 + 3]foo", common::ParsedTypeKind::ARRAY, 2},
+        Case{"[1]**foo", common::ParsedTypeKind::ARRAY, 2},
+        Case{"[13][10]**[1 + 2]foo", common::ParsedTypeKind::ARRAY, 2},
     };
 
     size_t i = GENERATE(Catch::Generators::range(0, 6));

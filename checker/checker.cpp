@@ -5,7 +5,6 @@
 #include "common/expression.h"
 #include "common/module.h"
 #include "common/parsed_types.h"
-#include "common/scope.h"
 #include "common/statement.h"
 #include "common/types.h"
 #include "common/util.h"

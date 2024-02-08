@@ -6,7 +6,6 @@
 #include "common/declarations.h"
 #include "common/expression.h"
 #include "common/literals.h"
-#include "common/scope.h"
 #include "common/token.h"
 #include "common/types.h"
 #include "common/util.h"
