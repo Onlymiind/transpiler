@@ -48,6 +48,7 @@ namespace parser {
 
         common::VariableID parse_func_param();
         std::unique_ptr<common::ParsedType> parse_type();
+	std::unique_ptr<common::ParsedType> parse_array_type();
 
         common::Variable parse_variable();
 

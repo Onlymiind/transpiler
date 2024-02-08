@@ -18,7 +18,12 @@
 
 namespace compiler {
 
-    void report_error(common::Error err, std::istream &file, std::ostream &out) {
+    void report_error(common::Error err, std::istream &file,
+                      std::ostream &out) {
+        if (err.pos == 0) {
+            out << "error: " << err.msg << '\n';
+        }
+
         file.clear();
         file.seekg(0, std::ios::beg);
         std::string line;
@@ -48,7 +53,8 @@ namespace compiler {
         out << line << cursor << '\n';
     }
 
-    std::optional<lexer::LexerResult> lex(std::istream &file, std::ostream &err) {
+    std::optional<lexer::LexerResult> lex(std::istream &file,
+                                          std::ostream &err) {
         lexer::Lexer lexer{file};
         lexer.split();
         common::Error error = lexer.get_error();
@@ -59,7 +65,8 @@ namespace compiler {
         return lexer.reset();
     }
 
-    std::optional<common::AST> parse(std::vector<common::Token> &&tokens, std::istream &file, std::ostream &err) {
+    std::optional<common::AST> parse(std::vector<common::Token> &&tokens,
+                                     std::istream &file, std::ostream &err) {
         parser::Parser parser{std::move(tokens)};
         parser.parse();
         common::Error error = parser.get_error();
@@ -70,7 +77,9 @@ namespace compiler {
         return parser.reset();
     }
 
-    std::optional<common::Module> check(common::AST &file, common::Identifiers &identifiers, std::istream &in_file, std::ostream &err, bool do_constant_folding) {
+    std::optional<std::pair<common::Module, std::unique_ptr<common::Global>>>
+    check(common::AST &file, common::Identifiers &identifiers,
+          std::istream &in_file, std::ostream &err, bool do_constant_folding) {
         checker::Checker checker{file, identifiers, do_constant_folding};
         checker.check();
         common::Error error = checker.get_error();
@@ -81,7 +90,9 @@ namespace compiler {
         return checker.reset();
     }
 
-    void generate(common::Module &mod, common::AST &ast, common::Identifiers &identifiers, std::ostream &out, std::ostream &err) {
+    void generate(common::Module &mod, common::AST &ast,
+                  common::Identifiers &identifiers, std::ostream &out,
+                  std::ostream &err) {
         codegen::Generator generator{out, mod, ast, identifiers};
         generator.codegen();
         std::string_view error = generator.get_error();
@@ -90,7 +101,8 @@ namespace compiler {
         }
     }
 
-    void compile(std::istream &file, std::ostream &out, std::ostream &err, bool do_constant_folding) {
+    void compile(std::istream &file, std::ostream &out, std::ostream &err,
+                 bool do_constant_folding) {
         if (!file) {
             err << "can't read from input file\n";
             return;
@@ -104,8 +116,7 @@ namespace compiler {
             }
             lexer_result = std::move(*r);
         } catch (...) {
-            err << "unknown exception in lexer\n"
-                << std::endl;
+            err << "unknown exception in lexer\n" << std::endl;
             return;
         }
 
@@ -117,22 +128,24 @@ namespace compiler {
             }
             parsed = std::move(*f);
         } catch (...) {
-            err << "unknown exception in parser\n"
-                << std::endl;
+            err << "unknown exception in parser\n" << std::endl;
             return;
         }
 
-        // not an optional, this is needed because module doesn't have default constructor
+        // not an optional, this is needed because module doesn't have default
+        // constructor
         std::optional<common::Module> mod;
+        std::unique_ptr<common::Global> global_types;
         try {
-            auto m = check(*parsed, lexer_result.identifiers, file, err, do_constant_folding);
+            auto m = check(*parsed, lexer_result.identifiers, file, err,
+                           do_constant_folding);
             if (!m) {
                 return;
             }
-            mod = std::move(*m);
+            mod = std::move(m->first);
+            global_types = std::move(m->second);
         } catch (...) {
-            err << "unknown exception in checker\n"
-                << std::endl;
+            err << "unknown exception in checker\n" << std::endl;
             return;
         }
 
@@ -144,8 +157,7 @@ namespace compiler {
         try {
             generate(*mod, *parsed, lexer_result.identifiers, out, err);
         } catch (...) {
-            err << "unknown exception in generator\n"
-                << std::endl;
+            err << "unknown exception in generator\n" << std::endl;
             return;
         }
     }

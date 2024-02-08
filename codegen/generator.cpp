@@ -1,5 +1,6 @@
 #include "codegen/generator.h"
 #include "common/ast.h"
+#include "common/base_classes.h"
 #include "common/declarations.h"
 #include "common/expression.h"
 #include "common/literals.h"
@@ -7,6 +8,7 @@
 #include "common/token.h"
 #include "common/types.h"
 #include "common/util.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <iomanip>
@@ -53,11 +55,10 @@ namespace codegen {
             codegen_call(common::downcast<common::FunctionCall>(expr));
             break;
         case common::ExpressionKind::VARIABLE_REF:
-            codegen_var_name(common::downcast<common::VariableReference>(expr).name());
+            codegen_var_name(
+                common::downcast<common::VariableReference>(expr).name());
             break;
-        default:
-            report_error("unknown expression type");
-            break;
+        default: report_error("unknown expression type"); break;
         }
     }
 
@@ -94,9 +95,7 @@ namespace codegen {
             codegen_expression(*expr.expression());
             *out_ << ')';
             return;
-        default:
-            report_error("unknown unary operator");
-            break;
+        default: report_error("unknown unary operator"); break;
         }
 
         codegen_expression(*expr.expression());
@@ -128,9 +127,7 @@ namespace codegen {
         case ASSIGN: *out_ << '='; break;
         case BITWISE_AND: *out_ << '&'; break;
         case BITWISE_OR: *out_ << '|'; break;
-        default:
-            report_error("unlnown binary operator");
-            return;
+        default: report_error("unlnown binary operator"); return;
         }
         *out_ << ' ';
 
@@ -146,14 +143,12 @@ namespace codegen {
     }
 
     void Generator::codegen_decls() {
-        const auto &functions = mod_->global_scope()->functions();
-        for (const common::FunctionID &func_id : functions) {
-            codegen_function_decl(*ast_->get_function(func_id));
+        for (const common::Function &func : ast_->functions()) {
+            codegen_function_decl(func);
             *out_ << ";\n";
         }
 
-        const auto &variables = mod_->global_scope()->variables();
-        for (const auto &var : variables) {
+        for (common::VariableID var : ast_->global_variables()) {
             codegen_var(*ast_->get_var(var));
             *out_ << '\n';
         }
@@ -226,13 +221,17 @@ namespace codegen {
         codegen_expression(*branch.predicate());
         *out_ << ") ";
         codegen_block(branch.true_branch());
-        if (!branch.false_branch() || branch.false_branch()->statements().empty()) {
+        if (!branch.false_branch() ||
+            branch.false_branch()->statements().empty()) {
             return;
         }
         *out_ << "else ";
         const common::Block &false_branch = *branch.false_branch();
-        if (false_branch.statements().size() == 1 && false_branch.statements()[0]->kind() == common::StatementType::BRANCH) {
-            codegen_branch(common::downcast<common::Branch>(*false_branch.statements()[0]));
+        if (false_branch.statements().size() == 1 &&
+            false_branch.statements()[0]->kind() ==
+                common::StatementType::BRANCH) {
+            codegen_branch(common::downcast<common::Branch>(
+                *false_branch.statements()[0]));
         } else {
             codegen_block(false_branch);
         }
@@ -275,7 +274,8 @@ namespace codegen {
         switch (smt.kind()) {
         case common::StatementType::RETURN: {
             *out_ << "return ";
-            const common::Expression *expr = common::downcast<common::Return>(smt).expression();
+            const common::Expression
+                *expr = common::downcast<common::Return>(smt).expression();
             if (expr) {
                 codegen_expression(*expr);
             }
@@ -283,13 +283,16 @@ namespace codegen {
             break;
         }
         case common::StatementType::EXPRESSION: {
-            const common::Expression *expr = common::downcast<common::ExpressionStatement>(smt).expression();
+            const common::Expression
+                *expr = common::downcast<common::ExpressionStatement>(smt)
+                            .expression();
             codegen_expression(*expr);
             *out_ << ';';
             break;
         }
         case common::StatementType::VARIABLE:
-            codegen_var(*ast_->get_var(common::downcast<common::VariableDeclatarion>(smt).variable()));
+            codegen_var(*ast_->get_var(
+                common::downcast<common::VariableDeclatarion>(smt).variable()));
             break;
         case common::StatementType::BRANCH:
             codegen_branch(common::downcast<common::Branch>(smt));
@@ -299,26 +302,26 @@ namespace codegen {
             break;
         case common::StatementType::BREAK: *out_ << "break;"; break;
         case common::StatementType::CONTINUE: *out_ << "continue;"; break;
-        default:
-            report_error("statement type not supported");
-            return;
+        default: report_error("statement type not supported"); return;
         }
     }
 
-    void Generator::codegen_type(common::Type type) {
-        if (type.is_nullptr()) {
-            *out_ << "void*";
-            return;
-        } else if (type.is_void()) {
+    void Generator::codegen_type(const common::Type *type) {
+        if (!type) {
             *out_ << "void";
             return;
-        } else if (type.is_error()) {
-            report_error("trying to generate error type");
-            return;
         }
-        *out_ << *identifiers_->get(mod_->get_scope(type.sym.scope)->get_type(type.sym.id)->name);
-        for (uint64_t i = 0; i < type.indirection_level; ++i) {
+        switch (type->kind()) {
+        case common::TypeKind::PRIMITIVE:
+            *out_ << *identifiers_->get(
+                common::downcast<common::PrimitiveType>(*type).name());
+            break;
+        case common::TypeKind::POINTER:
+            codegen_type(
+                common::downcast<common::PointerType>(*type).pointee_type());
             *out_ << '*';
+            break;
+        default: report_error("unsupported type"); break;
         }
     }
 

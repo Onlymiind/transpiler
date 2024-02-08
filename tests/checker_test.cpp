@@ -3,6 +3,7 @@
 #include "common/expression.h"
 #include "common/token.h"
 #include "common/types.h"
+#include "common/util.h"
 #include "lexer/lexer.h"
 #include "parser/parser.h"
 
@@ -17,7 +18,8 @@
 // TODO: Module class is simple for now,
 // later should definitely write tests for it
 
-// TODO: those tests don't check if Checker assigns correct types to all expressions in the tree
+// TODO: those tests don't check if Checker assigns correct types to all
+// expressions in the tree
 
 struct CheckerTestCase {
     std::string data;
@@ -38,18 +40,18 @@ void run_tests(const std::vector<CheckerTestCase> cases) {
         REQUIRE(p.get_error().empty());
         auto ast = p.reset();
         checker::Checker ch{ast, lexer_result.identifiers, false};
-        ch.add_builtins();
-        auto type = ch.check_expression(expr);
+        bool check_result = ch.check_expression(expr);
         INFO(ch.get_error().msg);
         if (c.should_fail) {
-            REQUIRE(!ch.get_error().empty());
+            REQUIRE(!check_result);
             continue;
         }
 
         REQUIRE(ch.get_error().empty());
 
         auto mod = ch.reset();
-        REQUIRE(c.expected == mod.get_scope(type.sym.scope)->get_type(type.sym.id)->type);
+        REQUIRE(c.expected ==
+                common::downcast<common::PrimitiveType>(*expr->type()).type());
     }
 }
 

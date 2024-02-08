@@ -13,6 +13,7 @@ set(COMPILER_SRC
     common/ast.h
     common/types.h
     common/module.h
+    common/module.cpp
     common/literals.h
     common/scope.h
     common/statement.h

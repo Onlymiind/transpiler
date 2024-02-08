@@ -1,11 +1,11 @@
 #ifndef COMPILER_V2_COMMON_TYPES_HDR_
 #define COMPILER_V2_COMMON_TYPES_HDR_
 
+#include "common/base_classes.h"
 #include "common/util.h"
 
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 
 namespace common {
     enum class BuiltinTypes {
@@ -13,25 +13,6 @@ namespace common {
         UINT,
         FLOAT,
     };
-
-    enum class TypeTraits {
-        NONE = 0,
-
-        BOOLEAN = 1,
-        INTEGER = 1 << 1,
-        FLOATING_POINT = 1 << 2,
-
-        NUMERIC = INTEGER | FLOATING_POINT,
-        ORDERED = NUMERIC,
-    };
-
-    constexpr inline TypeTraits operator&(TypeTraits lhs, TypeTraits rhs) {
-        return static_cast<TypeTraits>(to_underlying(lhs) & to_underlying(rhs));
-    }
-
-    constexpr inline TypeTraits operator|(TypeTraits lhs, TypeTraits rhs) {
-        return static_cast<TypeTraits>(to_underlying(lhs) | to_underlying(rhs));
-    }
 
     constexpr inline bool empty(TypeTraits traits) {
         return traits == TypeTraits::NONE;
@@ -45,40 +26,65 @@ namespace common {
         constexpr bool is_error() const { return name == IdentifierID{}; }
     };
 
-    struct Symbol {
-        ScopeID scope;
-        SymbolID id;
+    class PrimitiveType final : public Type {
+      public:
+        PrimitiveType(IdentifierID name, BuiltinTypes type, TypeTraits traits,
+                      size_t size)
+            : Type(static_kind(), traits, size), name_(name), type_(type) {}
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(PrimitiveType, TypeKind,
+                                                     TypeKind::PRIMITIVE,
+                                                     default)
 
-        constexpr bool is_error() const noexcept { return scope == ScopeID{} || id == SymbolID{}; }
-        constexpr bool is_void() const noexcept;
-        constexpr bool operator==(Symbol rhs) const noexcept { return scope == rhs.scope && id == rhs.id; }
+        IdentifierID name() const noexcept { return name_; }
+        BuiltinTypes type() const noexcept { return type_; }
+
+      private:
+        IdentifierID name_;
+        BuiltinTypes type_{};
     };
 
-    constexpr inline Symbol g_void = Symbol{.scope = common::ScopeID{0}, .id = common::SymbolID{0}};
-    constexpr inline bool Symbol::is_void() const noexcept { return *this == g_void; }
+    class ArrayType final : public Type {
+      public:
+        ArrayType(const Type &element_type, size_t count)
+            : Type(static_kind(), TypeTraits::INDEXABLE,
+                   element_type.size() * count),
+              count_(count), element_type_(&element_type) {}
 
-    struct Type {
-        Symbol sym;
-        uint64_t indirection_level = 0;
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(ArrayType, TypeKind,
+                                                     TypeKind::ARRAY, default)
 
-        constexpr bool is_pointer() const noexcept { return indirection_level != 0; }
-        constexpr bool is_nullptr() const noexcept { return is_void() && is_pointer(); }
-        constexpr bool is_error() const noexcept { return sym.is_error(); }
-        constexpr bool is_void() const noexcept { return sym.is_void(); }
-        constexpr bool operator==(Type rhs) const noexcept { return sym == rhs.sym && indirection_level == rhs.indirection_level; }
+        size_t count() const noexcept { return count_; }
+        const Type *element_type() const noexcept { return element_type_; }
+
+      private:
+        size_t count_ = 0;
+        const Type *element_type_ = nullptr;
     };
 
-    constexpr inline Type g_nullptr_type = Type{g_void, 1};
+    // FIXME: representing each pointer type as a separate Type instance seems
+    // extremely excessive, as the only information required on per-instance
+    // basis is pointee_type_ (or something like base type and indirection
+    // level)
+    class PointerType final : public Type {
+      public:
+        PointerType(const Type &pointee)
+            : Type(static_kind(), TypeTraits::DEREFERENCABLE, g_pointer_size),
+              pointee_type_(&pointee) {}
+
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(PointerType, TypeKind,
+                                                     TypeKind::POINTER, default)
+        const Type *pointee_type() const noexcept { return pointee_type_; }
+
+        static PointerType make_nullptr_type() { return PointerType(); }
+
+        bool is_nullptr() const noexcept { return pointee_type_ == nullptr; }
+
+      private:
+        PointerType() : Type(static_kind(), TypeTraits::NONE, g_pointer_size) {}
+
+        const Type *pointee_type_ = nullptr;
+    };
+
 } // namespace common
-
-namespace std {
-    template <>
-    struct hash<common::Type> {
-        size_t operator()(const common::Type &type) const {
-            std::hash<uint64_t> h{};
-            return (h(*type.sym.scope) * 7919 + h(*type.sym.id)) * 7919 + h(type.indirection_level);
-        }
-    };
-} // namespace std
 
 #endif

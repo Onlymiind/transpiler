@@ -35,13 +35,12 @@ void run_tests(const std::vector<GeneratorTestCase> cases) {
         REQUIRE(p.get_error().empty());
         auto ast = p.reset();
         checker::Checker ch{ast, lexer_result.identifiers, false};
-        ch.add_builtins();
         ch.add_declarations();
         ch.check_expression(expr);
         REQUIRE(ch.get_error().empty());
 
         std::stringstream out;
-        auto mod = ch.reset();
+        auto [mod, global_types] = ch.reset();
         codegen::Generator g{out, mod, ast, lexer_result.identifiers};
         g.codegen_expression(*expr);
         REQUIRE(!g.error_occured());
@@ -111,9 +110,14 @@ TEST_CASE("generator: casts", "[generator]") {
 
 TEST_CASE("generator: expressions", "[generator]") {
     std::vector<GeneratorTestCase> cases{
-        {"false && true || false && 1 != 2 * 3", "(((bool)0 && (bool)1) || ((bool)0 && ((u64)1 != ((u64)2 * (u64)3))))"},
-        {"1 + 2 * (3 + 5) / 4", "((u64)1 + (((u64)2 * ((u64)3 + (u64)5)) / (u64)4))"},
-        {"cast<f64>(1 + 2 * cast<u64>(1.3 - 11.02 * cast<f64>(12)) /1000)", "(f64)((u64)1 + (((u64)2 * (u64)((f64)1.3 - ((f64)11.02 * (f64)(u64)12))) / (u64)1000))"},
+        {"false && true || false && 1 != 2 * 3",
+         "(((bool)0 && (bool)1) || ((bool)0 && ((u64)1 != ((u64)2 * "
+         "(u64)3))))"},
+        {"1 + 2 * (3 + 5) / 4",
+         "((u64)1 + (((u64)2 * ((u64)3 + (u64)5)) / (u64)4))"},
+        {"cast<f64>(1 + 2 * cast<u64>(1.3 - 11.02 * cast<f64>(12)) /1000)",
+         "(f64)((u64)1 + (((u64)2 * (u64)((f64)1.3 - ((f64)11.02 * "
+         "(f64)(u64)12))) / (u64)1000))"},
     };
 
     run_tests(cases);

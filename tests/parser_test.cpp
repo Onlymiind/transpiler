@@ -107,9 +107,7 @@ class PolishNotationParser {
 };
 
 struct ExprComparer {
-    common::AST &lhs_ast;
     common::Identifiers &lhs_identifiers;
-    common::AST &rhs_ast;
     common::Identifiers &rhs_identifiers;
 
     bool compare(const common::Expression &lhs, const common::Expression &rhs) {
@@ -209,8 +207,7 @@ TEST_CASE("parser: literals", "[parser]") {
     auto result = p.parse_expression();
     REQUIRE(p.get_error().empty());
     auto file = p.reset();
-    REQUIRE(ExprComparer{file, lexer_result2.identifiers, expected.first,
-                         lexer_result1.identifiers}
+    REQUIRE(ExprComparer{lexer_result2.identifiers, lexer_result1.identifiers}
                 .compare(*result, *expected.second));
 }
 
@@ -241,9 +238,9 @@ void run_tests(const std::vector<ParserTestCase> &cases) {
         auto result = p.parse_expression();
         REQUIRE(p.get_error().empty());
         auto file = p.reset();
-        REQUIRE(ExprComparer{file, lexer_result2.identifiers, expected.first,
-                             lexer_result1.identifiers}
-                    .compare(*result, *expected.second));
+        REQUIRE(
+            ExprComparer{lexer_result2.identifiers, lexer_result1.identifiers}
+                .compare(*result, *expected.second));
     }
 }
 
@@ -635,6 +632,7 @@ TEST_CASE("parser: loops", "[parser]") {
         REQUIRE(loop_smt->kind() == common::StatementType::LOOP);
     }
 }
+
 TEST_CASE("parser: universal call syntax", "[parser]") {
     struct Case {
         std::string dot_call;
@@ -664,6 +662,38 @@ TEST_CASE("parser: universal call syntax", "[parser]") {
     auto [p2, idents2, expected] = parse_expression(cases[i].normal_call);
     auto got_ast = p.reset();
     auto expected_ast = p2.reset();
-    REQUIRE(ExprComparer{got_ast, idents, expected_ast, idents2}
-                .compare(*result, *expected));
+    REQUIRE(ExprComparer{idents, idents2}.compare(*result, *expected));
+}
+
+TEST_CASE("parser: types", "[parser]") {
+    struct Case {
+        std::string str;
+        common::ParsedTypeKind kind = common::ParsedTypeKind::ERROR;
+        uint64_t indirection_level = 0;
+    };
+
+    std::vector<Case> cases{
+        Case{"foo", common::ParsedTypeKind::NAMED},
+        Case{"*foo", common::ParsedTypeKind::NAMED, 1},
+        Case{"*******foo", common::ParsedTypeKind::NAMED, 7},
+        Case{"[1]foo", common::ParsedTypeKind::ARRAY},
+        Case{"[1 + 2 * 3]foo", common::ParsedTypeKind::ARRAY},
+        Case{"**[1 + 3]foo", common::ParsedTypeKind::ARRAY, 2},
+    };
+
+    size_t i = GENERATE(Catch::Generators::range(0, 6));
+    INFO(cases[i].str);
+    std::stringstream in{cases[i].str};
+    lexer::Lexer l{in};
+    l.split();
+    REQUIRE(l.get_error().empty());
+    auto lexer_result = l.reset();
+
+    parser::Parser p{std::move(lexer_result.tokens)};
+    auto type = p.parse_type();
+    REQUIRE(p.get_error().empty());
+    REQUIRE((type && !type->is_error()));
+
+    REQUIRE(type->kind() == cases[i].kind);
+    REQUIRE(type->indirection_level() == cases[i].indirection_level);
 }

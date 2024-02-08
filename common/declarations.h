@@ -22,13 +22,15 @@ namespace common {
         size_t pos = 0;
         bool decl_only = false;
 
-        Type return_type;
+        const Type *return_type = nullptr;
         ScopeID scope;
 
         std::vector<VariableID> params;
 
         constexpr bool is_error() const { return id == FunctionID{}; }
-        constexpr bool operator==(const Function &other) const { return id == other.id && name == other.name; }
+        constexpr bool operator==(const Function &other) const {
+            return id == other.id && name == other.name;
+        }
     };
 
     struct Variable {
@@ -38,7 +40,7 @@ namespace common {
         std::unique_ptr<ParsedType> explicit_type;
         std::unique_ptr<Expression> initial_value;
         size_t pos = 0;
-        Type type;
+        const Type *type = nullptr;
     };
 } // namespace common
 

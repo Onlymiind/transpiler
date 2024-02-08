@@ -57,12 +57,14 @@ namespace parser {
             return std::make_unique<common::ErrorExpression>(pos);
         }
 
-        return std::make_unique<common::UnaryExpression>(op, std::move(expr), pos);
+        return std::make_unique<common::UnaryExpression>(op, std::move(expr),
+                                                         pos);
     }
 
     std::unique_ptr<common::Expression> Parser::parse_primary_expression() {
         using enum common::TokenType;
-        auto make_literal_expr = [this]<typename T>(T) -> std::unique_ptr<common::Expression> {
+        auto make_literal_expr =
+            [this]<typename T>(T) -> std::unique_ptr<common::Expression> {
             common::Token tok = next();
             common::Literal result{*tok.get<T>(), tok.pos()};
             consume();
@@ -78,7 +80,8 @@ namespace parser {
                 break;
             }
             if (!match(RIGHT_PARENTHESIS, "expected ')'")) {
-                result = std::make_unique<common::ErrorExpression>(next().pos());
+                result = std::make_unique<common::ErrorExpression>(
+                    next().pos());
             }
             break;
         case IDENTIFIER: result = parse_identifier_ref(); break;
@@ -90,9 +93,7 @@ namespace parser {
             consume();
             break;
         case CAST: result = parse_cast(); break;
-        default:
-            report_error("expected primary expression");
-            break;
+        default: report_error("expected primary expression"); break;
         }
         if (!result) {
             return std::make_unique<common::ErrorExpression>(next().pos());
@@ -102,21 +103,25 @@ namespace parser {
 
         while (next().type() == common::TokenType::DOT) {
             consume();
-            std::unique_ptr<common::Expression> first_argument = std::move(result);
+            std::unique_ptr<common::Expression> first_argument = std::move(
+                result);
             result = parse_function_call();
-	    if (result->is_error()) {
+            if (result->is_error()) {
                 return result;
             }
-	    common::FunctionCall& call = common::downcast<common::FunctionCall>(*result);
-            call.arguments().emplace(call.arguments().begin(),std::move(first_argument));
+            common::FunctionCall &call = common::downcast<common::FunctionCall>(
+                *result);
+            call.arguments().emplace(call.arguments().begin(),
+                                     std::move(first_argument));
         }
 
-        return result; 
+        return result;
     }
 
     std::unique_ptr<common::Expression> Parser::parse_identifier_ref() {
         size_t pos = next().pos();
-        common::IdentifierID name = common::IdentifierID{match_identifier("function call: expected function name")};
+        common::IdentifierID name = common::IdentifierID{
+            match_identifier("function call: expected function name")};
         if (name == common::IdentifierID{}) {
             return std::make_unique<common::ErrorExpression>(pos);
         }
@@ -127,7 +132,8 @@ namespace parser {
         return parse_function_call(name, pos);
     }
 
-    std::unique_ptr<common::Expression> Parser::parse_function_call(common::IdentifierID name, size_t pos) {
+    std::unique_ptr<common::Expression>
+    Parser::parse_function_call(common::IdentifierID name, size_t pos) {
         if (name == common::IdentifierID{}) {
             pos = next().pos();
             name = match_identifier("function call: expected function name");
@@ -136,13 +142,17 @@ namespace parser {
             }
         }
 
-        if (!match(common::TokenType::LEFT_PARENTHESIS, "function call: expected '('")) {
+        if (!match(common::TokenType::LEFT_PARENTHESIS,
+                   "function call: expected '('")) {
             return std::make_unique<common::ErrorExpression>(next().pos());
         }
         std::vector<std::unique_ptr<common::Expression>> args;
         bool first = true;
-        while (!next().is(common::TokenType::RIGHT_PARENTHESIS) && !next().is_eof()) {
-            if (!first && !match(common::TokenType::COMMA, "expected comma-separated list of arguments")) {
+        while (!next().is(common::TokenType::RIGHT_PARENTHESIS) &&
+               !next().is_eof()) {
+            if (!first &&
+                !match(common::TokenType::COMMA,
+                       "expected comma-separated list of arguments")) {
                 return std::make_unique<common::ErrorExpression>(next().pos());
             }
             args.push_back(parse_expression());
@@ -154,14 +164,18 @@ namespace parser {
             }
             first = false;
         }
-        if (!match(common::TokenType::RIGHT_PARENTHESIS, "function call: expected ')'")) {
+        if (!match(common::TokenType::RIGHT_PARENTHESIS,
+                   "function call: expected ')'")) {
             return std::make_unique<common::ErrorExpression>(next().pos());
         }
 
-        return std::make_unique<common::FunctionCall>(name, std::move(args), pos);
+        return std::make_unique<common::FunctionCall>(name, std::move(args),
+                                                      pos);
     }
 
-    std::unique_ptr<common::Expression> Parser::parse_binary_expression(std::unique_ptr<common::Expression> &&lhs, uint8_t precedence) {
+    std::unique_ptr<common::Expression>
+    Parser::parse_binary_expression(std::unique_ptr<common::Expression> &&lhs,
+                                    uint8_t precedence) {
         if (!next().is_binary_op()) {
             report_error("expected binary operator");
             return std::make_unique<common::ErrorExpression>(next().pos());
@@ -184,13 +198,18 @@ namespace parser {
             for (auto next_op = common::to_binary_op(next().type());
                  next_op && common::get_precedence(*next_op) > op_precedence;
                  next_op = common::to_binary_op(next().type())) {
-                rhs = parse_binary_expression(std::move(rhs), common::get_precedence(*next_op));
+                rhs = parse_binary_expression(std::move(rhs),
+                                              common::get_precedence(*next_op));
                 if (!rhs || rhs->is_error()) {
-                    return std::make_unique<common::ErrorExpression>(next().pos());
+                    return std::make_unique<common::ErrorExpression>(
+                        next().pos());
                 }
             }
 
-            lhs = std::make_unique<common::BinaryExpression>(*op, std::move(lhs), std::move(rhs), pos);
+            lhs = std::make_unique<common::BinaryExpression>(*op,
+                                                             std::move(lhs),
+                                                             std::move(rhs),
+                                                             pos);
         }
 
         return lhs;
@@ -211,8 +230,11 @@ namespace parser {
             return;
         }
         bool first = true;
-        while (!next().is(common::TokenType::RIGHT_PARENTHESIS) && !next().is_eof()) {
-            if (!first && !match(common::TokenType::COMMA, "expected comma-separated list of function parameter declarations")) {
+        while (!next().is(common::TokenType::RIGHT_PARENTHESIS) &&
+               !next().is_eof()) {
+            if (!first && !match(common::TokenType::COMMA,
+                                 "expected comma-separated list of function "
+                                 "parameter declarations")) {
                 return;
             }
             result.params.push_back(parse_func_param());
@@ -228,7 +250,8 @@ namespace parser {
             return;
         }
 
-        if (!(next().is(common::TokenType::SEMICOLON) || next().is(common::TokenType::LEFT_BRACE))) {
+        if (!(next().is(common::TokenType::SEMICOLON) ||
+              next().is(common::TokenType::LEFT_BRACE))) {
             result.parsed_return_type = parse_type();
         }
         if (next().is(common::TokenType::SEMICOLON)) {
@@ -252,7 +275,8 @@ namespace parser {
         if (!err_.empty()) {
             return;
         }
-        if (!match(common::TokenType::SEMICOLON, "expected ';' after global variable definition")) {
+        if (!match(common::TokenType::SEMICOLON,
+                   "expected ';' after global variable definition")) {
             return;
         }
 
@@ -298,12 +322,15 @@ namespace parser {
             if (!expr || expr->is_error()) {
                 return std::make_unique<common::ErrorStatement>(pos);
             }
-            smt = std::make_unique<common::ExpressionStatement>(std::move(expr), pos);
+            smt = std::make_unique<common::ExpressionStatement>(std::move(expr),
+                                                                pos);
             break;
         }
         }
         if (!smt || smt->is_error() ||
-            (needs_semicolon && !match(common::TokenType::SEMICOLON, "expected ';' at the end of the statement"))) {
+            (needs_semicolon &&
+             !match(common::TokenType::SEMICOLON,
+                    "expected ';' at the end of the statement"))) {
             return std::make_unique<common::ErrorStatement>(pos);
         }
         return smt;
@@ -315,7 +342,10 @@ namespace parser {
         if (!err_.empty()) {
             return std::make_unique<common::ErrorStatement>(pos);
         }
-        return std::make_unique<common::VariableDeclatarion>(ast_.add_local(std::move(result)), pos);
+        return std::make_unique<common::VariableDeclatarion>(ast_.add_local(
+                                                                 std::move(
+                                                                     result)),
+                                                             pos);
     }
 
     common::VariableID Parser::parse_func_param() {
@@ -326,8 +356,10 @@ namespace parser {
             consume();
 
             // unnamed parameter
-            if (next().is(common::TokenType::COMMA) || next().is(common::TokenType::RIGHT_PARENTHESIS)) {
-                param.explicit_type = std::make_unique<common::ParsedNamedType>(name, 0);
+            if (next().is(common::TokenType::COMMA) ||
+                next().is(common::TokenType::RIGHT_PARENTHESIS)) {
+                param.explicit_type = std::make_unique<
+                    common::ParsedNamedType>(name, 0);
                 return ast_.add_func_param(std::move(param));
             }
             param.name = name;
@@ -358,7 +390,8 @@ namespace parser {
             result.statements().push_back(std::move(smt));
         }
 
-        match(common::TokenType::RIGHT_BRACE, "expected '}' at the end of a block");
+        match(common::TokenType::RIGHT_BRACE,
+              "expected '}' at the end of a block");
         return result;
     }
 
@@ -377,7 +410,9 @@ namespace parser {
             return std::make_unique<common::ErrorStatement>(pos);
         }
         if (!next().is(common::TokenType::ELSE)) {
-            return std::make_unique<common::Branch>(std::move(predicate), std::move(then), std::nullopt, pos);
+            return std::make_unique<common::Branch>(std::move(predicate),
+                                                    std::move(then),
+                                                    std::nullopt, pos);
         }
 
         // has "else"/"else if" branch
@@ -391,14 +426,18 @@ namespace parser {
             }
             otherwise = common::Block{smt->pos()};
             otherwise->statements().push_back(std::move(smt));
-            return std::make_unique<common::Branch>(std::move(predicate), std::move(then), std::move(otherwise), pos);
+            return std::make_unique<common::Branch>(std::move(predicate),
+                                                    std::move(then),
+                                                    std::move(otherwise), pos);
         }
 
         otherwise = parse_block();
         if (!err_.empty()) {
             return std::make_unique<common::ErrorStatement>(pos);
         }
-        return std::make_unique<common::Branch>(std::move(predicate), std::move(then), std::move(otherwise), pos);
+        return std::make_unique<common::Branch>(std::move(predicate),
+                                                std::move(then),
+                                                std::move(otherwise), pos);
     }
 
     std::unique_ptr<common::Statement> Parser::parse_loop() {
@@ -422,7 +461,9 @@ namespace parser {
             if (!expr || expr->is_error()) {
                 return std::make_unique<common::ErrorStatement>(pos);
             }
-            result.set_init(std::make_unique<common::ExpressionStatement>(std::move(expr), expr->pos()));
+            result.set_init(
+                std::make_unique<common::ExpressionStatement>(std::move(expr),
+                                                              expr->pos()));
         }
 
         if (next().is(common::TokenType::LEFT_BRACE)) {
@@ -452,11 +493,45 @@ namespace parser {
         for (; next().is(common::TokenType::MUL); consume()) {
             ++indirection_level;
         }
-        common::IdentifierID name = match_identifier("expected type name");
-        if (name == common::IdentifierID{}) {
+
+        std::unique_ptr<common::ParsedType> result;
+        if (next().type() == common::TokenType::LEFT_BRACKET) {
+            result = parse_array_type();
+        } else {
+            common::IdentifierID name = match_identifier("expected type name");
+            if (name == common::IdentifierID{}) {
+                return std::make_unique<common::ParsedErrorType>();
+            }
+            result = std::make_unique<
+                common::ParsedNamedType>(name, indirection_level);
+        }
+
+        if (result->is_error()) {
+            return result;
+        }
+        result->indirection_level(indirection_level);
+        return result;
+    }
+
+    std::unique_ptr<common::ParsedType> Parser::parse_array_type() {
+        if (!match(common::TokenType::LEFT_BRACKET,
+                   "expected '[' at the start of an array type")) {
             return std::make_unique<common::ParsedErrorType>();
         }
-        return std::make_unique<common::ParsedNamedType>(name, indirection_level);
+        std::unique_ptr<common::Expression> size = parse_expression();
+        if (size->is_error()) {
+            return std::make_unique<common::ParsedErrorType>();
+        }
+        if (!match(common::TokenType::RIGHT_BRACKET, "expected ']'")) {
+            return std::make_unique<common::ParsedErrorType>();
+        }
+        std::unique_ptr<common::ParsedType> base = parse_type();
+        if (base->is_error()) {
+            return std::make_unique<common::ParsedErrorType>();
+        }
+
+        return std::make_unique<common::ParsedArrayType>(std::move(size),
+                                                         std::move(base));
     }
 
     std::unique_ptr<common::Expression> Parser::parse_cast() {
@@ -484,16 +559,19 @@ namespace parser {
         if (!match(common::TokenType::RIGHT_PARENTHESIS, "expected ')'")) {
             return std::make_unique<common::ErrorExpression>(pos);
         }
-        return std::make_unique<common::Cast>(std::move(to), std::move(from), pos);
+        return std::make_unique<common::Cast>(std::move(to), std::move(from),
+                                              pos);
     }
 
     common::Variable Parser::parse_variable() {
         common::Variable result{.pos = next().pos()};
-        if (!match(common::TokenType::VAR, "expected 'var' at the start of local variable declaration")) {
+        if (!match(common::TokenType::VAR, "expected 'var' at the start of "
+                                           "local variable declaration")) {
             return common::Variable{};
         }
 
-        result.name = common::IdentifierID{match_identifier("expected variable's name")};
+        result.name = common::IdentifierID{
+            match_identifier("expected variable's name")};
         if (result.name == common::IdentifierID{}) {
             return common::Variable{};
         }

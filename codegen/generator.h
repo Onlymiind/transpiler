@@ -9,46 +9,48 @@
 #include "common/statement.h"
 #include "common/types.h"
 #include "common/util.h"
+
 #include <ostream>
 #include <string_view>
 
 namespace codegen {
-    constexpr std::string_view g_prelude =
-        "#include <stdint.h>\n"
-        "#include <stdio.h>\n"
-        "#include <stdlib.h>\n"
-        "#ifndef __cplusplus\n"
-        "#if __STDC_VERSION__ >= 199901L\n"
-        "#include <stdbool.h>\n"
-        "#else\n"
-        "typedef uint8_t bool;\n"
-        "#endif\n"
-        "#endif\n"
-        "typedef uint64_t u64;\n"
-        "typedef double f64;\n\n"
-        "u64 check_index(u64 idx, u64 size) {\n"
-        "    if(idx >= size) {\n"
-        "        printf(\"index out of bounds\\n\");\n"
-        "        exit(1);\n    }\n"
-        "    return idx;\n}\n"
-        "void* check_pointer(void* ptr) {\n"
-        "    if(!ptr) {\n"
-        "        printf(\"null pointer dereference\\n\");\n"
-        "        exit(1);\n    }\n"
-        "    return ptr;\n}\n";
+    constexpr std::string_view
+        g_prelude = "#include <stdint.h>\n"
+                    "#include <stdio.h>\n"
+                    "#include <stdlib.h>\n"
+                    "#ifndef __cplusplus\n"
+                    "#if __STDC_VERSION__ >= 199901L\n"
+                    "#include <stdbool.h>\n"
+                    "#else\n"
+                    "typedef uint8_t bool;\n"
+                    "#endif\n"
+                    "#endif\n"
+                    "typedef uint64_t u64;\n"
+                    "typedef double f64;\n\n"
+                    "u64 check_index(u64 idx, u64 size) {\n"
+                    "    if(idx >= size) {\n"
+                    "        printf(\"index out of bounds\\n\");\n"
+                    "        exit(1);\n    }\n"
+                    "    return idx;\n}\n"
+                    "void* check_pointer(void* ptr) {\n"
+                    "    if(!ptr) {\n"
+                    "        printf(\"null pointer dereference\\n\");\n"
+                    "        exit(1);\n    }\n"
+                    "    return ptr;\n}\n";
 
-    constexpr std::string_view g_main =
-        "int main(void) {\n"
-        "func_main();\n"
-        "}\n";
+    constexpr std::string_view g_main = "int main(void) {\n"
+                                        "func_main();\n"
+                                        "}\n";
 
     class Generator {
       public:
-        Generator(std::ostream &out, common::Module &mod, common::AST &ast, common::Identifiers &identifiers)
+        Generator(std::ostream &out, common::Module &mod, common::AST &ast,
+                  common::Identifiers &identifiers)
             : out_(&out), mod_(&mod), ast_(&ast), identifiers_(&identifiers) {}
 
         void set_file(std::ostream &out) { out_ = &out; }
-        void set_module(common::Module &mod, common::AST &ast, common::Identifiers &identifiers) {
+        void set_module(common::Module &mod, common::AST &ast,
+                        common::Identifiers &identifiers) {
             mod_ = &mod;
             ast_ = &ast;
             identifiers_ = &identifiers;
@@ -81,7 +83,7 @@ namespace codegen {
 
         void codegen_loop(const common::Loop &loop);
 
-        void codegen_type(common::Type type);
+        void codegen_type(const common::Type *type);
 
         void codegen_function_decl(const common::Function &func);
 

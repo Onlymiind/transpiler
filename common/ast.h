@@ -5,7 +5,7 @@
 
 #include <vector>
 
-namespace common {
+    namespace common {
 
     class AST {
       public:
@@ -36,8 +36,12 @@ namespace common {
             return result;
         }
 
-        Variable *get_var(VariableID id) { return *id >= vars_.size() ? nullptr : &vars_[*id]; }
-        const Variable *get_var(VariableID id) const { return *id >= vars_.size() ? nullptr : &vars_[*id]; }
+        Variable *get_var(VariableID id) {
+            return *id >= vars_.size() ? nullptr : &vars_[*id];
+        }
+        const Variable *get_var(VariableID id) const {
+            return *id >= vars_.size() ? nullptr : &vars_[*id];
+        }
 
         Function *get_function(FunctionID id) {
             if (*id >= functions_.size()) {
@@ -52,8 +56,12 @@ namespace common {
         std::vector<Variable> &variables() { return vars_; }
         const std::vector<Variable> &variables() const { return vars_; }
 
-        std::vector<VariableID> &global_variables() { return global_variables_; }
-        const std::vector<VariableID> &global_variables() const { return global_variables_; }
+        std::vector<VariableID> &global_variables() {
+            return global_variables_;
+        }
+        const std::vector<VariableID> &global_variables() const {
+            return global_variables_;
+        }
 
       private:
         std::vector<Function> functions_;
