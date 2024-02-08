@@ -64,18 +64,11 @@ namespace common {
 
     namespace IDType {
         enum IDType : size_t {
-            GENERIC,
-            LITERAL,
             IDENTIFIER,
-            EXPRESSION,
             FUNCTION,
-            TYPE,
             STATEMENT,
-            SCOPE,
-            SYMBOL,
             VARIABLE,
             BASIC_BLOCK,
-            PARSED_TYPE,
 
             COUNT,
         };
@@ -86,9 +79,6 @@ namespace common {
     using IDBase = Distinct<uint64_t, TAG, static_cast<uint64_t>(-1)>;
     using IdentifierID = IDBase<IDType::IDENTIFIER>;
     using FunctionID = IDBase<IDType::FUNCTION>;
-    using TypeID = IDBase<IDType::TYPE>;
-    using ScopeID = IDBase<IDType::SCOPE>;
-    using SymbolID = IDBase<IDType::SYMBOL>;
     using VariableID = IDBase<IDType::VARIABLE>;
     using BasicBlockID = IDBase<IDType::BASIC_BLOCK>;
 

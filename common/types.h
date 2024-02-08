@@ -14,18 +14,6 @@ namespace common {
         FLOAT,
     };
 
-    constexpr inline bool empty(TypeTraits traits) {
-        return traits == TypeTraits::NONE;
-    }
-
-    struct BuiltinType {
-        IdentifierID name;
-        BuiltinTypes type{};
-        TypeTraits traits{};
-
-        constexpr bool is_error() const { return name == IdentifierID{}; }
-    };
-
     class PrimitiveType final : public Type {
       public:
         PrimitiveType(IdentifierID name, BuiltinTypes type, TypeTraits traits,
