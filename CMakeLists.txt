@@ -43,11 +43,14 @@ target_include_directories(compiler PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(compiler compiler_lib)
 
 set(TEST_SRCS
-    tests/lexer_test.cpp
-    tests/parser_test.cpp
-    tests/checker_test.cpp
-    tests/generator_test.cpp
-    tests/functional/functional_tests.cpp
+	tests/common.h
+	tests/common.cpp
+
+	tests/lexer_test.cpp
+	tests/parser_test.cpp
+	tests/checker_test.cpp
+	tests/generator_test.cpp
+	tests/functional/functional_tests.cpp
 )
 
 add_executable(tests ${TEST_SRCS})

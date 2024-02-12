@@ -415,9 +415,16 @@ namespace checker {
         REACHABILITY_GUARD(Reachability::REACHABLE);
         current_function_ = func.id;
         for (common::VariableID param_id : func.params) {
-            // All of the checks are made in check_function_decl, here just add
-            // the parameters to the scope
-            module_.add_variable(ast_->get_var(param_id)->name, param_id);
+            // NOTE: by now parameters should be typechecked by
+            // check_function_decl
+            const common::Variable &param = *ast_->get_var(param_id);
+            ERROR_GUARD(param.pos);
+            if (!module_.add_variable(param.name, param_id)) {
+                report_error("can not use name \"" +
+                             *identifiers_->get(param.name) +
+                             "\" because it is already declared");
+                return false;
+            }
         }
         if (!check_block(func.body)) {
             return false;
@@ -473,11 +480,8 @@ namespace checker {
         for (common::VariableID param_id : func.params) {
             common::Variable &param = *ast_->get_var(param_id);
             ERROR_GUARD(param.pos);
-            if (module_.has_name(param.name)) {
-                report_error(
-                    "can't declare function parameter: name already declared");
-                return false;
-            }
+            // NOTE: do not check for name redeclaration here, as at this point
+            // not all functions and variables have been added to current module
             if (!param.explicit_type) {
                 report_error("function parameters must be explicitly typed");
                 return false;
@@ -863,16 +867,49 @@ namespace checker {
                       : nullptr;
     }
 
-    const common::Type *Checker::get_type(const common::ParsedType &parsed) {
-        // For now, just assert that parsed has a named base type
-        const common::ParsedNamedType
-            &named = common::downcast<common::ParsedNamedType>(parsed);
+    const common::Type *Checker::get_type(common::ParsedType &parsed) {
 
-        const common::Type *result = module_.get_type(named.name());
+        const common::Type *result = nullptr;
+        switch (parsed.kind()) {
+        case common::ParsedTypeKind::NAMED:
+            result = module_.get_type(
+                common::downcast<common::ParsedNamedType>(parsed).name());
+            break;
+        case common::ParsedTypeKind::ARRAY: {
+            common::ParsedArrayType
+                &array = common::downcast<common::ParsedArrayType>(parsed);
+            if (!check_expression(array.size())) {
+                return nullptr;
+            }
+            if (array.size()->kind() != common::ExpressionKind::LITERAL) {
+                report_error("array size must be a costant expression");
+                return nullptr;
+            }
+            const common::Literal &lit = common::downcast<common::Literal>(
+                *array.size());
+            if (!lit.is<uint64_t>()) {
+                report_error("array size must be a positive integer");
+                return nullptr;
+            }
+            size_t count = *lit.get<uint64_t>();
+            if (count == 0) {
+                report_error("zero-sized arrays are not supported");
+                return nullptr;
+            }
+            const common::Type *element = get_type(*array.element_type());
+            if (!element) {
+                return nullptr;
+            }
+            result = global_types_->get_array(count, element);
+            break;
+        }
+        default: report_error("unknown parsed type kind");
+        }
+
         if (!result) {
             return nullptr;
         }
-        for (size_t i = 0; i < named.indirection_level(); ++i) {
+        for (size_t i = 0; i < parsed.indirection_level(); ++i) {
             result = global_types_->get_pointer(result);
         }
         return result;

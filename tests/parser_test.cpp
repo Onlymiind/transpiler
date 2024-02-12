@@ -10,6 +10,7 @@
 #include "common/util.h"
 #include "lexer/lexer.h"
 #include "parser/parser.h"
+#include "tests/common.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
@@ -315,23 +316,6 @@ TEST_CASE("parser: precedence", "[parser]") {
     };
 
     run_tests(cases);
-}
-
-std::pair<parser::Parser, common::Identifiers> parse(const std::string &str) {
-    INFO(str);
-    std::stringstream in(str);
-    lexer::Lexer l{in};
-    l.split();
-    INFO(l.get_error().msg);
-    REQUIRE(l.get_error().empty());
-    auto lexer_result = l.reset();
-
-    parser::Parser p{std::move(lexer_result.tokens)};
-    p.parse();
-    INFO(p.get_error().msg);
-    return std::pair<parser::Parser,
-                     common::Identifiers>{std::move(p),
-                                          std::move(lexer_result.identifiers)};
 }
 
 std::tuple<parser::Parser, common::Identifiers,

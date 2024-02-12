@@ -49,7 +49,7 @@ namespace checker {
             return reachability_stack_.top() == Reachability::REACHABLE;
         }
 
-        const common::Type *get_type(const common::ParsedType &parsed);
+        const common::Type *get_type(common::ParsedType &parsed);
         static Reachability unite_reachability(Reachability lhs,
                                                Reachability rhs);
 

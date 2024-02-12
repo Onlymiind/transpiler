@@ -12,9 +12,13 @@ namespace common {
 
     class ParsedNamedType final : public ParsedType {
       public:
-        explicit ParsedNamedType(IdentifierID name, uint64_t indirection_level = 0)
+        explicit ParsedNamedType(IdentifierID name,
+                                 uint64_t indirection_level = 0)
             : ParsedType(static_kind(), indirection_level), name_(name) {}
-        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(ParsedNamedType, ParsedTypeKind, ParsedTypeKind::NAMED, default)
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(ParsedNamedType,
+                                                     ParsedTypeKind,
+                                                     ParsedTypeKind::NAMED,
+                                                     default)
 
         IdentifierID name() const noexcept { return name_; }
 
@@ -24,26 +28,35 @@ namespace common {
 
     class ParsedArrayType final : public ParsedType {
       public:
-        ParsedArrayType(std::unique_ptr<Expression> &&size, std::unique_ptr<ParsedType> base, uint64_t indirection_level = 0)
-            : ParsedType(static_kind(), indirection_level), size_(std::move(size)), base_(std::move(base)) {}
+        ParsedArrayType(std::unique_ptr<Expression> &&size,
+                        std::unique_ptr<ParsedType> base,
+                        uint64_t indirection_level = 0)
+            : ParsedType(static_kind(), indirection_level),
+              size_(std::move(size)), element_type_(std::move(base)) {}
 
-        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(ParsedArrayType, ParsedTypeKind, ParsedTypeKind::ARRAY, delete)
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(ParsedArrayType,
+                                                     ParsedTypeKind,
+                                                     ParsedTypeKind::ARRAY,
+                                                     delete)
 
         std::unique_ptr<Expression> &size() noexcept { return size_; }
-        std::unique_ptr<ParsedType> &base() noexcept { return base_; }
+        std::unique_ptr<ParsedType> &element_type() noexcept {
+            return element_type_;
+        }
 
         const Expression *size() const noexcept { return size_.get(); }
-        const ParsedType *base() const noexcept { return base_.get(); }
+        const ParsedType *element_type() const noexcept {
+            return element_type_.get();
+        }
 
       private:
         std::unique_ptr<Expression> size_;
-        std::unique_ptr<ParsedType> base_;
+        std::unique_ptr<ParsedType> element_type_;
     };
 
     class ParsedErrorType final : public ParsedType {
       public:
-        ParsedErrorType()
-            : ParsedType(ParsedTypeKind::ERROR, 0) {}
+        ParsedErrorType() : ParsedType(ParsedTypeKind::ERROR, 0) {}
     };
 
 } // namespace common

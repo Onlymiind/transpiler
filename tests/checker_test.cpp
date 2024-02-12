@@ -1,11 +1,13 @@
 #include "checker/checker.h"
 #include "common/ast.h"
+#include "common/base_classes.h"
 #include "common/expression.h"
 #include "common/token.h"
 #include "common/types.h"
 #include "common/util.h"
 #include "lexer/lexer.h"
 #include "parser/parser.h"
+#include "tests/common.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
@@ -125,6 +127,58 @@ TEST_CASE("checker: casts", "[checker]") {
         {.data = "cast<f64>(1)", .expected = FLOAT},
     };
     run_tests(cases);
+}
+
+TEST_CASE("checker: types", "[checker]") {
+    SECTION("named") {
+        auto lexed = lex("u64");
+        parser::Parser p{std::move(lexed.tokens)};
+        auto parsed_type = p.parse_type();
+        REQUIRE(p.get_error().empty());
+        auto ast = p.reset();
+        checker::Checker c{ast, lexed.identifiers};
+        auto checked = c.get_type(*parsed_type);
+        REQUIRE(checked);
+        REQUIRE(checked->kind() == common::TypeKind::PRIMITIVE);
+        REQUIRE(*lexed.identifiers.get(
+                    common::downcast<common::PrimitiveType>(*checked).name()) ==
+                "u64");
+    }
+    SECTION("pointer") {
+        auto lexed = lex("*u64");
+        parser::Parser p{std::move(lexed.tokens)};
+        auto parsed_type = p.parse_type();
+        REQUIRE(p.get_error().empty());
+        auto ast = p.reset();
+        checker::Checker c{ast, lexed.identifiers};
+        auto checked = c.get_type(*parsed_type);
+        REQUIRE(checked);
+        REQUIRE(checked->kind() == common::TypeKind::POINTER);
+        auto pointee = common::downcast<common::PointerType>(*checked)
+                           .pointee_type();
+        REQUIRE(*lexed.identifiers.get(
+                    common::downcast<common::PrimitiveType>(*pointee).name()) ==
+                "u64");
+    }
+    SECTION("array") {
+        auto lexed = lex("[1 + 2 * 3]u64");
+        parser::Parser p{std::move(lexed.tokens)};
+        auto parsed_type = p.parse_type();
+        REQUIRE(p.get_error().empty());
+        auto ast = p.reset();
+        checker::Checker c{ast, lexed.identifiers};
+        auto checked = c.get_type(*parsed_type);
+        REQUIRE(c.get_error().empty());
+        REQUIRE(checked);
+        REQUIRE(checked->kind() == common::TypeKind::ARRAY);
+        const common::ArrayType arr = common::downcast<common::ArrayType>(
+            *checked);
+        REQUIRE(arr.count() == 7);
+        REQUIRE(*lexed.identifiers.get(
+                    common::downcast<common::PrimitiveType>(*arr.element_type())
+                        .name()) == "u64");
+    }
+    // TODO: check more complex types
 }
 
 TEST_CASE("checker: fails", "[checker]") {
