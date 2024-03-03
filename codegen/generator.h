@@ -2,6 +2,7 @@
 #define COMPILER_V2_CODEGEN_GENERATOR_HDR_
 
 #include "common/ast.h"
+#include "common/base_classes.h"
 #include "common/declarations.h"
 #include "common/expression.h"
 #include "common/literals.h"
@@ -12,6 +13,8 @@
 
 #include <ostream>
 #include <string_view>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace codegen {
     constexpr std::string_view
@@ -44,17 +47,10 @@ namespace codegen {
 
     class Generator {
       public:
-        Generator(std::ostream &out, common::Module &mod, common::AST &ast,
-                  common::Identifiers &identifiers)
-            : out_(&out), mod_(&mod), ast_(&ast), identifiers_(&identifiers) {}
-
-        void set_file(std::ostream &out) { out_ = &out; }
-        void set_module(common::Module &mod, common::AST &ast,
-                        common::Identifiers &identifiers) {
-            mod_ = &mod;
-            ast_ = &ast;
-            identifiers_ = &identifiers;
-        }
+        Generator(std::ostream &body, std::ostream &header, common::Module &mod,
+                  common::AST &ast, common::Identifiers &identifiers)
+            : body_(&body), header_(&header), mod_(&mod), ast_(&ast),
+              identifiers_(&identifiers) {}
 
         void codegen();
 
@@ -89,6 +85,9 @@ namespace codegen {
 
         void codegen_decls();
 
+        bool codegen_type_decl(const common::Type *type);
+	common::IdentifierID generate_type_name(const common::Type* type);
+
         void codegen_var_name(common::IdentifierID name);
         void codegen_func_name(common::IdentifierID name);
 
@@ -98,11 +97,14 @@ namespace codegen {
         bool error_occured() { return !err_.empty(); }
 
       private:
-        std::ostream *out_ = nullptr;
         common::Module *mod_ = nullptr;
         common::AST *ast_ = nullptr;
         common::Identifiers *identifiers_ = nullptr;
         std::string_view err_;
+        std::ostream *body_ = nullptr;
+        std::ostream *header_ = nullptr;
+        std::unordered_map<const common::Type *, common::IdentifierID>
+            type_names_;
     };
 } // namespace codegen
 

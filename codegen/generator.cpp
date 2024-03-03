@@ -14,14 +14,15 @@
 #include <iomanip>
 #include <ios>
 #include <limits>
+#include <string>
 
 namespace codegen {
     void Generator::codegen() {
-        if (!out_ || !mod_) {
+        if (!body_ || !header_ || !mod_) {
             return;
         }
 
-        *out_ << g_prelude;
+        *header_ << g_prelude;
         codegen_decls();
         const auto &functions = ast_->functions();
         for (const common::Function &func : functions) {
@@ -30,7 +31,7 @@ namespace codegen {
                 break;
             }
         }
-        *out_ << g_main;
+        *body_ << g_main;
     }
 
     void Generator::codegen_expression(const common::Expression &expr) {
@@ -63,20 +64,20 @@ namespace codegen {
     }
 
     void Generator::codegen_literal(const common::Literal &lit) {
-        *out_ << '(';
+        *body_ << '(';
         codegen_type(lit.type());
-        *out_ << ')';
+        *body_ << ')';
 
         if (const bool *b = lit.get<bool>(); b) {
-            *out_ << *b;
+            *body_ << *b;
         } else if (const uint64_t *uint = lit.get<uint64_t>(); uint) {
-            *out_ << *uint;
+            *body_ << *uint;
         } else if (const double *d = lit.get<double>(); d) {
-            int presicion = out_->precision();
-            *out_ << std::setprecision(std::numeric_limits<double>::digits10)
-                  << *d << std::setprecision(presicion);
+            int presicion = body_->precision();
+            *body_ << std::setprecision(std::numeric_limits<double>::digits10)
+                   << *d << std::setprecision(presicion);
         } else if (lit.is<std::nullptr_t>()) {
-            *out_ << '0';
+            *body_ << '0';
         } else {
             report_error("unknown literal type");
         }
@@ -84,16 +85,16 @@ namespace codegen {
 
     void Generator::codegen_unary(const common::UnaryExpression &expr) {
         switch (expr.op()) {
-        case common::UnaryOp::NOT: *out_ << '!'; break;
-        case common::UnaryOp::NEGATE: *out_ << '-'; break;
-        case common::UnaryOp::ADDRESS_OF: *out_ << '&'; break;
+        case common::UnaryOp::NOT: *body_ << '!'; break;
+        case common::UnaryOp::NEGATE: *body_ << '-'; break;
+        case common::UnaryOp::ADDRESS_OF: *body_ << '&'; break;
         case common::UnaryOp::DEREFERENCE:
-            *out_ << '*';
-            *out_ << '(';
+            *body_ << '*';
+            *body_ << '(';
             codegen_type(expr.expression()->type());
-            *out_ << ")check_pointer(";
+            *body_ << ")check_pointer(";
             codegen_expression(*expr.expression());
-            *out_ << ')';
+            *body_ << ')';
             return;
         default: report_error("unknown unary operator"); break;
         }
@@ -102,55 +103,55 @@ namespace codegen {
     }
 
     void Generator::codegen_binary(const common::BinaryExpression &expr) {
-        *out_ << '(';
+        *body_ << '(';
         codegen_expression(*expr.lhs());
         if (error_occured()) {
             return;
         }
 
-        *out_ << ' ';
+        *body_ << ' ';
         using enum common::BinaryOp;
         switch (expr.op()) {
-        case ADD: *out_ << '+'; break;
-        case SUB: *out_ << '-'; break;
-        case MUL: *out_ << '*'; break;
-        case DIV: *out_ << '/'; break;
-        case REMAINDER: *out_ << '%'; break;
-        case AND: *out_ << "&&"; break;
-        case OR: *out_ << "||"; break;
-        case EQUALS: *out_ << "=="; break;
-        case NOT_EQUALS: *out_ << "!="; break;
-        case LESS: *out_ << '<'; break;
-        case GREATER: *out_ << '>'; break;
-        case LESS_EQUALS: *out_ << "<="; break;
-        case GREATER_EQUALS: *out_ << ">="; break;
-        case ASSIGN: *out_ << '='; break;
-        case BITWISE_AND: *out_ << '&'; break;
-        case BITWISE_OR: *out_ << '|'; break;
+        case ADD: *body_ << '+'; break;
+        case SUB: *body_ << '-'; break;
+        case MUL: *body_ << '*'; break;
+        case DIV: *body_ << '/'; break;
+        case REMAINDER: *body_ << '%'; break;
+        case AND: *body_ << "&&"; break;
+        case OR: *body_ << "||"; break;
+        case EQUALS: *body_ << "=="; break;
+        case NOT_EQUALS: *body_ << "!="; break;
+        case LESS: *body_ << '<'; break;
+        case GREATER: *body_ << '>'; break;
+        case LESS_EQUALS: *body_ << "<="; break;
+        case GREATER_EQUALS: *body_ << ">="; break;
+        case ASSIGN: *body_ << '='; break;
+        case BITWISE_AND: *body_ << '&'; break;
+        case BITWISE_OR: *body_ << '|'; break;
         default: report_error("unlnown binary operator"); return;
         }
-        *out_ << ' ';
+        *body_ << ' ';
 
         codegen_expression(*expr.rhs());
-        *out_ << ')';
+        *body_ << ')';
     }
 
     void Generator::codegen_cast(const common::Cast &cast) {
-        *out_ << '(';
+        *body_ << '(';
         codegen_type(cast.type());
-        *out_ << ')';
+        *body_ << ')';
         codegen_expression(*cast.from());
     }
 
     void Generator::codegen_decls() {
         for (const common::Function &func : ast_->functions()) {
             codegen_function_decl(func);
-            *out_ << ";\n";
+            *body_ << ";\n";
         }
 
         for (common::VariableID var : ast_->global_variables()) {
             codegen_var(*ast_->get_var(var));
-            *out_ << '\n';
+            *body_ << '\n';
         }
     }
 
@@ -161,49 +162,49 @@ namespace codegen {
 
         const std::string &name = *identifiers_->get(func.name);
         codegen_function_decl(func);
-        *out_ << ' ';
+        *body_ << ' ';
         codegen_block(func.body);
-        *out_ << '\n';
+        *body_ << '\n';
     }
 
     void Generator::codegen_call(const common::FunctionCall &call) {
         codegen_func_name(call.name());
-        *out_ << '(';
+        *body_ << '(';
         const auto &args = call.arguments();
         for (size_t i = 0; i < args.size(); ++i) {
             if (i != 0) {
-                *out_ << ", ";
+                *body_ << ", ";
             }
             codegen_expression(*args[i]);
         }
-        *out_ << ')';
+        *body_ << ')';
     }
 
     void Generator::codegen_var(const common::Variable &var) {
         codegen_type(var.type);
-        *out_ << ' ';
+        *body_ << ' ';
         codegen_var_name(var.name);
-        *out_ << " = ";
+        *body_ << " = ";
         if (!var.initial_value) {
             // TODO: proper zero-initialization
-            *out_ << '(';
+            *body_ << '(';
             codegen_type(var.type);
-            *out_ << ")0;";
+            *body_ << ")0;";
             return;
         }
         codegen_expression(*var.initial_value);
-        *out_ << ';';
+        *body_ << ';';
     }
 
     void Generator::codegen_function_decl(const common::Function &func) {
         codegen_type(func.return_type);
-        *out_ << ' ';
+        *body_ << ' ';
         codegen_func_name(func.name);
-        *out_ << '(';
+        *body_ << '(';
         for (size_t i = 0; i < func.params.size(); ++i) {
             common::Variable &param = *ast_->get_var(func.params[i]);
             if (i != 0) {
-                *out_ << ", ";
+                *body_ << ", ";
             }
             codegen_type(param.type);
             if (param.name != common::IdentifierID{}) {
@@ -211,21 +212,21 @@ namespace codegen {
             }
         }
         if (func.params.empty()) {
-            *out_ << "void";
+            *body_ << "void";
         }
-        *out_ << ')';
+        *body_ << ')';
     }
 
     void Generator::codegen_branch(const common::Branch &branch) {
-        *out_ << "if(";
+        *body_ << "if(";
         codegen_expression(*branch.predicate());
-        *out_ << ") ";
+        *body_ << ") ";
         codegen_block(branch.true_branch());
         if (!branch.false_branch() ||
             branch.false_branch()->statements().empty()) {
             return;
         }
-        *out_ << "else ";
+        *body_ << "else ";
         const common::Block &false_branch = *branch.false_branch();
         if (false_branch.statements().size() == 1 &&
             false_branch.statements()[0]->kind() ==
@@ -238,48 +239,48 @@ namespace codegen {
     }
 
     void Generator::codegen_block(const common::Block &block) {
-        *out_ << '{';
+        *body_ << '{';
         for (const auto &smt : block.statements()) {
-            *out_ << '\n';
+            *body_ << '\n';
             codegen_statement(*smt);
             if (!err_.empty()) {
                 return;
             }
         }
         if (!block.statements().empty()) {
-            *out_ << '\n';
+            *body_ << '\n';
         }
-        *out_ << '}';
+        *body_ << '}';
     }
 
     void Generator::codegen_loop(const common::Loop &loop) {
-        *out_ << "for (";
+        *body_ << "for (";
         if (loop.init()) {
             codegen_statement(*loop.init());
         } else {
-            *out_ << ';';
+            *body_ << ';';
         }
         if (loop.condition()) {
             codegen_expression(*loop.condition());
         }
-        *out_ << ';';
+        *body_ << ';';
         if (loop.iteration()) {
             codegen_expression(*loop.iteration());
         }
-        *out_ << ") ";
+        *body_ << ") ";
         codegen_block(loop.body());
     }
 
     void Generator::codegen_statement(const common::Statement &smt) {
         switch (smt.kind()) {
         case common::StatementType::RETURN: {
-            *out_ << "return ";
+            *body_ << "return ";
             const common::Expression
                 *expr = common::downcast<common::Return>(smt).expression();
             if (expr) {
                 codegen_expression(*expr);
             }
-            *out_ << ';';
+            *body_ << ';';
             break;
         }
         case common::StatementType::EXPRESSION: {
@@ -287,7 +288,7 @@ namespace codegen {
                 *expr = common::downcast<common::ExpressionStatement>(smt)
                             .expression();
             codegen_expression(*expr);
-            *out_ << ';';
+            *body_ << ';';
             break;
         }
         case common::StatementType::VARIABLE:
@@ -300,36 +301,116 @@ namespace codegen {
         case common::StatementType::LOOP:
             codegen_loop(common::downcast<common::Loop>(smt));
             break;
-        case common::StatementType::BREAK: *out_ << "break;"; break;
-        case common::StatementType::CONTINUE: *out_ << "continue;"; break;
+        case common::StatementType::BREAK: *body_ << "break;"; break;
+        case common::StatementType::CONTINUE: *body_ << "continue;"; break;
         default: report_error("statement type not supported"); return;
         }
     }
 
     void Generator::codegen_type(const common::Type *type) {
         if (!type) {
-            *out_ << "void";
+            *body_ << "void";
             return;
         }
         switch (type->kind()) {
         case common::TypeKind::PRIMITIVE:
-            *out_ << *identifiers_->get(
+            *body_ << *identifiers_->get(
                 common::downcast<common::PrimitiveType>(*type).name());
             break;
         case common::TypeKind::POINTER:
             codegen_type(
                 common::downcast<common::PointerType>(*type).pointee_type());
-            *out_ << '*';
+            *body_ << '*';
+            break;
+        case common::TypeKind::ARRAY:
+            if (!codegen_type_decl(type)) {
+                return;
+            }
+            *body_ << *identifiers_->get(type_names_.at(type));
             break;
         default: report_error("unsupported type"); break;
         }
     }
 
+    bool Generator::codegen_type_decl(const common::Type *type) {
+        if (!type || type->kind() != common::TypeKind::ARRAY) {
+            return true;
+        }
+
+        const common::ArrayType &array = common::downcast<common::ArrayType>(
+            *type);
+        if (!codegen_type_decl(array.element_type())) {
+            return false;
+        }
+        common::IdentifierID element_name = generate_type_name(
+            array.element_type());
+        if (element_name == common::IdentifierID{}) {
+            return false;
+        }
+        common::IdentifierID array_name = generate_type_name(type);
+        if (array_name == common::IdentifierID{}) {
+            return false;
+        }
+        *header_ << "typedef struct { " << *identifiers_->get(element_name)
+                 << " data[" << array.count() << "];} "
+                 << *identifiers_->get(array_name) << ";\n";
+
+        return true;
+    }
+
+    common::IdentifierID
+    Generator::generate_type_name(const common::Type *type) {
+        auto it = type_names_.find(type);
+        if (it != type_names_.end()) {
+            return it->second;
+        }
+        auto add_name = [type, this](common::IdentifierID name) {
+            type_names_[type] = name;
+            return name;
+        };
+
+        if (!type) {
+            return add_name(identifiers_->add("void"));
+        }
+
+        switch (type->kind()) {
+        case common::TypeKind::PRIMITIVE:
+            return add_name(
+                common::downcast<common::PrimitiveType>(*type).name());
+        case common::TypeKind::POINTER: {
+            const common::PointerType
+                &ptr = common::downcast<common::PointerType>(*type);
+            common::IdentifierID pointee_name = generate_type_name(
+                ptr.pointee_type());
+            if (pointee_name == common::IdentifierID{}) {
+                return add_name(common::IdentifierID{});
+            }
+            return add_name(
+                identifiers_->add(*identifiers_->get(pointee_name) + "_p"));
+        }
+        case common::TypeKind::ARRAY: {
+            const common::ArrayType
+                &array = common::downcast<common::ArrayType>(*type);
+            common::IdentifierID element_name = generate_type_name(
+                array.element_type());
+            if (element_name == common::IdentifierID{}) {
+                return add_name(common::IdentifierID{});
+            }
+            return add_name(identifiers_->add(*identifiers_->get(element_name) +
+                                              "_array_" +
+                                              std::to_string(array.count())));
+        }
+        default:
+            report_error("unknown type kind");
+            return add_name(common::IdentifierID{});
+        }
+    }
+
     void Generator::codegen_var_name(common::IdentifierID name) {
-        *out_ << "var_" << *identifiers_->get(name);
+        *body_ << "var_" << *identifiers_->get(name);
     }
 
     void Generator::codegen_func_name(common::IdentifierID name) {
-        *out_ << "func_" << *identifiers_->get(name);
+        *body_ << "func_" << *identifiers_->get(name);
     }
 } // namespace codegen
