@@ -40,8 +40,9 @@ void run_tests(const std::vector<GeneratorTestCase> cases) {
         REQUIRE(ch.get_error().empty());
 
         std::stringstream out;
+	std::stringstream dummy;
         auto [mod, global_types] = ch.reset();
-        codegen::Generator g{out, mod, ast, lexer_result.identifiers};
+        codegen::Generator g{out, dummy, mod, ast, lexer_result.identifiers};
         g.codegen_expression(*expr);
         REQUIRE(!g.error_occured());
         std::string result = out.str();

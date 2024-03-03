@@ -1,0 +1,11 @@
+func foo(a [10]u64) [12]u64{
+	var b [11]f64;
+	var c [((1 + 1) * 2 + 2) * 2]u64;
+	var d [10]**[6]*bool;
+	return c;
+}
+
+func main() {
+	var a [10]u64;
+	foo(a);
+}

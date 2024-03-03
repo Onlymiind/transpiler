@@ -1,0 +1,25 @@
+// clang-format off
+typedef struct { u64 data[12];} u64_array_12;
+typedef struct { u64 data[10];} u64_array_10;
+typedef struct { f64 data[11];} f64_array_11;
+typedef struct { bool* data[6];} bool_p_array_6;
+typedef struct { bool_p_array_6** data[10];} bool_p_array_6_p_p_array_10;
+u64_array_12 func_foo(u64_array_10 var_a);
+void func_main(void);
+u64_array_12 func_foo(u64_array_10 var_a) {
+f64_array_11 var_b;
+memset(var_b.data, 0, sizeof(f64_array_11));
+u64_array_12 var_c;
+memset(var_c.data, 0, sizeof(u64_array_12));
+bool_p_array_6_p_p_array_10 var_d;
+memset(var_d.data, 0, sizeof(bool_p_array_6_p_p_array_10));
+return var_c;
+}
+void func_main(void) {
+u64_array_10 var_a;
+memset(var_a.data, 0, sizeof(u64_array_10));
+func_foo(var_a);
+}
+int main(void) {
+func_main();
+}

@@ -1,7 +1,7 @@
 // clang-format off
-void func_foo(u64***var_a, f64*var_b);
+void func_foo(u64*** var_a, f64* var_b);
 void func_main(void);
-void func_foo(u64***var_a, f64*var_b) {
+void func_foo(u64*** var_a, f64* var_b) {
 (*(f64*)check_pointer(var_b) = (f64)((u64)1000 * *(u64*)check_pointer(*(u64**)check_pointer(*(u64***)check_pointer(var_a)))));
 }
 void func_main(void) {

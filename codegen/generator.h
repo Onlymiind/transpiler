@@ -21,6 +21,7 @@ namespace codegen {
         g_prelude = "#include <stdint.h>\n"
                     "#include <stdio.h>\n"
                     "#include <stdlib.h>\n"
+                    "#include <string.h>\n"
                     "#ifndef __cplusplus\n"
                     "#if __STDC_VERSION__ >= 199901L\n"
                     "#include <stdbool.h>\n"
@@ -79,14 +80,15 @@ namespace codegen {
 
         void codegen_loop(const common::Loop &loop);
 
-        void codegen_type(const common::Type *type);
+        void codegen_type(const common::Type *type,
+                          std::ostream *out = nullptr);
 
         void codegen_function_decl(const common::Function &func);
 
         void codegen_decls();
 
         bool codegen_type_decl(const common::Type *type);
-	common::IdentifierID generate_type_name(const common::Type* type);
+        common::IdentifierID generate_type_name(const common::Type *type);
 
         void codegen_var_name(common::IdentifierID name);
         void codegen_func_name(common::IdentifierID name);

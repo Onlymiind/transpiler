@@ -13,6 +13,7 @@
 #include <iostream>
 #include <optional>
 #include <ostream>
+#include <sstream>
 #include <stdexcept>
 #include <string_view>
 
@@ -93,12 +94,14 @@ namespace compiler {
     void generate(common::Module &mod, common::AST &ast,
                   common::Identifiers &identifiers, std::ostream &out,
                   std::ostream &err) {
-        codegen::Generator generator{out, mod, ast, identifiers};
+	std::stringstream temp_body;
+        codegen::Generator generator{temp_body, out, mod, ast, identifiers};
         generator.codegen();
         std::string_view error = generator.get_error();
         if (!error.empty()) {
             err << error << '\n';
         }
+	out << temp_body.str();
     }
 
     void compile(std::istream &file, std::ostream &out, std::ostream &err,

@@ -184,14 +184,23 @@ namespace codegen {
         codegen_type(var.type);
         *body_ << ' ';
         codegen_var_name(var.name);
-        *body_ << " = ";
         if (!var.initial_value) {
             // TODO: proper zero-initialization
-            *body_ << '(';
-            codegen_type(var.type);
-            *body_ << ")0;";
+            if (var.type->kind() == common::TypeKind::ARRAY) {
+                *body_ << ";\n";
+                *body_ << "memset(";
+                codegen_var_name(var.name);
+                *body_ << ".data, 0, sizeof(";
+                codegen_type(var.type);
+                *body_ << "));";
+            } else {
+                *body_ << " = (";
+                codegen_type(var.type);
+                *body_ << ")0;";
+            }
             return;
         }
+        *body_ << " = ";
         codegen_expression(*var.initial_value);
         *body_ << ';';
     }
@@ -208,6 +217,7 @@ namespace codegen {
             }
             codegen_type(param.type);
             if (param.name != common::IdentifierID{}) {
+                *body_ << ' ';
                 codegen_var_name(param.name);
             }
         }
@@ -307,34 +317,47 @@ namespace codegen {
         }
     }
 
-    void Generator::codegen_type(const common::Type *type) {
+    void Generator::codegen_type(const common::Type *type, std::ostream *out) {
+        if (!out) {
+            out = body_;
+        }
         if (!type) {
-            *body_ << "void";
+            *out << "void";
             return;
         }
         switch (type->kind()) {
         case common::TypeKind::PRIMITIVE:
-            *body_ << *identifiers_->get(
+            *out << *identifiers_->get(
                 common::downcast<common::PrimitiveType>(*type).name());
             break;
         case common::TypeKind::POINTER:
-            codegen_type(
-                common::downcast<common::PointerType>(*type).pointee_type());
-            *body_ << '*';
+            codegen_type(common::downcast<common::PointerType>(*type)
+                             .pointee_type(),
+                         out);
+            *out << '*';
             break;
         case common::TypeKind::ARRAY:
             if (!codegen_type_decl(type)) {
                 return;
             }
-            *body_ << *identifiers_->get(type_names_.at(type));
+            *out << *identifiers_->get(type_names_.at(type));
             break;
         default: report_error("unsupported type"); break;
         }
     }
 
     bool Generator::codegen_type_decl(const common::Type *type) {
-        if (!type || type->kind() != common::TypeKind::ARRAY) {
+        if (!type || type_names_.contains(type) ||
+            type->kind() == common::TypeKind::PRIMITIVE) {
             return true;
+        }
+        if (type->kind() == common::TypeKind::POINTER) {
+            return codegen_type_decl(
+                common::downcast<common::PointerType>(*type).pointee_type());
+        }
+        if (type->kind() != common::TypeKind::ARRAY) {
+            report_error("type declaration generation: unsupported type kind");
+            return false;
         }
 
         const common::ArrayType &array = common::downcast<common::ArrayType>(
@@ -342,17 +365,13 @@ namespace codegen {
         if (!codegen_type_decl(array.element_type())) {
             return false;
         }
-        common::IdentifierID element_name = generate_type_name(
-            array.element_type());
-        if (element_name == common::IdentifierID{}) {
-            return false;
-        }
         common::IdentifierID array_name = generate_type_name(type);
         if (array_name == common::IdentifierID{}) {
             return false;
         }
-        *header_ << "typedef struct { " << *identifiers_->get(element_name)
-                 << " data[" << array.count() << "];} "
+        *header_ << "typedef struct { ";
+        codegen_type(array.element_type(), header_);
+        *header_ << " data[" << array.count() << "];} "
                  << *identifiers_->get(array_name) << ";\n";
 
         return true;
