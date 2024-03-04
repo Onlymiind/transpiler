@@ -20,6 +20,7 @@ Currently inmplemented:
 - Basic constant folding
 - Runtime checks for null pointer dereference
 - Universal function call syntax
+- Arrays and bounds checking
 
 ## Building
 
