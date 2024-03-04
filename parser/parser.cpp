@@ -101,18 +101,39 @@ namespace parser {
             return result;
         }
 
-        while (next().type() == common::TokenType::DOT) {
+        // TODO: probably should refactor this to its own method
+        while (next().type() == common::TokenType::DOT ||
+               next().type() == common::TokenType::LEFT_BRACKET) {
+            common::TokenType type = next().type();
+            size_t pos = next().pos();
             consume();
-            std::unique_ptr<common::Expression> first_argument = std::move(
-                result);
-            result = parse_function_call();
-            if (result->is_error()) {
-                return result;
+            if (type == common::TokenType::DOT) {
+                std::unique_ptr<common::Expression> first_argument = std::move(
+                    result);
+                result = parse_function_call();
+                if (result->is_error()) {
+                    return result;
+                }
+                common::FunctionCall
+                    &call = common::downcast<common::FunctionCall>(*result);
+                call.arguments().emplace(call.arguments().begin(),
+                                         std::move(first_argument));
+            } else if (type == common::TokenType::LEFT_BRACKET) {
+                std::unique_ptr<common::Expression> index = parse_expression();
+                if (index->is_error()) {
+                    return index;
+                }
+                if (next().type() != common::TokenType::RIGHT_BRACKET) {
+                    report_error("expected ']'");
+                    return std::make_unique<common::ErrorExpression>(
+                        next().pos());
+                }
+                consume();
+                std::unique_ptr<common::Expression> index_expr = std::
+                    make_unique<common::IndexExpression>(std::move(result),
+                                                         std::move(index), pos);
+                result = std::move(index_expr);
             }
-            common::FunctionCall &call = common::downcast<common::FunctionCall>(
-                *result);
-            call.arguments().emplace(call.arguments().begin(),
-                                     std::move(first_argument));
         }
 
         return result;

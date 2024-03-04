@@ -78,6 +78,16 @@ class PolishNotationParser {
                 common::Cast>(std::make_unique<common::ParsedNamedType>(to),
                               std::move(from), pos);
         }
+        case common::TokenType::LEFT_BRACKET: {
+            size_t pos = next().pos();
+            consume();
+            auto index = parse_expression();
+            auto container = parse_expression();
+            return std::make_unique<common::IndexExpression>(std::move(
+                                                                 container),
+                                                             std::move(index),
+                                                             pos);
+        }
         }
 
         return nullptr;
@@ -170,6 +180,14 @@ struct ExprComparer {
                 }
             }
             return true;
+        }
+        case common::ExpressionKind::INDEX: {
+            const auto &lhs_index = common::downcast<common::IndexExpression>(
+                lhs);
+            const auto &rhs_index = common::downcast<common::IndexExpression>(
+                rhs);
+            return compare(*lhs_index.container(), *rhs_index.container()) &&
+                   compare(*lhs_index.index(), *rhs_index.index());
         }
         case common::ExpressionKind::VARIABLE_REF:
             return *lhs_identifiers.get(
@@ -292,6 +310,16 @@ TEST_CASE("parser: binary operators", "[parser]") {
     };
 
     run_tests(cases);
+}
+
+TEST_CASE("parser: index expressions", "[parser]") {
+	std::vector<ParserTestCase> cases = {
+	ParserTestCase{"123[1]", "[1 123"},
+	ParserTestCase{"123[1 + 2 * (3 - 4)]", "[+1 * 2 - 3 4 123"},
+	ParserTestCase{"(1 + 123)[1 + 2]", "[+ 1 2 + 1 123"},
+	ParserTestCase{"123[2][3][4]", "[4 [3 [2 123"},
+	};
+	run_tests(cases);
 }
 
 TEST_CASE("parser: parenthesized expressions", "[parser]") {
