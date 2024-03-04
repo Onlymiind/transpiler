@@ -62,6 +62,9 @@ std::vector<FunctionalTestCase> cases{
     {"non_constexpr_global_initializer_fail", true},
     {"arrays", true},
     {"array_cast_fail", true},
+    {"array_indexing", true},
+    {"array_index_out_of_bounds_fail", true},
+    {"assing_to_rvalue_array_fail", true},
 };
 
 TEST_CASE("functional tests") {
@@ -82,6 +85,7 @@ TEST_CASE("functional tests") {
     compiler::compile(in, out, err, c.do_constant_folding);
     std::string errors = err.str();
     INFO(errors);
+    INFO("----");
     if (should_fail) {
         REQUIRE(!errors.empty());
         return;

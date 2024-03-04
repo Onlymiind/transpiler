@@ -44,6 +44,7 @@ namespace checker {
         bool check_statement(common::Statement &smt);
         bool check_block(common::Block &block);
         bool check_loop(common::Loop &loop);
+	bool check_index_expression(common::IndexExpression& expr);
 
         bool is_reachable() const {
             return reachability_stack_.top() == Reachability::REACHABLE;

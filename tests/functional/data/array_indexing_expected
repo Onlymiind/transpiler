@@ -1,0 +1,24 @@
+// clang-format off
+typedef struct { u64 data[4];} u64_array_4;
+u64_array_4 func_foo(u64_array_4 var_param);
+u64 func_bar(u64 var_param);
+void func_main(void);
+u64_array_4 func_foo(u64_array_4 var_param) {
+return var_param;
+}
+u64 func_bar(u64 var_param) {
+return var_param;
+}
+void func_main(void) {
+u64_array_4 var_a;
+memset(var_a.data, 0, sizeof(u64_array_4));
+u64 var_b = var_a.data[(u64)2];
+u64 var_d = (u64)0;
+u64 var_x = var_a.data[check_index(var_d, 4)];
+(var_a.data[check_index((var_d + var_b), 4)] = (u64)16);
+(var_d = func_foo(func_foo(var_a)).data[(u64)3]);
+(var_d = func_bar(func_foo(var_a).data[(u64)1]));
+}
+int main(void) {
+func_main();
+}

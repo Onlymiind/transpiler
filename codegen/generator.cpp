@@ -59,6 +59,10 @@ namespace codegen {
             codegen_var_name(
                 common::downcast<common::VariableReference>(expr).name());
             break;
+        case common::ExpressionKind::INDEX:
+            codegen_index_expression(
+                common::downcast<common::IndexExpression>(expr));
+            break;
         default: report_error("unknown expression type"); break;
         }
     }
@@ -423,6 +427,34 @@ namespace codegen {
             report_error("unknown type kind");
             return add_name(common::IdentifierID{});
         }
+    }
+
+    bool
+    Generator::codegen_index_expression(const common::IndexExpression &expr) {
+        codegen_expression(*expr.container());
+        if (error_occured()) {
+            return false;
+        }
+        *body_ << ".data[";
+        if (expr.index()->kind() != common::ExpressionKind::LITERAL) {
+            *body_ << "check_index(";
+            codegen_expression(*expr.index());
+            if (error_occured()) {
+                return false;
+            }
+            *body_ << ", "
+                   << std::to_string(common::downcast<common::ArrayType>(
+                                         *expr.container()->type())
+                                         .count())
+                   << ')';
+        } else {
+            codegen_expression(*expr.index());
+            if (error_occured()) {
+                return false;
+            }
+        }
+        *body_ << ']';
+        return true;
     }
 
     void Generator::codegen_var_name(common::IdentifierID name) {

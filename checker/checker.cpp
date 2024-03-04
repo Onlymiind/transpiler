@@ -155,6 +155,9 @@ namespace checker {
             }
             break;
         }
+        case common::ExpressionKind::INDEX:
+            return check_index_expression(
+                common::downcast<common::IndexExpression>(*expr));
         case common::ExpressionKind::FUNCTION_CALL:
             return check_function_call(
                 common::downcast<common::FunctionCall>(*expr));
@@ -310,7 +313,8 @@ namespace checker {
 
     bool Checker::check_cast(common::Cast &cast) {
         if (!cast.to()) {
-            report_error("missing destination type for a cast (probably a bug)");
+            report_error(
+                "missing destination type for a cast (probably a bug)");
             return false;
         }
 
@@ -327,10 +331,11 @@ namespace checker {
             return true;
         }
 
-	if(cast.type()->kind() == common::TypeKind::ARRAY || cast.from()->type()->kind() == common::TypeKind::ARRAY) {
-		report_error("converting array types is not allowed");
-		return false;
-	}
+        if (cast.type()->kind() == common::TypeKind::ARRAY ||
+            cast.from()->type()->kind() == common::TypeKind::ARRAY) {
+            report_error("converting array types is not allowed");
+            return false;
+        }
 
         if (cast.type()->is_pointer()) {
             if (!cast.from()->type()->is_pointer()) {
@@ -682,6 +687,38 @@ namespace checker {
         bool result = check_block(loop.body());
         --loop_cout_;
         return result;
+    }
+
+    bool Checker::check_index_expression(common::IndexExpression &expr) {
+        if (!check_expression(expr.container()) ||
+            !check_expression(expr.index())) {
+            return false;
+        }
+
+        if (!expr.container()->type()->has_trait(
+                common::TypeTraits::INDEXABLE)) {
+            report_error("index expressions are allowed only for array types");
+            return false;
+        }
+
+        const common::ArrayType &array = common::downcast<common::ArrayType>(
+            *expr.container()->type());
+        expr.type(array.element_type());
+        // TODO: later also check if index is positive
+        if (!expr.index()->type()->has_trait(common::TypeTraits::INTEGER)) {
+            report_error("index must be an integer");
+            return false;
+        }
+        if (expr.index()->kind() == common::ExpressionKind::LITERAL) {
+            const common::Literal &lit = common::downcast<common::Literal>(
+                *expr.index());
+            if (*lit.get<uint64_t>() >= array.count()) {
+                report_error("array index out of bounds");
+                return false;
+            }
+        }
+
+        return true;
     }
 
     Reachability Checker::unite_reachability(Reachability lhs,

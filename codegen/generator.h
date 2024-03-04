@@ -57,7 +57,6 @@ namespace codegen {
 
         void codegen_expression(const common::Expression &expr);
 
-        // expr parameter is needed to cast literal to the correct type
         void codegen_literal(const common::Literal &lit);
 
         void codegen_unary(const common::UnaryExpression &expr);
@@ -82,6 +81,8 @@ namespace codegen {
 
         void codegen_type(const common::Type *type,
                           std::ostream *out = nullptr);
+
+        bool codegen_index_expression(const common::IndexExpression &expr);
 
         void codegen_function_decl(const common::Function &func);
 
