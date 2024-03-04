@@ -61,6 +61,7 @@ std::vector<FunctionalTestCase> cases{
     {"division_by_zero_constant_folding_floats_fail", true},
     {"non_constexpr_global_initializer_fail", true},
     {"arrays", true},
+    {"array_cast_fail", true},
 };
 
 TEST_CASE("functional tests") {

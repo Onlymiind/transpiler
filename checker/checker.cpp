@@ -309,13 +309,10 @@ namespace checker {
     }
 
     bool Checker::check_cast(common::Cast &cast) {
-        if (!cast.to() || cast.to()->kind() != common::ParsedTypeKind::NAMED) {
-            report_error("unsupported parsed type");
+        if (!cast.to()) {
+            report_error("missing destination type for a cast (probably a bug)");
             return false;
         }
-
-        common::ParsedNamedType
-            &parsed = common::downcast<common::ParsedNamedType>(*cast.to());
 
         cast.type(get_type(*cast.to()));
         if (!cast.type()) {
@@ -329,6 +326,11 @@ namespace checker {
         if (cast.type() == cast.from()->type()) {
             return true;
         }
+
+	if(cast.type()->kind() == common::TypeKind::ARRAY || cast.from()->type()->kind() == common::TypeKind::ARRAY) {
+		report_error("converting array types is not allowed");
+		return false;
+	}
 
         if (cast.type()->is_pointer()) {
             if (!cast.from()->type()->is_pointer()) {

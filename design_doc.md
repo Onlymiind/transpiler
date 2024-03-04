@@ -30,11 +30,12 @@ Precedence:
 
 ```
 <expression> = <binary_expression> | <unary_expression> | <primary_expression>
-<primary_expression> = ('('<expression>')') | <identifier> | <function_call> | <literal>
+<primary_expression> = ('('<expression>')') | <identifier> | <function_call> | <literal> | <index_expression>
 <function_call> = <identifier>'('LIST(<expression>)')'
 <literal> = true | false | <integer_constant> | <floating_point_constant>
 <unary_expression> = <unary_op>?+ <primary_expression>
 <binary_expression> = <expression> <binary_op> <expression>
+<index_expression> = <primary_expression> '[' <expression> ']'
 ```
 
 ### Statement syntax
