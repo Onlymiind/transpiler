@@ -60,6 +60,7 @@ TEST_CASE("lexer: keywords", "[lexer]") {
         {"continue", common::Token{common::TokenType::CONTINUE}},
         {"cast", common::Token{common::TokenType::CAST}},
         {"null", common::Token{common::TokenType::NULLPTR}},
+	{"struct", common::Token{common::TokenType::STRUCT}},
     };
 
     for (auto c : cases) {

@@ -52,6 +52,7 @@ namespace common {
         BREAK,
         CONTINUE,
         CAST,
+	STRUCT,
 
         // identifier
         IDENTIFIER,

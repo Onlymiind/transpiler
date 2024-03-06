@@ -40,7 +40,7 @@ gcc <path-to-output-file>
 ```
 
 ## TODO next (roadmap):
-- arrays and slices
+- slices
 - record types
 - add more built-in types
 - temporary basic built-in IO
