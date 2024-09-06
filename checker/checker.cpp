@@ -119,10 +119,10 @@ namespace checker {
         bool result = false;
         switch (expr->kind()) {
         case common::ExpressionKind::LITERAL:
-            return set_literal_type(common::downcast<common::Literal>(*expr));
+            return set_literal_type(dynamic_cast<common::Literal &>(*expr));
         case common::ExpressionKind::UNARY: {
             common::UnaryExpression
-                &unary = common::downcast<common::UnaryExpression>(*expr);
+                &unary = dynamic_cast<common::UnaryExpression &>(*expr);
             result = check_unary_expression(unary);
             if (result && do_constant_folding_) {
                 if (auto computed = try_compute(unary)) {
@@ -134,7 +134,7 @@ namespace checker {
         }
         case common::ExpressionKind::BINARY: {
             common::BinaryExpression
-                &binary = common::downcast<common::BinaryExpression>(*expr);
+                &binary = dynamic_cast<common::BinaryExpression &>(*expr);
             result = check_binary_expression(binary);
             if (result && do_constant_folding_) {
                 if (auto computed = try_compute(binary)) {
@@ -145,7 +145,7 @@ namespace checker {
             break;
         }
         case common::ExpressionKind::CAST: {
-            common::Cast &cast = common::downcast<common::Cast>(*expr);
+            common::Cast &cast = dynamic_cast<common::Cast &>(*expr);
             result = check_cast(cast);
             if (result && do_constant_folding_) {
                 if (auto computed = try_compute(cast)) {
@@ -157,13 +157,13 @@ namespace checker {
         }
         case common::ExpressionKind::INDEX:
             return check_index_expression(
-                common::downcast<common::IndexExpression>(*expr));
+                dynamic_cast<common::IndexExpression &>(*expr));
         case common::ExpressionKind::FUNCTION_CALL:
             return check_function_call(
-                common::downcast<common::FunctionCall>(*expr));
+                dynamic_cast<common::FunctionCall &>(*expr));
         case common::ExpressionKind::VARIABLE_REF:
             return check_variable_ref(
-                common::downcast<common::VariableReference>(*expr));
+                dynamic_cast<common::VariableReference &>(*expr));
         default: report_error("unknown expression type"); return false;
         }
         return result;
@@ -209,7 +209,7 @@ namespace checker {
             }
             {
                 const common::PointerType
-                    &ptr = common::downcast<common::PointerType>(
+                    &ptr = dynamic_cast<const common::PointerType &>(
                         *expr.expression()->type());
                 if (ptr.is_nullptr()) {
                     report_error("null dereference");
@@ -240,10 +240,10 @@ namespace checker {
         const common::Type *rhs = expr.rhs()->type();
 
         if (lhs->is_pointer() && rhs->is_pointer()) {
-            if (common::downcast<common::PointerType>(*lhs).is_nullptr()) {
+            if (dynamic_cast<const common::PointerType &>(*lhs).is_nullptr()) {
                 lhs = rhs;
                 expr.lhs()->type(rhs);
-            } else if (common::downcast<common::PointerType>(*rhs)
+            } else if (dynamic_cast<const common::PointerType &>(*rhs)
                            .is_nullptr()) {
                 rhs = lhs;
                 expr.rhs()->type(lhs);
@@ -342,7 +342,7 @@ namespace checker {
                 report_error("conversion between non-pointer types and "
                              "pointers is not allowed");
                 return false;
-            } else if (!common::downcast<common::PointerType>(
+            } else if (!dynamic_cast<const common::PointerType &>(
                             *cast.from()->type())
                             .is_nullptr()) {
                 report_error("can not convert between different pointer types");
@@ -535,7 +535,7 @@ namespace checker {
         if (branch.false_branch()->statements().size() == 1 &&
             branch.false_branch()->statements()[0]->kind() ==
                 common::StatementType::BRANCH) {
-            if (!check_branch(common::downcast<common::Branch>(
+            if (!check_branch(dynamic_cast<common::Branch &>(
                     *branch.false_branch()->statements()[0]))) {
                 return false;
             }
@@ -559,16 +559,15 @@ namespace checker {
         switch (smt.kind()) {
         case common::StatementType::EXPRESSION:
             return check_expression(
-                common::downcast<common::ExpressionStatement>(smt)
-                    .expression());
+                dynamic_cast<common::ExpressionStatement &>(smt).expression());
         case common::StatementType::BRANCH:
-            return check_branch(common::downcast<common::Branch>(smt));
+            return check_branch(dynamic_cast<common::Branch &>(smt));
         case common::StatementType::RETURN: {
             if (is_reachable()) {
                 reachability_stack_.top() = Reachability::RETURNS;
             }
             common::Function &func = *ast_->get_function(current_function_);
-            auto &ret_expr = common::downcast<common::Return>(smt).expression();
+            auto &ret_expr = dynamic_cast<common::Return &>(smt).expression();
             if (!ret_expr) {
                 if (func.return_type) {
                     report_error("trying to return a value from "
@@ -588,9 +587,9 @@ namespace checker {
         }
         case common::StatementType::VARIABLE:
             return check_variable(*ast_->get_var(
-                common::downcast<common::VariableDeclatarion>(smt).variable()));
+                dynamic_cast<common::VariableDeclatarion &>(smt).variable()));
         case common::StatementType::LOOP:
-            return check_loop(common::downcast<common::Loop>(smt));
+            return check_loop(dynamic_cast<common::Loop &>(smt));
         case common::StatementType::BREAK: [[fallthrough]];
         case common::StatementType::CONTINUE:
             reachability_stack_.top() = Reachability::UNREACHABLE;
@@ -632,7 +631,7 @@ namespace checker {
                 return false;
             }
             if (var.initial_value->type()->is_pointer() &&
-                common::downcast<common::PointerType>(
+                dynamic_cast<const common::PointerType &>(
                     *var.initial_value->type())
                     .is_nullptr()) {
                 if (!var.type) {
@@ -701,8 +700,9 @@ namespace checker {
             return false;
         }
 
-        const common::ArrayType &array = common::downcast<common::ArrayType>(
-            *expr.container()->type());
+        const common::ArrayType
+            &array = dynamic_cast<const common::ArrayType &>(
+                *expr.container()->type());
         expr.type(array.element_type());
         // TODO: later also check if index is positive
         if (!expr.index()->type()->has_trait(common::TypeTraits::INTEGER)) {
@@ -710,7 +710,7 @@ namespace checker {
             return false;
         }
         if (expr.index()->kind() == common::ExpressionKind::LITERAL) {
-            const common::Literal &lit = common::downcast<common::Literal>(
+            const common::Literal &lit = dynamic_cast<common::Literal &>(
                 *expr.index());
             if (*lit.get<uint64_t>() >= array.count()) {
                 report_error("array index out of bounds");
@@ -738,7 +738,7 @@ namespace checker {
             return nullptr;
         }
 
-        common::Literal &lit = common::downcast<common::Literal>(
+        common::Literal &lit = dynamic_cast<common::Literal &>(
             *expr.expression());
         switch (expr.op()) {
         case common::UnaryOp::NEGATE:
@@ -758,8 +758,8 @@ namespace checker {
             return nullptr;
         }
 
-        common::Literal &lhs = common::downcast<common::Literal>(*expr.lhs());
-        common::Literal &rhs = common::downcast<common::Literal>(*expr.rhs());
+        common::Literal &lhs = dynamic_cast<common::Literal &>(*expr.lhs());
+        common::Literal &rhs = dynamic_cast<common::Literal &>(*expr.rhs());
         if (!lhs.same_type(rhs)) {
             return nullptr;
         }
@@ -876,7 +876,7 @@ namespace checker {
         const common::Type
             *boolean_type = builtin_types_[common::BuiltinTypes::BOOL];
 
-        common::Literal &from = common::downcast<common::Literal>(*cast.from());
+        common::Literal &from = dynamic_cast<common::Literal &>(*cast.from());
         std::optional<common::Literal> result;
         if (cast.type() == floating_type) {
             if (!from.is<uint64_t>() && !from.is<double>()) {
@@ -912,11 +912,11 @@ namespace checker {
         switch (parsed.kind()) {
         case common::ParsedTypeKind::NAMED:
             result = module_.get_type(
-                common::downcast<common::ParsedNamedType>(parsed).name());
+                dynamic_cast<common::ParsedNamedType &>(parsed).name());
             break;
         case common::ParsedTypeKind::ARRAY: {
             common::ParsedArrayType
-                &array = common::downcast<common::ParsedArrayType>(parsed);
+                &array = dynamic_cast<common::ParsedArrayType &>(parsed);
             if (!check_expression(array.size())) {
                 return nullptr;
             }
@@ -924,7 +924,7 @@ namespace checker {
                 report_error("array size must be a costant expression");
                 return nullptr;
             }
-            const common::Literal &lit = common::downcast<common::Literal>(
+            const common::Literal &lit = dynamic_cast<const common::Literal &>(
                 *array.size());
             if (!lit.is<uint64_t>()) {
                 report_error("array size must be a positive integer");

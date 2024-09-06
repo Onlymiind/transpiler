@@ -5,7 +5,6 @@
 #include "common/util.h"
 
 #include <cstddef>
-#include <cstdint>
 
 namespace common {
     enum class BuiltinTypes {

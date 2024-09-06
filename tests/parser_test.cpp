@@ -71,11 +71,12 @@ class PolishNotationParser {
             return parse_unary_expression();
         case common::TokenType::IDENTIFIER: {
             size_t pos = next().pos();
-            common::ParsedNamedType to{*next().get<common::IdentifierID>()};
+            common::IdentifierID to_name = *next().get<common::IdentifierID>();
             consume();
             auto from = parse_expression();
             return std::make_unique<
-                common::Cast>(std::make_unique<common::ParsedNamedType>(to),
+                common::Cast>(std::make_unique<common::ParsedNamedType>(
+                                  to_name),
                               std::move(from), pos);
         }
         case common::TokenType::LEFT_BRACKET: {
@@ -132,40 +133,45 @@ struct ExprComparer {
 
         switch (lhs.kind()) {
         case common::ExpressionKind::BINARY: {
-            const auto &lhs_binary = common::downcast<common::BinaryExpression>(
-                lhs);
-            const auto &rhs_binary = common::downcast<common::BinaryExpression>(
-                rhs);
+            const auto
+                &lhs_binary = dynamic_cast<const common::BinaryExpression &>(
+
+                    lhs);
+            const auto
+                &rhs_binary = dynamic_cast<const common::BinaryExpression &>(
+                    rhs);
             return lhs_binary.op() == rhs_binary.op() &&
                    compare(*lhs_binary.lhs(), *rhs_binary.lhs()) &&
                    compare(*lhs_binary.rhs(), *rhs_binary.rhs());
         }
         case common::ExpressionKind::UNARY: {
-            const auto &lhs_unary = common::downcast<common::UnaryExpression>(
-                lhs);
-            const auto &rhs_unary = common::downcast<common::UnaryExpression>(
-                rhs);
+            const auto
+                &lhs_unary = dynamic_cast<const common::UnaryExpression &>(lhs);
+            const auto
+                &rhs_unary = dynamic_cast<const common::UnaryExpression &>(rhs);
             return lhs_unary.op() == rhs_unary.op() &&
                    compare(*lhs_unary.expression(), *rhs_unary.expression());
         }
         case common::ExpressionKind::CAST: {
-            const auto &lhs_cast = common::downcast<common::Cast>(lhs);
-            const auto &rhs_cast = common::downcast<common::Cast>(rhs);
+            const auto &lhs_cast = dynamic_cast<const common::Cast &>(lhs);
+            const auto &rhs_cast = dynamic_cast<const common::Cast &>(rhs);
             if (lhs_cast.to()->kind() != common::ParsedTypeKind::NAMED ||
                 rhs_cast.to()->kind() != common::ParsedTypeKind::NAMED) {
                 throw std::runtime_error("only named types are supported");
             }
             auto str1 = *lhs_identifiers.get(
-                common::downcast<common::ParsedNamedType>(*lhs_cast.to())
+                dynamic_cast<const common::ParsedNamedType &>(*lhs_cast.to())
                     .name());
             auto str2 = *rhs_identifiers.get(
-                common::downcast<common::ParsedNamedType>(*rhs_cast.to())
+                dynamic_cast<const common::ParsedNamedType &>(*rhs_cast.to())
                     .name());
             return str1 == str2 && compare(*lhs_cast.from(), *rhs_cast.from());
         }
         case common::ExpressionKind::FUNCTION_CALL: {
-            const auto &lhs_call = common::downcast<common::FunctionCall>(lhs);
-            const auto &rhs_call = common::downcast<common::FunctionCall>(rhs);
+            const auto &lhs_call = dynamic_cast<const common::FunctionCall &>(
+                lhs);
+            const auto &rhs_call = dynamic_cast<const common::FunctionCall &>(
+                rhs);
             if (*lhs_identifiers.get(lhs_call.name()) !=
                 *rhs_identifiers.get(rhs_call.name())) {
                 return false;
@@ -182,22 +188,23 @@ struct ExprComparer {
             return true;
         }
         case common::ExpressionKind::INDEX: {
-            const auto &lhs_index = common::downcast<common::IndexExpression>(
-                lhs);
-            const auto &rhs_index = common::downcast<common::IndexExpression>(
-                rhs);
+            const auto
+                &lhs_index = dynamic_cast<const common::IndexExpression &>(lhs);
+            const auto
+                &rhs_index = dynamic_cast<const common::IndexExpression &>(rhs);
             return compare(*lhs_index.container(), *rhs_index.container()) &&
                    compare(*lhs_index.index(), *rhs_index.index());
         }
         case common::ExpressionKind::VARIABLE_REF:
             return *lhs_identifiers.get(
-                       common::downcast<common::VariableReference>(lhs)
+                       dynamic_cast<const common::VariableReference &>(lhs)
                            .name()) ==
                    *rhs_identifiers.get(
-                       common::downcast<common::VariableReference>(rhs).name());
+                       dynamic_cast<const common::VariableReference &>(rhs)
+                           .name());
         case common::ExpressionKind::LITERAL:
-            return common::downcast<common::Literal>(lhs) ==
-                   common::downcast<common::Literal>(rhs);
+            return dynamic_cast<const common::Literal &>(lhs) ==
+                   dynamic_cast<const common::Literal &>(rhs);
         }
         return false;
     }
@@ -313,13 +320,13 @@ TEST_CASE("parser: binary operators", "[parser]") {
 }
 
 TEST_CASE("parser: index expressions", "[parser]") {
-	std::vector<ParserTestCase> cases = {
-	ParserTestCase{"123[1]", "[1 123"},
-	ParserTestCase{"123[1 + 2 * (3 - 4)]", "[+1 * 2 - 3 4 123"},
-	ParserTestCase{"(1 + 123)[1 + 2]", "[+ 1 2 + 1 123"},
-	ParserTestCase{"123[2][3][4]", "[4 [3 [2 123"},
-	};
-	run_tests(cases);
+    std::vector<ParserTestCase> cases = {
+        ParserTestCase{"123[1]", "[1 123"},
+        ParserTestCase{"123[1 + 2 * (3 - 4)]", "[+1 * 2 - 3 4 123"},
+        ParserTestCase{"(1 + 123)[1 + 2]", "[+ 1 2 + 1 123"},
+        ParserTestCase{"123[2][3][4]", "[4 [3 [2 123"},
+    };
+    run_tests(cases);
 }
 
 TEST_CASE("parser: parenthesized expressions", "[parser]") {
@@ -486,7 +493,7 @@ TEST_CASE("parser: function call and variable ref distinction", "[parser]") {
         REQUIRE(p.get_error().empty());
         REQUIRE(expr->kind() == common::ExpressionKind::VARIABLE_REF);
         auto ast = p.reset();
-        REQUIRE(common::downcast<common::VariableReference>(*expr).name() !=
+        REQUIRE(dynamic_cast<const common::VariableReference &>(*expr).name() !=
                 common::IdentifierID{});
     }
     SECTION("function call") {
@@ -494,7 +501,7 @@ TEST_CASE("parser: function call and variable ref distinction", "[parser]") {
         REQUIRE(p.get_error().empty());
         REQUIRE(expr->kind() == common::ExpressionKind::FUNCTION_CALL);
         auto ast = p.reset();
-        REQUIRE(common::downcast<common::FunctionCall>(*expr).name() !=
+        REQUIRE(dynamic_cast<const common::FunctionCall &>(*expr).name() !=
                 common::IdentifierID{});
     }
 }
@@ -658,7 +665,7 @@ TEST_CASE("parser: universal call syntax", "[parser]") {
         Case{"a.foo(1).bar(2, 3)", "bar(foo(a, 1), 2, 3)"},
         Case{.dot_call = ".foo()", .should_fail = true},
     };
-    size_t i = GENERATE(Catch::Generators::range(0, 5));
+    size_t i = GENERATE_REF(Catch::Generators::range(size_t(0), cases.size()));
     INFO(cases[i].dot_call);
     auto [p, idents, result] = parse_expression(cases[i].dot_call);
     if (cases[i].should_fail) {
@@ -684,24 +691,20 @@ TEST_CASE("parser: types", "[parser]") {
         uint64_t indirection_level = 0;
     };
 
-    std::vector<Case> cases{
+    std::vector<Case> cases = {
         Case{"foo", common::ParsedTypeKind::NAMED},
         Case{"*foo", common::ParsedTypeKind::NAMED, 1},
         Case{"*******foo", common::ParsedTypeKind::NAMED, 7},
         Case{"[1]foo", common::ParsedTypeKind::ARRAY},
         Case{"[1 + 2 * 3]foo", common::ParsedTypeKind::ARRAY},
         Case{"**[1 + 3]foo", common::ParsedTypeKind::ARRAY, 2},
-        Case{"[1]**foo", common::ParsedTypeKind::ARRAY, 2},
-        Case{"[13][10]**[1 + 2]foo", common::ParsedTypeKind::ARRAY, 2},
+        Case{"[1]**foo", common::ParsedTypeKind::ARRAY, 0},
+        Case{"[13][10]**[1 + 2]foo", common::ParsedTypeKind::ARRAY, 0},
     };
 
-    size_t i = GENERATE(Catch::Generators::range(0, 6));
+    size_t i = GENERATE_REF(Catch::Generators::range(size_t(0), cases.size()));
     INFO(cases[i].str);
-    std::stringstream in{cases[i].str};
-    lexer::Lexer l{in};
-    l.split();
-    REQUIRE(l.get_error().empty());
-    auto lexer_result = l.reset();
+    auto lexer_result = lex(cases[i].str);
 
     parser::Parser p{std::move(lexer_result.tokens)};
     auto type = p.parse_type();
@@ -710,4 +713,40 @@ TEST_CASE("parser: types", "[parser]") {
 
     REQUIRE(type->kind() == cases[i].kind);
     REQUIRE(type->indirection_level() == cases[i].indirection_level);
+}
+
+TEST_CASE("parser: struct declarations", "[parser]") {
+    struct Case {
+        std::string str;
+        std::vector<common::ParsedTypeKind> expected_members;
+        bool should_fail = false;
+    };
+
+    std::vector<Case> cases{
+        Case{.str = "struct A {}"},
+        Case{.str = "struct A { foo u8; }"},
+        Case{.str = "struct A { foo *u8; }"},
+        Case{.str = "struct A { foo [1]u8; }"},
+        Case{.str = "struct A { a [2 + 3 * 8]u8; b *[1]u8; c u8; }"},
+        Case{.str = "A { foo u8}", .should_fail = true},
+        Case{.str = "struct {foo u8}", .should_fail = true},
+        Case{.str = "struct A foo u8}", .should_fail = true},
+        Case{.str = "struct A { foo; }", .should_fail = true},
+        Case{.str = "struct A { foo u8 }", .should_fail = true},
+        Case{.str = "struct A { foo u8;", .should_fail = true},
+    };
+
+    size_t i = GENERATE_REF(Catch::Generators::range(size_t(0), cases.size()));
+    INFO(cases[i].str);
+    auto lexed = lex(cases[i].str);
+
+    parser::Parser p{std::move(lexed.tokens)};
+    p.parse();
+    INFO(p.get_error().msg);
+    if (cases[i].should_fail) {
+        REQUIRE(!p.get_error().empty());
+        return;
+    }
+    REQUIRE(p.get_error().empty());
+    auto ast = p.reset();
 }

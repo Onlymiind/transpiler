@@ -1,15 +1,10 @@
 #ifndef COMPILER_V2_COMMON_LITERALS_HDR_
 #define COMPILER_V2_COMMON_LITERALS_HDR_
 
-#include "common/expression.h"
 #include "common/util.h"
 
-#include <cstddef>
-#include <cstdint>
-#include <optional>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 
 namespace common {
@@ -25,7 +20,8 @@ namespace common {
         Identifiers &operator=(const Identifiers &) = delete;
 
         IdentifierID add(std::string str) {
-            auto [it, inserted] = name_to_id_.try_emplace(std::move(str), id_to_name_.size());
+            auto [it, inserted] = name_to_id_.try_emplace(std::move(str),
+                                                          id_to_name_.size());
             if (inserted) {
                 id_to_name_.push_back(&it->first);
             }
@@ -33,7 +29,9 @@ namespace common {
         }
 
         const std::string *get(IdentifierID id) const {
-            return id == IdentifierID{} || *id >= id_to_name_.size() ? nullptr : id_to_name_[*id];
+            return id == IdentifierID{} || *id >= id_to_name_.size()
+                       ? nullptr
+                       : id_to_name_[*id];
         }
 
         IdentifierID get(const std::string &name) const {

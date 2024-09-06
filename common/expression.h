@@ -3,7 +3,6 @@
 
 #include "common/base_classes.h"
 #include "common/token.h"
-#include "common/types.h"
 #include "common/util.h"
 
 #include <cstddef>

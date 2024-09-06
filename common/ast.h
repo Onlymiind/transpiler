@@ -5,7 +5,7 @@
 
 #include <vector>
 
-    namespace common {
+namespace common {
 
     class AST {
       public:

@@ -2,6 +2,7 @@
 #define COMPILER_V2_COMMON_TOKEN_HDR_
 
 #include "common/util.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <span>

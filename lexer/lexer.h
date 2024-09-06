@@ -6,7 +6,7 @@
 #include "common/util.h"
 
 #include <cstdio>
-#include <fstream>
+#include <istream>
 #include <optional>
 #include <string_view>
 #include <utility>

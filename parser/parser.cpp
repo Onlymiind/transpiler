@@ -2,13 +2,11 @@
 #include "common/base_classes.h"
 #include "common/declarations.h"
 #include "common/expression.h"
-#include "common/literals.h"
 #include "common/parsed_types.h"
 #include "common/statement.h"
 #include "common/token.h"
 #include "common/util.h"
 
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -21,6 +19,7 @@ namespace parser {
             switch (next().type()) {
             case common::TokenType::VAR: parse_global_variabe(); break;
             case common::TokenType::FUNC: parse_function(); break;
+            case common::TokenType::STRUCT: parse_struct_decl(); break;
             case common::TokenType::SEMICOLON: consume(); break;
             default: report_error("unexpected token in global scope"); break;
             }
@@ -115,7 +114,7 @@ namespace parser {
                     return result;
                 }
                 common::FunctionCall
-                    &call = common::downcast<common::FunctionCall>(*result);
+                    &call = dynamic_cast<common::FunctionCall &>(*result);
                 call.arguments().emplace(call.arguments().begin(),
                                          std::move(first_argument));
             } else if (type == common::TokenType::LEFT_BRACKET) {
@@ -613,5 +612,58 @@ namespace parser {
         }
 
         return result;
+    }
+
+    std::unique_ptr<common::ParsedType> Parser::parse_struct_decl() {
+        if (!match(common::TokenType::STRUCT, "expected 'struct' keyword")) {
+            return std::make_unique<common::ParsedErrorType>();
+        }
+        common::IdentifierID name = match_identifier(
+            "expected name of the struct");
+        if (name == common::IdentifierID{}) {
+            return std::make_unique<common::ParsedErrorType>();
+        }
+
+        if (!match(common::TokenType::LEFT_BRACE, "expected '{'")) {
+            return std::make_unique<common::ParsedErrorType>();
+        }
+
+        std::vector<common::VariableID> fields;
+
+        while (next().type() != common::TokenType::RIGHT_BRACE) {
+            if (next().type() == common::TokenType::SEMICOLON) {
+                consume();
+                continue;
+            }
+            common::VariableID field = parse_field();
+            if (!match(common::TokenType::SEMICOLON,
+                       "expected ';' after field declaration")) {
+                return std::make_unique<common::ParsedErrorType>();
+            }
+            if (field == common::VariableID{}) {
+                return std::make_unique<common::ParsedErrorType>();
+            }
+            fields.push_back(field);
+        }
+        if (!match(common::TokenType::RIGHT_BRACE, "expected '}'")) {
+            return std::make_unique<common::ParsedErrorType>();
+        }
+        return std::make_unique<common::ParsedStructType>(name,
+                                                          std::move(fields));
+    }
+
+    common::VariableID Parser::parse_field() {
+        common::IdentifierID name = match_identifier(
+            "expected name of the field");
+        if (name == common::IdentifierID{}) {
+            return common::VariableID{};
+        }
+
+        std::unique_ptr<common::ParsedType> type = parse_type();
+        if (!type || type->is_error()) {
+            return common::VariableID{};
+        }
+        return ast_.add_local(
+            common::Variable{.name = name, .explicit_type = std::move(type)});
     }
 } // namespace parser

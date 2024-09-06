@@ -5,14 +5,12 @@
 #include "common/expression.h"
 #include "common/literals.h"
 #include "common/statement.h"
-#include "common/token.h"
 #include "common/types.h"
 #include "common/util.h"
 
 #include <cstddef>
 #include <cstdint>
 #include <iomanip>
-#include <ios>
 #include <limits>
 #include <string>
 
@@ -41,27 +39,28 @@ namespace codegen {
 
         switch (expr.kind()) {
         case common::ExpressionKind::BINARY:
-            codegen_binary(common::downcast<common::BinaryExpression>(expr));
+            codegen_binary(
+                dynamic_cast<const common::BinaryExpression &>(expr));
             break;
         case common::ExpressionKind::UNARY:
-            codegen_unary(common::downcast<common::UnaryExpression>(expr));
+            codegen_unary(dynamic_cast<const common::UnaryExpression &>(expr));
             break;
         case common::ExpressionKind::LITERAL:
-            codegen_literal(common::downcast<common::Literal>(expr));
+            codegen_literal(dynamic_cast<const common::Literal &>(expr));
             break;
         case common::ExpressionKind::CAST:
-            codegen_cast(common::downcast<common::Cast>(expr));
+            codegen_cast(dynamic_cast<const common::Cast &>(expr));
             break;
         case common::ExpressionKind::FUNCTION_CALL:
-            codegen_call(common::downcast<common::FunctionCall>(expr));
+            codegen_call(dynamic_cast<const common::FunctionCall &>(expr));
             break;
         case common::ExpressionKind::VARIABLE_REF:
             codegen_var_name(
-                common::downcast<common::VariableReference>(expr).name());
+                dynamic_cast<const common::VariableReference &>(expr).name());
             break;
         case common::ExpressionKind::INDEX:
             codegen_index_expression(
-                common::downcast<common::IndexExpression>(expr));
+                dynamic_cast<const common::IndexExpression &>(expr));
             break;
         default: report_error("unknown expression type"); break;
         }
@@ -245,7 +244,7 @@ namespace codegen {
         if (false_branch.statements().size() == 1 &&
             false_branch.statements()[0]->kind() ==
                 common::StatementType::BRANCH) {
-            codegen_branch(common::downcast<common::Branch>(
+            codegen_branch(dynamic_cast<const common::Branch &>(
                 *false_branch.statements()[0]));
         } else {
             codegen_block(false_branch);
@@ -290,7 +289,7 @@ namespace codegen {
         case common::StatementType::RETURN: {
             *body_ << "return ";
             const common::Expression
-                *expr = common::downcast<common::Return>(smt).expression();
+                *expr = dynamic_cast<const common::Return &>(smt).expression();
             if (expr) {
                 codegen_expression(*expr);
             }
@@ -299,7 +298,7 @@ namespace codegen {
         }
         case common::StatementType::EXPRESSION: {
             const common::Expression
-                *expr = common::downcast<common::ExpressionStatement>(smt)
+                *expr = dynamic_cast<const common::ExpressionStatement &>(smt)
                             .expression();
             codegen_expression(*expr);
             *body_ << ';';
@@ -307,13 +306,14 @@ namespace codegen {
         }
         case common::StatementType::VARIABLE:
             codegen_var(*ast_->get_var(
-                common::downcast<common::VariableDeclatarion>(smt).variable()));
+                dynamic_cast<const common::VariableDeclatarion &>(smt)
+                    .variable()));
             break;
         case common::StatementType::BRANCH:
-            codegen_branch(common::downcast<common::Branch>(smt));
+            codegen_branch(dynamic_cast<const common::Branch &>(smt));
             break;
         case common::StatementType::LOOP:
-            codegen_loop(common::downcast<common::Loop>(smt));
+            codegen_loop(dynamic_cast<const common::Loop &>(smt));
             break;
         case common::StatementType::BREAK: *body_ << "break;"; break;
         case common::StatementType::CONTINUE: *body_ << "continue;"; break;
@@ -332,10 +332,10 @@ namespace codegen {
         switch (type->kind()) {
         case common::TypeKind::PRIMITIVE:
             *out << *identifiers_->get(
-                common::downcast<common::PrimitiveType>(*type).name());
+                dynamic_cast<const common::PrimitiveType &>(*type).name());
             break;
         case common::TypeKind::POINTER:
-            codegen_type(common::downcast<common::PointerType>(*type)
+            codegen_type(dynamic_cast<const common::PointerType &>(*type)
                              .pointee_type(),
                          out);
             *out << '*';
@@ -357,15 +357,16 @@ namespace codegen {
         }
         if (type->kind() == common::TypeKind::POINTER) {
             return codegen_type_decl(
-                common::downcast<common::PointerType>(*type).pointee_type());
+                dynamic_cast<const common::PointerType &>(*type)
+                    .pointee_type());
         }
         if (type->kind() != common::TypeKind::ARRAY) {
             report_error("type declaration generation: unsupported type kind");
             return false;
         }
 
-        const common::ArrayType &array = common::downcast<common::ArrayType>(
-            *type);
+        const common::ArrayType
+            &array = dynamic_cast<const common::ArrayType &>(*type);
         if (!codegen_type_decl(array.element_type())) {
             return false;
         }
@@ -399,10 +400,10 @@ namespace codegen {
         switch (type->kind()) {
         case common::TypeKind::PRIMITIVE:
             return add_name(
-                common::downcast<common::PrimitiveType>(*type).name());
+                dynamic_cast<const common::PrimitiveType &>(*type).name());
         case common::TypeKind::POINTER: {
             const common::PointerType
-                &ptr = common::downcast<common::PointerType>(*type);
+                &ptr = dynamic_cast<const common::PointerType &>(*type);
             common::IdentifierID pointee_name = generate_type_name(
                 ptr.pointee_type());
             if (pointee_name == common::IdentifierID{}) {
@@ -413,7 +414,7 @@ namespace codegen {
         }
         case common::TypeKind::ARRAY: {
             const common::ArrayType
-                &array = common::downcast<common::ArrayType>(*type);
+                &array = dynamic_cast<const common::ArrayType &>(*type);
             common::IdentifierID element_name = generate_type_name(
                 array.element_type());
             if (element_name == common::IdentifierID{}) {
@@ -443,7 +444,7 @@ namespace codegen {
                 return false;
             }
             *body_ << ", "
-                   << std::to_string(common::downcast<common::ArrayType>(
+                   << std::to_string(dynamic_cast<const common::ArrayType &>(
                                          *expr.container()->type())
                                          .count())
                    << ')';

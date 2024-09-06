@@ -2,7 +2,7 @@
 #include "common/literals.h"
 #include "common/token.h"
 #include "common/util.h"
-#include <array>
+
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
@@ -84,7 +84,7 @@ namespace lexer {
         {"break", common::Token{common::TokenType::BREAK}},
         {"continue", common::Token{common::TokenType::CONTINUE}},
         {"cast", common::Token{common::TokenType::CAST}},
-	{"struct", common::Token{common::TokenType::STRUCT}},
+        {"struct", common::Token{common::TokenType::STRUCT}},
     };
 
     common::Token Lexer::get_identifier() {
@@ -97,7 +97,8 @@ namespace lexer {
 
         std::string buf;
         buf.push_back(*c);
-        for (c = get_char(); c && (std::isalnum(*c) || *c == '_'); c = get_char()) {
+        for (c = get_char(); c && (std::isalnum(*c) || *c == '_');
+             c = get_char()) {
             buf.push_back(*c);
         }
 
@@ -112,7 +113,9 @@ namespace lexer {
             return result;
         }
 
-        return common::Token::with_value(result_.identifiers.add(std::move(buf)), pos);
+        return common::Token::with_value(result_.identifiers.add(
+                                             std::move(buf)),
+                                         pos);
     }
 
     common::Token Lexer::get_numeric() {
@@ -155,7 +158,10 @@ namespace lexer {
             put_back(*c);
         }
 
-        return common::Token::with_value(static_cast<double>(integer) + static_cast<double>(fraction) / static_cast<double>(exponent), pos);
+        return common::Token::with_value(static_cast<double>(integer) +
+                                             static_cast<double>(fraction) /
+                                                 static_cast<double>(exponent),
+                                         pos);
     }
 
     common::Token Lexer::get_op() {
@@ -166,7 +172,9 @@ namespace lexer {
             return result;
         }
 
-        auto handle_wide_op = [this, &result](common::TokenType default_type, char next, common::TokenType if_next) -> common::Token {
+        auto handle_wide_op =
+            [this, &result](common::TokenType default_type, char next,
+                            common::TokenType if_next) -> common::Token {
             result.type(default_type);
             if (file_->peek() == next) {
                 result.type(if_next);
@@ -190,14 +198,14 @@ namespace lexer {
         case ',': result.type(COMMA); return result;
         case '[': result.type(LEFT_BRACKET); return result;
         case ']': result.type(RIGHT_BRACKET); return result;
-	case '.': result.type(DOT); return result;
+        case '.': result.type(DOT); return result;
         case '!': return handle_wide_op(NOT, '=', NOT_EQUALS);
         case '<': return handle_wide_op(LESS, '=', LESS_EQUALS);
         case '>': return handle_wide_op(GREATER, '=', GREATER_EQUALS);
         case '=': return handle_wide_op(ASSIGN, '=', EQUALS);
         case '&': return handle_wide_op(BITWISE_AND, '&', AND);
         case '|': return handle_wide_op(BITWISE_OR, '|', OR);
-	default:
+        default:
             put_back(*c);
             report_error("unknown symbol");
             return result;

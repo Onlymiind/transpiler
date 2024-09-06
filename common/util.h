@@ -1,14 +1,14 @@
 #ifndef COMPILER_V2_COMMON_UTIL_HDR_
 #define COMPILER_V2_COMMON_UTIL_HDR_
 
-#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <sstream>
 #include <stdexcept>
 #include <string>
-#include <string_view>
 #include <type_traits>
+#include <typeinfo>
 
 namespace common {
     template <typename T, size_t TAG, T DEFAULT>
@@ -66,9 +66,8 @@ namespace common {
         enum IDType : size_t {
             IDENTIFIER,
             FUNCTION,
-            STATEMENT,
             VARIABLE,
-            BASIC_BLOCK,
+            STRUCT,
 
             COUNT,
         };
@@ -80,7 +79,7 @@ namespace common {
     using IdentifierID = IDBase<IDType::IDENTIFIER>;
     using FunctionID = IDBase<IDType::FUNCTION>;
     using VariableID = IDBase<IDType::VARIABLE>;
-    using BasicBlockID = IDBase<IDType::BASIC_BLOCK>;
+    using StructID = IDBase<IDType::STRUCT>;
 
     template <typename ID, typename Type>
     constexpr inline ID make_id(Type tag, uint64_t idx)
@@ -96,26 +95,6 @@ namespace common {
                  std::is_same_v<std::underlying_type_t<Type>, uint8_t>
     {
         return {static_cast<Type>(*id >> 56), *id & 0xffffffffffffff};
-    }
-
-    template <typename Derived, typename Base>
-    inline Derived &downcast(Base &base)
-        requires std::is_base_of_v<std::decay_t<Base>, Derived>
-    {
-        if (base.kind() != Derived::static_kind()) {
-            throw std::runtime_error("downcasting to wrong derived type");
-        }
-        return static_cast<Derived &>(base);
-    }
-
-    template <typename Derived, typename Base>
-    inline const Derived &downcast(const Base &base)
-        requires std::is_base_of_v<std::decay_t<Base>, Derived>
-    {
-        if (base.kind() != Derived::static_kind()) {
-            throw std::runtime_error("downcasting to wrong derived type");
-        }
-        return static_cast<const Derived &>(base);
     }
 
     template <typename ReleaseFunc>

@@ -3,9 +3,9 @@
 
 #include "common/util.h"
 
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 
 namespace common {
 
@@ -18,7 +18,7 @@ namespace common {
     class_name &operator=(const class_name &) = copy_policy;                   \
     constexpr static kind_type static_kind() noexcept { return kind_name; }
 
-    enum class ParsedTypeKind { ERROR, NAMED, ARRAY };
+    enum class ParsedTypeKind { ERROR, NAMED, ARRAY, STRUCT };
 
     class ParsedType {
       public:
@@ -61,7 +61,7 @@ namespace common {
         ERROR = 0xff,
     };
 
-    enum class TypeKind : uint8_t { PRIMITIVE, ARRAY, POINTER };
+    enum class TypeKind : uint8_t { PRIMITIVE, ARRAY, POINTER, STRUCT };
 
     enum class TypeTraits {
         NONE = 0,
@@ -102,15 +102,11 @@ namespace common {
             return (traits_ & trait) != static_cast<TypeTraits>(0);
         }
 
-        // NOTE: pos() returns 0 for predeclared and anonymous types (e.g.
-        // primitive types, arrays etc.)
-        size_t pos() const noexcept { return pos_; }
-
         size_t size() const noexcept { return size_; }
 
       protected:
-        Type(TypeKind kind, TypeTraits traits, size_t size, size_t pos = 0)
-            : kind_(kind), traits_(traits), pos_(pos), size_(size) {}
+        Type(TypeKind kind, TypeTraits traits, size_t size)
+            : kind_(kind), traits_(traits), size_(size) {}
         Type(const Type &) = default;
         Type(Type &&) = default;
         Type &operator=(const Type &) = default;
@@ -119,7 +115,6 @@ namespace common {
       private:
         TypeKind kind_{};
         TypeTraits traits_{};
-        size_t pos_{};
         size_t size_{};
     };
 
@@ -188,8 +183,55 @@ namespace common {
 
       private:
         StatementType kind_{};
-        size_t pos_ = 1;
         bool is_reachable_ = true;
+        size_t pos_ = 1;
+    };
+
+    enum class DeclaredTypeKind : uint8_t {
+        STRUCT,
+    };
+    class DeclaredType {
+      public:
+        DeclaredTypeKind kind() const noexcept { return kind_; }
+        size_t pos() const noexcept { return pos_; }
+        IdentifierID name() const noexcept { return name_; }
+
+      protected:
+        DeclaredType(IdentifierID name, DeclaredTypeKind kind, size_t pos)
+            : kind_(kind), name_(name), pos_(pos) {}
+        ~DeclaredType() = default;
+        DeclaredType(const DeclaredType &) = delete;
+        DeclaredType(DeclaredType &&) = default;
+        DeclaredType &operator=(const DeclaredType &) = delete;
+        DeclaredType &operator=(DeclaredType &&) = default;
+
+      private:
+        DeclaredTypeKind kind_{};
+        IdentifierID name_{};
+        size_t pos_ = 1;
+    };
+
+    enum class DeclarationKind : uint8_t { VARIABLE, FUNCTION, STRUCT };
+
+    class Declaration {
+      public:
+        DeclarationKind kind() const noexcept { return kind_; }
+        size_t pos() const noexcept { return pos_; }
+        IdentifierID name() const noexcept { return name_; }
+
+      protected:
+        Declaration(IdentifierID name, DeclarationKind kind, size_t pos)
+            : kind_(kind), name_(name), pos_(pos) {}
+        ~Declaration() = default;
+        Declaration(const Declaration &) = delete;
+        Declaration(Declaration &&) = default;
+        Declaration &operator=(const Declaration &) = delete;
+        Declaration &operator=(Declaration &&) = default;
+
+      private:
+        DeclarationKind kind_{};
+        size_t pos_ = 1;
+        IdentifierID name_{};
     };
 
 } // namespace common

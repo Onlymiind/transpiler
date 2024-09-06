@@ -1,8 +1,5 @@
 #include "checker/checker.h"
-#include "common/ast.h"
 #include "common/base_classes.h"
-#include "common/expression.h"
-#include "common/token.h"
 #include "common/types.h"
 #include "common/util.h"
 #include "lexer/lexer.h"
@@ -12,7 +9,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
-#include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -52,8 +48,9 @@ void run_tests(const std::vector<CheckerTestCase> cases) {
         REQUIRE(ch.get_error().empty());
 
         auto mod = ch.reset();
-        REQUIRE(c.expected ==
-                common::downcast<common::PrimitiveType>(*expr->type()).type());
+        REQUIRE(
+            c.expected ==
+            dynamic_cast<const common::PrimitiveType &>(*expr->type()).type());
     }
 }
 
@@ -140,9 +137,10 @@ TEST_CASE("checker: types", "[checker]") {
         auto checked = c.get_type(*parsed_type);
         REQUIRE(checked);
         REQUIRE(checked->kind() == common::TypeKind::PRIMITIVE);
-        REQUIRE(*lexed.identifiers.get(
-                    common::downcast<common::PrimitiveType>(*checked).name()) ==
-                "u64");
+        REQUIRE(
+            *lexed.identifiers.get(
+                dynamic_cast<const common::PrimitiveType &>(*checked).name()) ==
+            "u64");
     }
     SECTION("pointer") {
         auto lexed = lex("*u64");
@@ -154,11 +152,12 @@ TEST_CASE("checker: types", "[checker]") {
         auto checked = c.get_type(*parsed_type);
         REQUIRE(checked);
         REQUIRE(checked->kind() == common::TypeKind::POINTER);
-        auto pointee = common::downcast<common::PointerType>(*checked)
+        auto pointee = dynamic_cast<const common::PointerType &>(*checked)
                            .pointee_type();
-        REQUIRE(*lexed.identifiers.get(
-                    common::downcast<common::PrimitiveType>(*pointee).name()) ==
-                "u64");
+        REQUIRE(
+            *lexed.identifiers.get(
+                dynamic_cast<const common::PrimitiveType &>(*pointee).name()) ==
+            "u64");
     }
     SECTION("array") {
         auto lexed = lex("[1 + 2 * 3]u64");
@@ -171,12 +170,13 @@ TEST_CASE("checker: types", "[checker]") {
         REQUIRE(c.get_error().empty());
         REQUIRE(checked);
         REQUIRE(checked->kind() == common::TypeKind::ARRAY);
-        const common::ArrayType arr = common::downcast<common::ArrayType>(
+        const common::ArrayType arr = dynamic_cast<const common::ArrayType &>(
             *checked);
         REQUIRE(arr.count() == 7);
-        REQUIRE(*lexed.identifiers.get(
-                    common::downcast<common::PrimitiveType>(*arr.element_type())
-                        .name()) == "u64");
+        REQUIRE(
+            *lexed.identifiers.get(
+                dynamic_cast<const common::PrimitiveType &>(*arr.element_type())
+                    .name()) == "u64");
     }
     // TODO: check more complex types
 }

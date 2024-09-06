@@ -34,7 +34,8 @@ namespace parser {
         std::unique_ptr<common::Expression> parse_primary_expression();
         std::unique_ptr<common::Expression> parse_identifier_ref();
         std::unique_ptr<common::Expression> parse_cast();
-        std::unique_ptr<common::Expression> parse_function_call(common::IdentifierID name = {}, size_t pos = 0);
+        std::unique_ptr<common::Expression>
+        parse_function_call(common::IdentifierID name = {}, size_t pos = 0);
 
         void parse_function();
         void parse_global_variabe();
@@ -48,7 +49,10 @@ namespace parser {
 
         common::VariableID parse_func_param();
         std::unique_ptr<common::ParsedType> parse_type();
-	std::unique_ptr<common::ParsedType> parse_array_type();
+        std::unique_ptr<common::ParsedType> parse_array_type();
+        std::unique_ptr<common::ParsedType> parse_struct_decl();
+
+        common::VariableID parse_field();
 
         common::Variable parse_variable();
 
@@ -86,7 +90,9 @@ namespace parser {
         }
 
       private:
-        std::unique_ptr<common::Expression> parse_binary_expression(std::unique_ptr<common::Expression> &&lhs, uint8_t precedence);
+        std::unique_ptr<common::Expression>
+        parse_binary_expression(std::unique_ptr<common::Expression> &&lhs,
+                                uint8_t precedence);
 
         std::vector<common::Token> tokens_{};
         common::Tokens remainder_{};

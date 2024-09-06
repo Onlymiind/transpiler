@@ -1,18 +1,13 @@
 #ifndef COMPILER_V2_COMMON_MODULE_HDR_
 #define COMPILER_V2_COMMON_MODULE_HDR_
 
-#include "common/ast.h"
 #include "common/base_classes.h"
-#include "common/declarations.h"
-#include "common/expression.h"
-#include "common/literals.h"
-#include "common/token.h"
 #include "common/types.h"
 #include "common/util.h"
 
-#include <cstdint>
 #include <stack>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace common {
 

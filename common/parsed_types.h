@@ -2,7 +2,6 @@
 #define COMPILER_V2_COMMON_PARSED_TYPES_HDR_
 
 #include "common/base_classes.h"
-#include "common/expression.h"
 #include "common/util.h"
 
 #include <cstdint>
@@ -52,6 +51,25 @@ namespace common {
       private:
         std::unique_ptr<Expression> size_;
         std::unique_ptr<ParsedType> element_type_;
+    };
+
+    class ParsedStructType final : public ParsedType {
+      public:
+        ParsedStructType(IdentifierID name, std::vector<VariableID> fields)
+            : ParsedType(static_kind(), 0), name_(name), fields_(fields) {}
+
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(ParsedStructType,
+                                                     ParsedTypeKind,
+                                                     ParsedTypeKind::STRUCT,
+                                                     delete)
+        IdentifierID name() const noexcept { return name_; }
+        const std::vector<VariableID> &fields() const noexcept {
+            return fields_;
+        }
+
+      private:
+        IdentifierID name_;
+        std::vector<VariableID> fields_;
     };
 
     class ParsedErrorType final : public ParsedType {

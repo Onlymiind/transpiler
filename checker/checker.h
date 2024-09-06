@@ -12,7 +12,6 @@
 
 #include <cstddef>
 #include <stack>
-#include <string_view>
 
 namespace checker {
     enum class Reachability {
@@ -44,7 +43,7 @@ namespace checker {
         bool check_statement(common::Statement &smt);
         bool check_block(common::Block &block);
         bool check_loop(common::Loop &loop);
-	bool check_index_expression(common::IndexExpression& expr);
+        bool check_index_expression(common::IndexExpression &expr);
 
         bool is_reachable() const {
             return reachability_stack_.top() == Reachability::REACHABLE;
@@ -66,7 +65,7 @@ namespace checker {
             return {std::move(module_), std::move(global)};
         }
 
-        bool set_literal_type(common::Literal& lit);
+        bool set_literal_type(common::Literal &lit);
 
         void report_error(std::string err) {
             err_.msg = err;
