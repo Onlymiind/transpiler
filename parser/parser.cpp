@@ -7,10 +7,10 @@
 #include "common/token.h"
 #include "common/util.h"
 
-#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <strings.h>
 #include <utility>
 
 namespace parser {
@@ -39,17 +39,17 @@ namespace parser {
 
     std::unique_ptr<common::Expression> Parser::parse_unary_expression() {
         if (!next().is_unary_op()) {
-            return parse_primary_expression();
+            return parse_member_access();
         }
 
-        size_t pos = next().pos();
+        common::TokenPos pos = next().pos();
         common::UnaryOp op = *common::to_unary_op(next().type());
         std::unique_ptr<common::Expression> expr;
         consume();
         if (next().is_unary_op()) {
             expr = parse_unary_expression();
         } else {
-            expr = parse_primary_expression();
+            expr = parse_member_access();
         }
 
         if (!expr || expr->is_error()) {
@@ -58,6 +58,50 @@ namespace parser {
 
         return std::make_unique<common::UnaryExpression>(op, std::move(expr),
                                                          pos);
+    }
+
+    std::unique_ptr<common::Expression> Parser::parse_member_access() {
+        std::unique_ptr<common::Expression> result = parse_primary_expression();
+        if (result->is_error()) {
+            return result;
+        }
+
+        for (common::TokenType type = next().type();
+             type == common::TokenType::DOT ||
+             type == common::TokenType::LEFT_BRACKET;
+             type = next().type()) {
+            common::TokenPos pos = next().pos();
+            consume();
+            if (type == common::TokenType::DOT) {
+                std::unique_ptr<common::Expression>
+                    member = parse_identifier_ref();
+                if (member->is_error()) {
+                    return member;
+                }
+                result = std::make_unique<common::MemberAccess>(std::move(
+                                                                    result),
+                                                                std::move(
+                                                                    member),
+                                                                pos);
+            } else if (type == common::TokenType::LEFT_BRACKET) {
+                std::unique_ptr<common::Expression> index = parse_expression();
+                if (index->is_error()) {
+                    return index;
+                } else if (!match(common::TokenType::RIGHT_BRACKET,
+                                  "expected closing ']'")) {
+                    return std::make_unique<common::ErrorExpression>(
+                        next().pos());
+                }
+
+                result = std::make_unique<common::MemberAccess>(std::move(
+                                                                    result),
+                                                                std::move(
+                                                                    index),
+                                                                pos);
+            }
+        }
+
+        return result;
     }
 
     std::unique_ptr<common::Expression> Parser::parse_primary_expression() {
@@ -100,46 +144,11 @@ namespace parser {
             return result;
         }
 
-        // TODO: probably should refactor this to its own method
-        while (next().type() == common::TokenType::DOT ||
-               next().type() == common::TokenType::LEFT_BRACKET) {
-            common::TokenType type = next().type();
-            size_t pos = next().pos();
-            consume();
-            if (type == common::TokenType::DOT) {
-                std::unique_ptr<common::Expression> first_argument = std::move(
-                    result);
-                result = parse_function_call();
-                if (result->is_error()) {
-                    return result;
-                }
-                common::FunctionCall
-                    &call = dynamic_cast<common::FunctionCall &>(*result);
-                call.arguments().emplace(call.arguments().begin(),
-                                         std::move(first_argument));
-            } else if (type == common::TokenType::LEFT_BRACKET) {
-                std::unique_ptr<common::Expression> index = parse_expression();
-                if (index->is_error()) {
-                    return index;
-                }
-                if (next().type() != common::TokenType::RIGHT_BRACKET) {
-                    report_error("expected ']'");
-                    return std::make_unique<common::ErrorExpression>(
-                        next().pos());
-                }
-                consume();
-                std::unique_ptr<common::Expression> index_expr = std::
-                    make_unique<common::IndexExpression>(std::move(result),
-                                                         std::move(index), pos);
-                result = std::move(index_expr);
-            }
-        }
-
         return result;
     }
 
     std::unique_ptr<common::Expression> Parser::parse_identifier_ref() {
-        size_t pos = next().pos();
+        common::TokenPos pos = next().pos();
         common::IdentifierID name = common::IdentifierID{
             match_identifier("function call: expected function name")};
         if (name == common::IdentifierID{}) {
@@ -153,7 +162,8 @@ namespace parser {
     }
 
     std::unique_ptr<common::Expression>
-    Parser::parse_function_call(common::IdentifierID name, size_t pos) {
+    Parser::parse_function_call(common::IdentifierID name,
+                                common::TokenPos pos) {
         if (name == common::IdentifierID{}) {
             pos = next().pos();
             name = match_identifier("function call: expected function name");
@@ -209,7 +219,7 @@ namespace parser {
                 report_error("operator precedence not implemented");
                 return std::make_unique<common::ErrorExpression>(next().pos());
             }
-            size_t pos = next().pos();
+            common::TokenPos pos = next().pos();
             consume();
             std::unique_ptr<common::Expression> rhs = parse_unary_expression();
             if (!rhs || rhs->is_error()) {
@@ -304,7 +314,7 @@ namespace parser {
     }
 
     std::unique_ptr<common::Statement> Parser::parse_statement() {
-        size_t pos = next().pos();
+        common::TokenPos pos = next().pos();
         bool needs_semicolon = true;
         std::unique_ptr<common::Statement> smt;
         switch (next().type()) {
@@ -357,7 +367,7 @@ namespace parser {
     }
 
     std::unique_ptr<common::Statement> Parser::parse_local_variable() {
-        size_t pos = next().pos();
+        common::TokenPos pos = next().pos();
         common::Variable result = parse_variable();
         if (!err_.empty()) {
             return std::make_unique<common::ErrorStatement>(pos);
@@ -369,7 +379,7 @@ namespace parser {
     }
 
     common::VariableID Parser::parse_func_param() {
-        size_t pos = next().pos();
+        common::TokenPos pos = next().pos();
         common::Variable param{.pos = pos};
         if (next().is(common::TokenType::IDENTIFIER)) {
             common::IdentifierID name = *next().get<common::IdentifierID>();
@@ -416,7 +426,7 @@ namespace parser {
     }
 
     std::unique_ptr<common::Statement> Parser::parse_branch() {
-        size_t pos = next().pos();
+        common::TokenPos pos = next().pos();
         if (!match(common::TokenType::IF, "expected 'if' keyword")) {
             return std::make_unique<common::ErrorStatement>(pos);
         }
@@ -461,7 +471,7 @@ namespace parser {
     }
 
     std::unique_ptr<common::Statement> Parser::parse_loop() {
-        size_t pos = next().pos();
+        common::TokenPos pos = next().pos();
         if (!match(common::TokenType::FOR, "expected 'for' keyword")) {
             return std::make_unique<common::ErrorStatement>(pos);
         }
@@ -555,7 +565,7 @@ namespace parser {
     }
 
     std::unique_ptr<common::Expression> Parser::parse_cast() {
-        size_t pos = next().pos();
+        common::TokenPos pos = next().pos();
         if (!match(common::TokenType::CAST, "expected 'cast' keyword")) {
             return std::make_unique<common::ErrorExpression>(pos);
         }
@@ -614,56 +624,56 @@ namespace parser {
         return result;
     }
 
-    std::unique_ptr<common::ParsedType> Parser::parse_struct_decl() {
+    void Parser::parse_struct_decl() {
+        common::TokenPos pos = next().pos();
+
         if (!match(common::TokenType::STRUCT, "expected 'struct' keyword")) {
-            return std::make_unique<common::ParsedErrorType>();
+            return;
         }
         common::IdentifierID name = match_identifier(
             "expected name of the struct");
         if (name == common::IdentifierID{}) {
-            return std::make_unique<common::ParsedErrorType>();
+            return;
         }
 
         if (!match(common::TokenType::LEFT_BRACE, "expected '{'")) {
-            return std::make_unique<common::ParsedErrorType>();
+            return;
         }
 
-        std::vector<common::VariableID> fields;
+        std::vector<common::Variable> fields;
 
         while (next().type() != common::TokenType::RIGHT_BRACE) {
             if (next().type() == common::TokenType::SEMICOLON) {
                 consume();
                 continue;
             }
-            common::VariableID field = parse_field();
+            common::Variable field = parse_field();
             if (!match(common::TokenType::SEMICOLON,
                        "expected ';' after field declaration")) {
-                return std::make_unique<common::ParsedErrorType>();
+                return;
             }
-            if (field == common::VariableID{}) {
-                return std::make_unique<common::ParsedErrorType>();
+            if (field.name == common::IdentifierID{}) {
+                return;
             }
-            fields.push_back(field);
+            fields.emplace_back(std::move(field));
         }
         if (!match(common::TokenType::RIGHT_BRACE, "expected '}'")) {
-            return std::make_unique<common::ParsedErrorType>();
+            return;
         }
-        return std::make_unique<common::ParsedStructType>(name,
-                                                          std::move(fields));
+        ast_.add_struct(common::ParsedStructType{name, std::move(fields), pos});
     }
 
-    common::VariableID Parser::parse_field() {
+    common::Variable Parser::parse_field() {
         common::IdentifierID name = match_identifier(
             "expected name of the field");
         if (name == common::IdentifierID{}) {
-            return common::VariableID{};
+            return common::Variable{};
         }
 
         std::unique_ptr<common::ParsedType> type = parse_type();
         if (!type || type->is_error()) {
-            return common::VariableID{};
+            return common::Variable{};
         }
-        return ast_.add_local(
-            common::Variable{.name = name, .explicit_type = std::move(type)});
+        return common::Variable{.name = name, .explicit_type = std::move(type)};
     }
 } // namespace parser

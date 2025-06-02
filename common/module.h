@@ -69,6 +69,7 @@ namespace common {
         bool add_type(IdentifierID name, const Type *type);
         bool add_function(IdentifierID name, FunctionID function);
         bool add_variable(IdentifierID name, VariableID var);
+        StructType *add_struct(StructType record);
 
         const Type *get_type(IdentifierID name) const {
             auto it = named_types_.find(name);
@@ -111,6 +112,8 @@ namespace common {
         std::unordered_map<IdentifierID, const Type *> named_types_;
         std::unordered_map<IdentifierID, VariableID> variables_;
         std::unordered_map<IdentifierID, FunctionID> functions_;
+
+        std::deque<StructType> structs_;
 
         FunctionID entrypoint_;
     };

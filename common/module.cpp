@@ -3,6 +3,19 @@
 #include "common/util.h"
 
 namespace common {
+
+    StructType *Module::add_struct(StructType record) {
+        IdentifierID name = record.name();
+
+        if (named_types_.contains(name)) {
+            return nullptr;
+        }
+
+        StructType *ptr = &structs_.emplace_back(std::move(record));
+        named_types_[name] = ptr;
+        return ptr;
+    }
+
     bool Module::try_add_name(IdentifierID name) {
         bool result = defined_names_.insert(name).second;
         if (!result) {

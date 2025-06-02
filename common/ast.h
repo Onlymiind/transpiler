@@ -1,6 +1,7 @@
 #ifndef COMPILER_V2_COMMON_FILE_HDR_
 #define COMPILER_V2_COMMON_FILE_HDR_
 #include "common/declarations.h"
+#include "common/parsed_types.h"
 #include "common/util.h"
 
 #include <vector>
@@ -36,6 +37,10 @@ namespace common {
             return result;
         }
 
+        void add_struct(ParsedStructType &&record) {
+            structs_.emplace_back(std::move(record));
+        }
+
         Variable *get_var(VariableID id) {
             return *id >= vars_.size() ? nullptr : &vars_[*id];
         }
@@ -50,23 +55,33 @@ namespace common {
             return &functions_[*id];
         }
 
-        std::vector<Function> &functions() { return functions_; }
-        const std::vector<Function> &functions() const { return functions_; }
+        std::vector<Function> &functions() noexcept { return functions_; }
+        const std::vector<Function> &functions() const noexcept {
+            return functions_;
+        }
 
-        std::vector<Variable> &variables() { return vars_; }
-        const std::vector<Variable> &variables() const { return vars_; }
+        std::vector<Variable> &variables() noexcept { return vars_; }
+        const std::vector<Variable> &variables() const noexcept {
+            return vars_;
+        }
 
-        std::vector<VariableID> &global_variables() {
+        std::vector<VariableID> &global_variables() noexcept {
             return global_variables_;
         }
-        const std::vector<VariableID> &global_variables() const {
+        const std::vector<VariableID> &global_variables() const noexcept {
             return global_variables_;
+        }
+
+        std::vector<ParsedStructType> &structs() noexcept { return structs_; }
+        const std::vector<ParsedStructType> &structs() const noexcept {
+            return structs_;
         }
 
       private:
         std::vector<Function> functions_;
         std::vector<Variable> vars_;
         std::vector<VariableID> global_variables_;
+        std::vector<ParsedStructType> structs_;
     };
 } // namespace common
 #endif

@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.18)
 project(compiler_v2 C CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Catch2)
 
@@ -12,6 +13,7 @@ set(COMPILER_SRC
     common/expression.h
     common/ast.h
     common/types.h
+    common/types.cpp
     common/module.h
     common/module.cpp
     common/literals.h
@@ -33,6 +35,9 @@ set(COMPILER_SRC
 
     compiler/compiler.h
     compiler/compiler.cpp
+
+    vm/vm.h
+    vm/vm.cpp
 )
 
 add_library(compiler_lib ${COMPILER_SRC})

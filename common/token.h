@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <format>
 #include <span>
 
 namespace common {
@@ -53,7 +54,7 @@ namespace common {
         BREAK,
         CONTINUE,
         CAST,
-	STRUCT,
+        STRUCT,
 
         // identifier
         IDENTIFIER,
@@ -68,14 +69,15 @@ namespace common {
         RIGHT_BRACKET,
         COLON,
         COMMA,
-	DOT,
+        DOT,
 
         // eof
         END_OF_FILE
     };
 
     constexpr inline bool has_value(TokenType type) noexcept {
-        return (type >= TokenType::INTEGER && type <= TokenType::BOOL) || type == TokenType::IDENTIFIER;
+        return (type >= TokenType::INTEGER && type <= TokenType::BOOL) ||
+               type == TokenType::IDENTIFIER;
     }
 
     constexpr inline bool is_op(TokenType type) noexcept {
@@ -83,17 +85,20 @@ namespace common {
     }
 
     constexpr inline bool is_binary_op(TokenType type) noexcept {
-        return type >= TokenType::BINARY_OP_START && type < TokenType::BINARY_OP_END;
+        return type >= TokenType::BINARY_OP_START &&
+               type < TokenType::BINARY_OP_END;
     }
 
     constexpr inline bool is_unary_op(TokenType type) noexcept {
-        return type == TokenType::SUB || type == TokenType::NOT || type == TokenType::BITWISE_AND || type == TokenType::MUL;
+        return type == TokenType::SUB || type == TokenType::NOT ||
+               type == TokenType::BITWISE_AND || type == TokenType::MUL;
     }
 
     class Token {
       public:
-        constexpr Token() noexcept : integer(0){};
-        constexpr Token(TokenType type, size_t pos = 1) noexcept : integer(0), pos_(pos) {
+        constexpr Token() noexcept : integer(0) {};
+        constexpr Token(TokenType type, TokenPos pos = {}) noexcept
+            : integer(0), pos_(pos) {
             if (::common::has_value(type)) {
                 return;
             }
@@ -103,22 +108,34 @@ namespace common {
         constexpr TokenType type() const noexcept { return type_; }
         constexpr void type(TokenType typ) noexcept { type_ = typ; }
 
-        constexpr size_t pos() const noexcept { return pos_; }
-        constexpr void pos(size_t pos) noexcept { pos_ = pos; }
+        constexpr TokenPos pos() const noexcept { return pos_; }
+        constexpr void pos(TokenPos pos) noexcept { pos_ = pos; }
 
-        constexpr bool is_error() const noexcept { return type_ == TokenType::ERROR; }
+        constexpr bool is_error() const noexcept {
+            return type_ == TokenType::ERROR;
+        }
 
-        constexpr bool is_eof() const noexcept { return type_ == TokenType::END_OF_FILE; }
+        constexpr bool is_eof() const noexcept {
+            return type_ == TokenType::END_OF_FILE;
+        }
 
-        constexpr bool has_value() const noexcept { return ::common::has_value(type_); }
+        constexpr bool has_value() const noexcept {
+            return ::common::has_value(type_);
+        }
 
         constexpr bool is_op() const noexcept { return ::common::is_op(type_); }
 
-        constexpr bool is_binary_op() const noexcept { return ::common::is_binary_op(type_); }
+        constexpr bool is_binary_op() const noexcept {
+            return ::common::is_binary_op(type_);
+        }
 
-        constexpr bool is_unary_op() const noexcept { return ::common::is_unary_op(type_); }
+        constexpr bool is_unary_op() const noexcept {
+            return ::common::is_unary_op(type_);
+        }
 
-        constexpr bool is(TokenType type) const noexcept { return type_ == type; }
+        constexpr bool is(TokenType type) const noexcept {
+            return type_ == type;
+        }
 
         template <typename T>
         constexpr T *get() noexcept = delete;
@@ -128,7 +145,7 @@ namespace common {
 
         // explicitly instantiated for all supported types
         template <typename T>
-        static Token with_value(T value, size_t pos = 1) noexcept = delete;
+        static Token with_value(T value, TokenPos pos = {}) noexcept = delete;
 
       private:
         TokenType type_ = TokenType::ERROR;
@@ -139,11 +156,11 @@ namespace common {
             bool boolean;
         };
 
-        size_t pos_ = 0;
+        TokenPos pos_;
     };
 
     template <>
-    inline Token Token::with_value(uint64_t value, size_t pos) noexcept {
+    inline Token Token::with_value(uint64_t value, TokenPos pos) noexcept {
         Token result;
         result.type_ = TokenType::INTEGER;
         result.integer = value;
@@ -152,7 +169,7 @@ namespace common {
     }
 
     template <>
-    inline Token Token::with_value(double value, size_t pos) noexcept {
+    inline Token Token::with_value(double value, TokenPos pos) noexcept {
         Token result;
         result.type_ = TokenType::FLOAT;
         result.floating = value;
@@ -161,7 +178,7 @@ namespace common {
     }
 
     template <>
-    inline Token Token::with_value(bool value, size_t pos) noexcept {
+    inline Token Token::with_value(bool value, TokenPos pos) noexcept {
         Token result;
         result.type_ = TokenType::BOOL;
         result.boolean = value;
@@ -170,7 +187,7 @@ namespace common {
     }
 
     template <>
-    inline Token Token::with_value(IdentifierID value, size_t pos) noexcept {
+    inline Token Token::with_value(IdentifierID value, TokenPos pos) noexcept {
         Token result;
         result.type_ = TokenType::IDENTIFIER;
         result.identifier = value;
@@ -179,7 +196,8 @@ namespace common {
     }
 
     template <>
-    inline Token Token::with_value(std::nullptr_t value, size_t pos) noexcept {
+    inline Token Token::with_value(std::nullptr_t value,
+                                   TokenPos pos) noexcept {
         Token result;
         result.type_ = TokenType::NULLPTR;
         result.pos_ = pos;
@@ -187,28 +205,45 @@ namespace common {
     }
 
     template <>
-    constexpr inline bool *Token::get<bool>() noexcept { return type_ != TokenType::BOOL ? nullptr : &boolean; }
+    constexpr inline bool *Token::get<bool>() noexcept {
+        return type_ != TokenType::BOOL ? nullptr : &boolean;
+    }
 
     template <>
-    constexpr inline const bool *Token::get<bool>() const noexcept { return type_ != TokenType::BOOL ? nullptr : &boolean; }
+    constexpr inline const bool *Token::get<bool>() const noexcept {
+        return type_ != TokenType::BOOL ? nullptr : &boolean;
+    }
 
     template <>
-    constexpr inline uint64_t *Token::get<uint64_t>() noexcept { return type_ != TokenType::INTEGER ? nullptr : &integer; }
+    constexpr inline uint64_t *Token::get<uint64_t>() noexcept {
+        return type_ != TokenType::INTEGER ? nullptr : &integer;
+    }
 
     template <>
-    constexpr inline const uint64_t *Token::get<uint64_t>() const noexcept { return type_ != TokenType::INTEGER ? nullptr : &integer; }
+    constexpr inline const uint64_t *Token::get<uint64_t>() const noexcept {
+        return type_ != TokenType::INTEGER ? nullptr : &integer;
+    }
 
     template <>
-    constexpr inline double *Token::get<double>() noexcept { return type_ != TokenType::FLOAT ? nullptr : &floating; }
+    constexpr inline double *Token::get<double>() noexcept {
+        return type_ != TokenType::FLOAT ? nullptr : &floating;
+    }
 
     template <>
-    constexpr inline const double *Token::get<double>() const noexcept { return type_ != TokenType::FLOAT ? nullptr : &floating; }
+    constexpr inline const double *Token::get<double>() const noexcept {
+        return type_ != TokenType::FLOAT ? nullptr : &floating;
+    }
 
     template <>
-    constexpr inline IdentifierID *Token::get<IdentifierID>() noexcept { return type_ != TokenType::IDENTIFIER ? nullptr : &identifier; }
+    constexpr inline IdentifierID *Token::get<IdentifierID>() noexcept {
+        return type_ != TokenType::IDENTIFIER ? nullptr : &identifier;
+    }
 
     template <>
-    constexpr inline const IdentifierID *Token::get<IdentifierID>() const noexcept { return type_ != TokenType::IDENTIFIER ? nullptr : &identifier; }
+    constexpr inline const IdentifierID *
+    Token::get<IdentifierID>() const noexcept {
+        return type_ != TokenType::IDENTIFIER ? nullptr : &identifier;
+    }
 
     class Tokens : private std::span<const Token> {
         using Base = std::span<const Token>;
@@ -301,7 +336,7 @@ namespace common {
         }
 
       private:
-        Token eof_{TokenType::END_OF_FILE, 0};
+        Token eof_{TokenType::END_OF_FILE, {}};
     };
 
 } // namespace common

@@ -9,49 +9,32 @@
 #include "lexer/lexer.h"
 #include "parser/parser.h"
 
-#include <exception>
 #include <iostream>
 #include <optional>
 #include <ostream>
 #include <sstream>
-#include <stdexcept>
+#include <string>
 #include <string_view>
 
 namespace compiler {
 
-    void report_error(common::Error err, std::istream &file,
-                      std::ostream &out) {
-        if (err.pos == 0) {
+    void report_error(common::Error err, std::istream &in, std::ostream &out) {
+        if (err.pos.line == 0 && err.pos.symbol == 0) {
             out << "error: " << err.msg << '\n';
         }
 
-        file.clear();
-        file.seekg(0, std::ios::beg);
         std::string line;
-        size_t i = 0;
-        size_t line_count = 1;
-        for (int c = file.get(); file && c != EOF; c = file.get(), ++i) {
-
-            line.push_back(static_cast<char>(c));
-            if (c != '\n') {
-                continue;
-            }
-
-            if (i >= err.pos) {
-                break;
-            }
-            line.clear();
-            ++line_count;
-            continue;
+        in.clear();
+        in.seekg(0);
+        for (size_t i = 0; i < err.pos.line && in; ++i) {
+            std::getline(in, line);
         }
 
-        std::string cursor(line.size(), '_');
-        // - 1 for not incrementing i
-        // - 1 since error at first char in file will be at pos 1
-        size_t idx = err.pos + line.size() - i - 2;
-        cursor[idx] = '^';
-        out << "error on line " << line_count << ": " << err.msg << '\n';
-        out << line << cursor << '\n';
+        std::string cursor(err.pos.symbol, '_');
+        cursor.push_back('^');
+        cursor.append(line.size() - cursor.size(), '_');
+        out << "error on line " << err.pos.line << ": " << err.msg << '\n';
+        out << line << '\n' << cursor << '\n';
     }
 
     std::optional<lexer::LexerResult> lex(std::istream &file,
@@ -94,14 +77,14 @@ namespace compiler {
     void generate(common::Module &mod, common::AST &ast,
                   common::Identifiers &identifiers, std::ostream &out,
                   std::ostream &err) {
-	std::stringstream temp_body;
+        std::stringstream temp_body;
         codegen::Generator generator{temp_body, out, mod, ast, identifiers};
         generator.codegen();
         std::string_view error = generator.get_error();
         if (!error.empty()) {
             err << error << '\n';
         }
-	out << temp_body.str();
+        out << temp_body.str();
     }
 
     void compile(std::istream &file, std::ostream &out, std::ostream &err,

@@ -9,6 +9,7 @@
 #include "common/types.h"
 #include "common/util.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -23,7 +24,8 @@ namespace checker {
     CONCATENATE_TOKENS_INNER(prefix, postfix)
 #define ERROR_GUARD(position)                                                  \
     common::RAIIGuard CONCATENATE_TOKENS(error_guard_, __LINE__) {             \
-        std::bind([this](size_t pos) { err_positions_.push(pos); }, position), \
+        std::bind([this](common::TokenPos pos) { err_positions_.push(pos); },  \
+                  position),                                                   \
             [this]() { err_positions_.pop(); }                                 \
     }
 #define REACHABILITY_GUARD(reachability)                                       \
@@ -61,6 +63,18 @@ namespace checker {
     }
 
     void Checker::add_declarations() {
+        auto &structs = ast_->structs();
+        for (auto &record : structs) {
+            ERROR_GUARD(record.pos());
+            common::StructType *ptr = module_.add_struct(
+                common::StructType{record.name()});
+            if (!ptr) {
+                report_error("duplicate name used for struct declaration");
+                return;
+            }
+            structs_[ptr] = &record;
+        }
+
         auto &functions = ast_->functions();
         for (auto &func : functions) {
             if (!check_function_decl(func)) {
@@ -90,6 +104,12 @@ namespace checker {
         if (!err_.empty()) {
             return;
         }
+        for (auto [record, info] : structs_) {
+            if (!check_struct(*record, *info)) {
+                return;
+            }
+        }
+
         auto &functions = ast_->functions();
         for (auto &func : functions) {
             ERROR_GUARD(func.pos);
@@ -103,7 +123,7 @@ namespace checker {
         }
 
         if (module_.entrypoint() == common::FunctionID{}) {
-            ERROR_GUARD(0);
+            ERROR_GUARD(common::TokenPos{});
             report_error("entrypoint not declared");
         }
     }
@@ -164,6 +184,8 @@ namespace checker {
         case common::ExpressionKind::VARIABLE_REF:
             return check_variable_ref(
                 dynamic_cast<common::VariableReference &>(*expr));
+        case common::ExpressionKind::MEMBER_ACCESS:
+            return check_member_access(expr);
         default: report_error("unknown expression type"); return false;
         }
         return result;
@@ -190,7 +212,7 @@ namespace checker {
             // no signed integer type for now
             if (!expr.expression()->type()->has_trait(
                     common::TypeTraits::FLOATING_POINT)) {
-                report_error("unary - is defined only for floats");
+                report_error("unary '-' is defined only for floats");
                 return false;
             }
             expr.type(expr.expression()->type());
@@ -238,6 +260,10 @@ namespace checker {
 
         const common::Type *lhs = expr.lhs()->type();
         const common::Type *rhs = expr.rhs()->type();
+        if (!lhs || !rhs) {
+            report_error("assignment doesn't return a value");
+            return false;
+        }
 
         if (lhs->is_pointer() && rhs->is_pointer()) {
             if (dynamic_cast<const common::PointerType &>(*lhs).is_nullptr()) {
@@ -704,7 +730,7 @@ namespace checker {
             &array = dynamic_cast<const common::ArrayType &>(
                 *expr.container()->type());
         expr.type(array.element_type());
-        // TODO: later also check if index is positive
+        // TODO: also check if index is positive when signed integers are added
         if (!expr.index()->type()->has_trait(common::TypeTraits::INTEGER)) {
             report_error("index must be an integer");
             return false;
@@ -954,4 +980,138 @@ namespace checker {
         return result;
     }
 
+    bool Checker::check_struct(
+        common::StructType &record, common::ParsedStructType &info,
+        std::unordered_set<const common::StructType *> *in_progress) {
+        if (!in_progress) {
+            std::unordered_set<const common::StructType *> in_progress;
+            check_struct(record, info, &in_progress);
+        }
+
+        in_progress->insert(&record);
+
+        std::vector<common::Variable> checked_fields;
+        checked_fields.reserve(info.fields().size());
+
+        auto &fields = info.fields();
+        for (auto &field : fields) {
+            ERROR_GUARD(field.pos);
+
+            field.type = get_type(*field.explicit_type);
+            if (!field.type) {
+                return false;
+            }
+
+            const common::StructType *struct_ptr = nullptr;
+            if (field.type->kind() == common::TypeKind::STRUCT) {
+                struct_ptr = dynamic_cast<const common::StructType *>(
+                    field.type);
+            } else if (field.type->kind() == common::TypeKind::ARRAY) {
+                auto array = dynamic_cast<const common::ArrayType *>(
+                    field.type);
+                if (array->element_type()->kind() == common::TypeKind::STRUCT) {
+                    struct_ptr = dynamic_cast<const common::StructType *>(
+                        array->element_type());
+                }
+            }
+
+            if (!struct_ptr) {
+                continue;
+            }
+
+            if (in_progress->contains(struct_ptr)) {
+                report_error(
+                    "infinite loop detected in struct field declaration");
+                return false;
+            }
+
+            auto it = structs_.find(
+                const_cast<common::StructType *>(struct_ptr));
+            if (it == structs_.end()) {
+                report_error("internal error: unknown struct");
+            }
+
+            auto [typ, parsed] = *it;
+            if (!check_struct(*typ, *parsed, in_progress)) {
+                return false;
+            }
+        }
+
+        record.add_fields(std::move(info.fields()));
+        return true;
+    }
+
+    bool
+    Checker::check_member_access(std::unique_ptr<common::Expression> &access) {
+        common::MemberAccess *access_ptr = dynamic_cast<common::MemberAccess *>(
+            access.get());
+        if (!access_ptr) {
+            return false;
+        }
+
+        ERROR_GUARD(access_ptr->pos());
+        check_expression(access_ptr->record());
+
+        if (access_ptr->member()->kind() ==
+            common::ExpressionKind::FUNCTION_CALL) {
+            auto call_ptr = std::move(access_ptr->member());
+            auto call = dynamic_cast<common::FunctionCall *>(call_ptr.get());
+            call->arguments().insert(call->arguments().begin(),
+                                     std::move(access_ptr->record()));
+
+            access = std::move(call_ptr);
+            return check_function_call(*call);
+        } else if (access_ptr->member()->kind() !=
+                   common::ExpressionKind::VARIABLE_REF) {
+            report_error("expected a function call or member reference after a "
+                         "'.' operator");
+            return false;
+        }
+
+        common::IdentifierID name = dynamic_cast<common::VariableReference *>(
+                                        access_ptr->member().get())
+                                        ->name();
+        access_ptr->member_name(name);
+
+        const common::Type *type = access_ptr->record()->type();
+        if (type->kind() == common::TypeKind::POINTER) {
+            auto ptr_type = dynamic_cast<const common::PointerType *>(type);
+            if (ptr_type->is_nullptr()) {
+                report_error("nullptr does not have any members");
+                return false;
+            } else if (ptr_type->pointee_type()->kind() !=
+                       common::TypeKind::STRUCT) {
+                report_error("dot operator can only be applied to structs and "
+                             "pointers to structs");
+                return false;
+            }
+
+            auto deref = std::make_unique<
+                common::UnaryExpression>(common::UnaryOp::DEREFERENCE,
+                                         std::move(access_ptr->record()),
+                                         access_ptr->pos());
+            if (!check_unary_expression(*deref)) {
+                return false;
+            }
+            type = deref->type();
+            access_ptr->record(std::move(deref));
+        }
+
+        if (type->kind() != common::TypeKind::STRUCT) {
+            report_error("dot operator can only be applied to structs and "
+                         "pointers to structs");
+            return false;
+        }
+
+        auto struct_ptr = dynamic_cast<const common::StructType *>(type);
+        auto field = struct_ptr->get_field(name);
+        if (!field) {
+            report_error("field with name " + *identifiers_->get(name) +
+                         " is not defined on this struct");
+            return false;
+        }
+        access_ptr->type(field->type);
+
+        return true;
+    }
 } // namespace checker

@@ -17,17 +17,25 @@ namespace lexer {
         }
 
         int c = file_->get();
-        if (c == EOF) {
-            return {};
+        switch (c) {
+        case EOF: return {};
+        case '\n':
+            ++current_line_;
+            current_pos_.push(0);
+            return '\n';
         }
-        ++current_pos_;
+        ++current_pos_.top();
         return static_cast<char>(c);
     }
 
     void Lexer::put_back(char c) {
         file_->putback(c);
-        if (current_pos_ > 0) {
-            --current_pos_;
+        if (!current_pos_.empty()) {
+            if (current_pos_.top() > 0) {
+                --current_pos_.top();
+            } else {
+                current_pos_.pop();
+            }
         }
     }
 
@@ -88,7 +96,7 @@ namespace lexer {
     };
 
     common::Token Lexer::get_identifier() {
-        size_t pos = current_pos_;
+        common::TokenPos pos{current_line_, current_pos_.top()};
         std::optional<char> c = get_char();
         if (!c || !std::isalpha(*c) && *c != '_') {
             report_error("exprected alphabetic character or _");
@@ -119,7 +127,7 @@ namespace lexer {
     }
 
     common::Token Lexer::get_numeric() {
-        size_t pos = current_pos_;
+        common::TokenPos pos{current_line_, current_pos_.top()};
         std::optional<char> c = get_char();
         if (!c || !std::isdigit(*c)) {
             return common::Token{};
@@ -166,7 +174,7 @@ namespace lexer {
 
     common::Token Lexer::get_op() {
         common::Token result;
-        result.pos(current_pos_);
+        result.pos(common::TokenPos{current_line_, current_pos_.top()});
         std::optional<char> c = get_char();
         if (!c || !std::ispunct(*c)) {
             return result;

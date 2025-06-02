@@ -2,15 +2,16 @@
 #define COMPILER_V2_CHECKER_CHECKER_HDR_
 
 #include "common/ast.h"
+#include "common/base_classes.h"
 #include "common/declarations.h"
 #include "common/expression.h"
 #include "common/literals.h"
 #include "common/module.h"
+#include "common/parsed_types.h"
 #include "common/statement.h"
 #include "common/types.h"
 #include "common/util.h"
 
-#include <cstddef>
 #include <stack>
 
 namespace checker {
@@ -38,12 +39,18 @@ namespace checker {
         bool check_variable_ref(common::VariableReference &name);
         bool check_function(common::Function &func);
         bool check_function_decl(common::Function &func);
+        bool check_struct_decl(const common::ParsedStructType &record, bool);
         bool check_branch(common::Branch &branch);
         bool check_variable(common::Variable &var);
         bool check_statement(common::Statement &smt);
         bool check_block(common::Block &block);
         bool check_loop(common::Loop &loop);
         bool check_index_expression(common::IndexExpression &expr);
+        bool check_struct(common::StructType &record,
+                          common::ParsedStructType &info,
+                          std::unordered_set<const common::StructType *>
+                              *in_progress = nullptr);
+        bool check_member_access(std::unique_ptr<common::Expression> &access);
 
         bool is_reachable() const {
             return reachability_stack_.top() == Reachability::REACHABLE;
@@ -80,8 +87,10 @@ namespace checker {
         common::Identifiers *identifiers_ = nullptr;
         std::unordered_map<common::BuiltinTypes, const common::Type *>
             builtin_types_;
+        std::unordered_map<common::StructType *, common::ParsedStructType *>
+            structs_;
         common::Error err_;
-        std::stack<size_t> err_positions_;
+        std::stack<common::TokenPos> err_positions_;
         std::stack<Reachability> reachability_stack_;
         common::FunctionID current_function_;
         uint64_t loop_cout_ = 0;

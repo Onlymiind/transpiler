@@ -3,12 +3,10 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <format>
 #include <functional>
-#include <sstream>
-#include <stdexcept>
 #include <string>
 #include <type_traits>
-#include <typeinfo>
 
 namespace common {
     template <typename T, size_t TAG, T DEFAULT>
@@ -43,6 +41,19 @@ namespace common {
         T val_ = DEFAULT;
     };
 
+    struct TokenPos {
+        size_t line = 0;
+        size_t symbol = 0;
+
+        constexpr auto operator<=>(TokenPos rhs) noexcept {
+            return line == rhs.line ? symbol <=> rhs.symbol : line <=> rhs.line;
+        }
+
+        [[nodiscard]] std::string to_string() {
+            return std::format("line {}, symbol {}", line, symbol);
+        }
+    };
+
     template <typename T>
     constexpr inline auto to_underlying(T val)
         requires std::is_enum_v<T>
@@ -57,7 +68,7 @@ namespace common {
 
     struct Error {
         std::string msg;
-        size_t pos = 0;
+        TokenPos pos;
 
         constexpr bool empty() const { return msg.empty(); }
     };

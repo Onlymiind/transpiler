@@ -7,136 +7,178 @@
 #include "common/statement.h"
 #include "common/types.h"
 #include "common/util.h"
+#include "vm/vm.h"
 
+#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <iomanip>
 #include <limits>
 #include <string>
+#include <vector>
 
 namespace codegen {
-    void Generator::codegen() {
+    bool Generator::codegen() {
         if (!body_ || !header_ || !mod_) {
-            return;
+            return false;
         }
 
         *header_ << g_prelude;
         codegen_decls();
         const auto &functions = ast_->functions();
         for (const common::Function &func : functions) {
-            codegen_function(func);
-            if (error_occured()) {
+            if (!codegen_function(func)) {
                 break;
             }
         }
         *body_ << g_main;
+        return true;
     }
 
-    void Generator::codegen_expression(const common::Expression &expr) {
+    bool Generator::codegen_expression(const common::Expression &expr,
+                                       bool want_ptr) {
         if (expr.is_error()) {
-            return;
+            return false;
         }
 
         switch (expr.kind()) {
         case common::ExpressionKind::BINARY:
-            codegen_binary(
+            return codegen_binary(
                 dynamic_cast<const common::BinaryExpression &>(expr));
-            break;
         case common::ExpressionKind::UNARY:
-            codegen_unary(dynamic_cast<const common::UnaryExpression &>(expr));
-            break;
+            return codegen_unary(dynamic_cast<const common::UnaryExpression &>(
+                                     expr),
+                                 want_ptr);
         case common::ExpressionKind::LITERAL:
-            codegen_literal(dynamic_cast<const common::Literal &>(expr));
-            break;
+            return codegen_literal(dynamic_cast<const common::Literal &>(expr));
         case common::ExpressionKind::CAST:
-            codegen_cast(dynamic_cast<const common::Cast &>(expr));
-            break;
+            return codegen_cast(dynamic_cast<const common::Cast &>(expr));
         case common::ExpressionKind::FUNCTION_CALL:
-            codegen_call(dynamic_cast<const common::FunctionCall &>(expr));
-            break;
+            return codegen_call(
+                dynamic_cast<const common::FunctionCall &>(expr));
         case common::ExpressionKind::VARIABLE_REF:
-            codegen_var_name(
-                dynamic_cast<const common::VariableReference &>(expr).name());
-            break;
+            return codegen_var_ref(dynamic_cast<
+                                       const common::VariableReference &>(expr),
+                                   want_ptr);
         case common::ExpressionKind::INDEX:
-            codegen_index_expression(
-                dynamic_cast<const common::IndexExpression &>(expr));
-            break;
-        default: report_error("unknown expression type"); break;
+            return codegen_index_expression(dynamic_cast<
+                                                const common::IndexExpression
+                                                    &>(expr),
+                                            want_ptr);
+        case common::ExpressionKind::MEMBER_ACCESS:
+            return codegen_member_access(dynamic_cast<const common::MemberAccess
+                                                          &>(expr),
+                                         want_ptr);
+        default: report_error("unknown expression type"); return false;
         }
     }
 
-    void Generator::codegen_literal(const common::Literal &lit) {
-        *body_ << '(';
-        codegen_type(lit.type());
-        *body_ << ')';
-
+    bool Generator::codegen_literal(const common::Literal &lit) {
+        uint64_t value = 0;
         if (const bool *b = lit.get<bool>(); b) {
-            *body_ << *b;
-        } else if (const uint64_t *uint = lit.get<uint64_t>(); uint) {
-            *body_ << *uint;
+            value = *b ? vm::VM::true_value : vm::VM::false_value;
+        } else if (const int64_t *integer = lit.get<int64_t>(); integer) {
+            value = static_cast<uint64_t>(*integer);
         } else if (const double *d = lit.get<double>(); d) {
-            int presicion = body_->precision();
-            *body_ << std::setprecision(std::numeric_limits<double>::digits10)
-                   << *d << std::setprecision(presicion);
+            value = std::bit_cast<uint64_t>(*d);
         } else if (lit.is<std::nullptr_t>()) {
-            *body_ << '0';
+            value = vm::VM::null_value;
         } else {
             report_error("unknown literal type");
+            return false;
         }
+
+        output.push_back(vm::Instruction{.op = vm::Op::PUSH, .arg = value});
+        return true;
     }
 
-    void Generator::codegen_unary(const common::UnaryExpression &expr) {
+    bool Generator::codegen_unary(const common::UnaryExpression &expr,
+                                  bool want_ptr) {
+        using enum common::UnaryOp;
+        if (!codegen_expression(*expr.expression(), expr.op() == ADDRESS_OF)) {
+            return false;
+        }
+
         switch (expr.op()) {
-        case common::UnaryOp::NOT: *body_ << '!'; break;
-        case common::UnaryOp::NEGATE: *body_ << '-'; break;
-        case common::UnaryOp::ADDRESS_OF: *body_ << '&'; break;
-        case common::UnaryOp::DEREFERENCE:
-            *body_ << '*';
-            *body_ << '(';
-            codegen_type(expr.expression()->type());
-            *body_ << ")check_pointer(";
-            codegen_expression(*expr.expression());
-            *body_ << ')';
-            return;
-        default: report_error("unknown unary operator"); break;
+        case NOT: [[fallthrough]];
+        case NEGATE: push_op(vm::Op::NOT); break;
+        case ADDRESS_OF: break;
+        case DEREFERENCE: {
+            if (want_ptr) {
+                break;
+            }
+
+            const common::PointerType
+                *typ = dynamic_cast<const common::PointerType *>(expr.type());
+            if (!(typ->pointee_type()->is_pointer() ||
+                  typ->pointee_type()->is_primitive())) {
+                break;
+            }
+
+            push_op(vm::Op::READ);
+            break;
+        }
+        default: report_error("unknown unary operator"); return false;
         }
 
-        codegen_expression(*expr.expression());
+        return false;
     }
 
-    void Generator::codegen_binary(const common::BinaryExpression &expr) {
-        *body_ << '(';
-        codegen_expression(*expr.lhs());
-        if (error_occured()) {
-            return;
+    void Generator::push_equals(const common::Type *type) {
+        if (type->is_pointer() || type->is_primitive()) {
+            push_op(vm::Op::EQUALS);
+        } else {
+            push_op(vm::Op::MEM_EQUALS);
         }
+    }
 
-        *body_ << ' ';
+    void Generator::push_assign(const common::Type *type) {
+        if (type->is_pointer() || type->is_primitive()) {
+            push_op(vm::Op::WRITE);
+        } else {
+            push_op(vm::Op::COPY);
+        }
+    }
+
+    bool Generator::codegen_binary(const common::BinaryExpression &expr) {
         using enum common::BinaryOp;
-        switch (expr.op()) {
-        case ADD: *body_ << '+'; break;
-        case SUB: *body_ << '-'; break;
-        case MUL: *body_ << '*'; break;
-        case DIV: *body_ << '/'; break;
-        case REMAINDER: *body_ << '%'; break;
-        case AND: *body_ << "&&"; break;
-        case OR: *body_ << "||"; break;
-        case EQUALS: *body_ << "=="; break;
-        case NOT_EQUALS: *body_ << "!="; break;
-        case LESS: *body_ << '<'; break;
-        case GREATER: *body_ << '>'; break;
-        case LESS_EQUALS: *body_ << "<="; break;
-        case GREATER_EQUALS: *body_ << ">="; break;
-        case ASSIGN: *body_ << '='; break;
-        case BITWISE_AND: *body_ << '&'; break;
-        case BITWISE_OR: *body_ << '|'; break;
-        default: report_error("unlnown binary operator"); return;
+        if (!codegen_expression(*expr.lhs(), expr.op() == ASSIGN)) {
+            return false;
+        } else if (!codegen_expression(*expr.rhs())) {
+            return false;
         }
-        *body_ << ' ';
 
-        codegen_expression(*expr.rhs());
-        *body_ << ')';
+        switch (expr.op()) {
+        case ADD: push_binop(expr, vm::Op::ADD_I, vm::Op::ADD_F); break;
+        case SUB: push_binop(expr, vm::Op::SUB_I, vm::Op::SUB_F); break;
+        case MUL: push_binop(expr, vm::Op::MUL_I, vm::Op::MUL_F); break;
+        case DIV: push_binop(expr, vm::Op::DIV_I, vm::Op::DIV_F); break;
+        case REMAINDER: push_op(vm::Op::REM); break;
+        case AND: push_op(vm::Op::BITWISE_AND); break;
+        case OR: push_op(vm::Op::BITWISE_OR); break;
+        case EQUALS: push_equals(expr.lhs()->type()); break;
+        case NOT_EQUALS:
+            push_equals(expr.lhs()->type());
+            push_op(vm::Op::NOT);
+            break;
+        case LESS: push_binop(expr, vm::Op::LESS_I, vm::Op::LESS_F); break;
+        case GREATER:
+            push_binop(expr, vm::Op::GREATER_I, vm::Op::GREATER_F);
+            break;
+        case LESS_EQUALS:
+            push_binop(expr, vm::Op::GREATER_I, vm::Op::GREATER_F);
+            push_op(vm::Op::NOT);
+            break;
+        case GREATER_EQUALS:
+            push_binop(expr, vm::Op::LESS_I, vm::Op::LESS_F);
+            push_op(vm::Op::NOT);
+            break;
+        case ASSIGN: push_assign(expr.lhs()->type()); break;
+        case BITWISE_AND: push_op(vm::Op::BITWISE_AND); break;
+        case BITWISE_OR: push_op(vm::Op::BITWISE_OR); break;
+        default: report_error("unlnown binary operator"); return false;
+        }
+        return true;
     }
 
     void Generator::codegen_cast(const common::Cast &cast) {
@@ -170,42 +212,55 @@ namespace codegen {
         *body_ << '\n';
     }
 
-    void Generator::codegen_call(const common::FunctionCall &call) {
-        codegen_func_name(call.name());
-        *body_ << '(';
+    bool Generator::codegen_call(const common::FunctionCall &call) {
         const auto &args = call.arguments();
-        for (size_t i = 0; i < args.size(); ++i) {
-            if (i != 0) {
-                *body_ << ", ";
+        for (const auto &arg : args) {
+            if (!codegen_expression(*arg)) {
+                return false;
             }
-            codegen_expression(*args[i]);
         }
-        *body_ << ')';
+
+        auto idx = get_func_idx(call.id());
+        if (!idx) {
+            return false;
+        }
+        push_op(vm::Op::PUSH, *idx);
+        push_op(vm::Op::CALL);
+        return false;
     }
 
-    void Generator::codegen_var(const common::Variable &var) {
-        codegen_type(var.type);
-        *body_ << ' ';
-        codegen_var_name(var.name);
-        if (!var.initial_value) {
-            // TODO: proper zero-initialization
-            if (var.type->kind() == common::TypeKind::ARRAY) {
-                *body_ << ";\n";
-                *body_ << "memset(";
-                codegen_var_name(var.name);
-                *body_ << ".data, 0, sizeof(";
-                codegen_type(var.type);
-                *body_ << "));";
-            } else {
-                *body_ << " = (";
-                codegen_type(var.type);
-                *body_ << ")0;";
-            }
-            return;
+    bool Generator::push_allocate(const common::Type *type) {
+        auto type_idx = get_type_info_idx(type);
+        if (!type_idx) {
+            return false;
         }
-        *body_ << " = ";
-        codegen_expression(*var.initial_value);
-        *body_ << ';';
+
+        if (type->kind() == common::TypeKind::ARRAY) {
+            const common::ArrayType
+                *arr = dynamic_cast<const common::ArrayType *>(type);
+            push_op(vm::Op::PUSH, arr->count());
+            push_op(vm::Op::ALLOCATE_ARRAY, *type_idx);
+        } else {
+            push_op(vm::Op::ALLOCATE, *type_idx);
+        }
+
+        return true;
+    }
+
+    bool Generator::codegen_var(const common::Variable &var) {
+        if (!push_allocate(var.type)) {
+            return false;
+        }
+
+        push_op(vm::Op::DUP);
+        if (var.initial_value) {
+            if (!codegen_expression(*var.initial_value)) {
+                return false;
+            }
+        }
+
+        push_assign(var.type);
+        return true;
     }
 
     void Generator::codegen_function_decl(const common::Function &func) {
@@ -230,70 +285,110 @@ namespace codegen {
         *body_ << ')';
     }
 
-    void Generator::codegen_branch(const common::Branch &branch) {
-        *body_ << "if(";
-        codegen_expression(*branch.predicate());
-        *body_ << ") ";
-        codegen_block(branch.true_branch());
-        if (!branch.false_branch() ||
-            branch.false_branch()->statements().empty()) {
-            return;
+    bool Generator::codegen_branch(const common::Branch &branch) {
+        if (!codegen_expression(*branch.predicate())) {
+            return false;
         }
-        *body_ << "else ";
-        const common::Block &false_branch = *branch.false_branch();
-        if (false_branch.statements().size() == 1 &&
-            false_branch.statements()[0]->kind() ==
-                common::StatementType::BRANCH) {
-            codegen_branch(dynamic_cast<const common::Branch &>(
-                *false_branch.statements()[0]));
-        } else {
-            codegen_block(false_branch);
+
+        push_op(vm::Op::NOT);
+        vm::Instruction &false_branch = push_op(vm::Op::BRANCH);
+
+        if (!codegen_block(branch.true_branch())) {
+            return false;
+        }
+
+        vm::Instruction *end = nullptr;
+
+        if (branch.false_branch()) {
+            end = &push_op(vm::Op::JUMP);
+        }
+
+        false_branch.arg = output.size();
+
+        if (branch.false_branch()) {
+            if (!codegen_block(*branch.false_branch())) {
+                return false;
+            }
+            // FIXME: this will jump out of bounds if the branch is the last
+            // statement in a fucntion
+            end->arg = output.size();
         }
     }
 
-    void Generator::codegen_block(const common::Block &block) {
-        *body_ << '{';
-        for (const auto &smt : block.statements()) {
-            *body_ << '\n';
-            codegen_statement(*smt);
-            if (!err_.empty()) {
-                return;
+    bool Generator::codegen_block(const common::Block &block) {
+        if (!block.reachable()) {
+            return true;
+        }
+
+        for (const auto &stmt : block.statements()) {
+            if (!stmt->reachable()) {
+                break;
+            }
+
+            if (!codegen_statement(*stmt)) {
+                return false;
             }
         }
-        if (!block.statements().empty()) {
-            *body_ << '\n';
-        }
-        *body_ << '}';
+
+        return true;
     }
 
-    void Generator::codegen_loop(const common::Loop &loop) {
-        *body_ << "for (";
+    bool Generator::codegen_loop(const common::Loop &loop) {
         if (loop.init()) {
-            codegen_statement(*loop.init());
-        } else {
-            *body_ << ';';
+            if (!codegen_statement(*loop.init())) {
+                return false;
+            }
         }
+
+        break_jumps.push_back(std::vector<vm::Instruction *>{});
+        continue_jumps.push_back(std::vector<vm::Instruction *>{});
+        uint64_t start = output.size();
         if (loop.condition()) {
-            codegen_expression(*loop.condition());
+            if (!codegen_expression(*loop.condition())) {
+                return false;
+            }
+            push_op(vm::Op::NOT);
+
+            break_jumps.back().push_back(&push_op(vm::Op::BRANCH));
         }
-        *body_ << ';';
+
+        if (!codegen_block(loop.body())) {
+            return false;
+        }
+
+        for (auto jump : continue_jumps.back()) {
+            jump->arg = output.size();
+        }
+        continue_jumps.pop_back();
+
         if (loop.iteration()) {
-            codegen_expression(*loop.iteration());
+            if (!codegen_expression(*loop.iteration())) {
+                return false;
+            }
         }
-        *body_ << ") ";
-        codegen_block(loop.body());
+
+        push_op(vm::Op::JUMP, start);
+        for (auto jump : break_jumps.back()) {
+            jump->arg = output.size();
+        }
+        break_jumps.pop_back();
+        return true;
     }
 
-    void Generator::codegen_statement(const common::Statement &smt) {
+    bool Generator::codegen_statement(const common::Statement &smt) {
         switch (smt.kind()) {
         case common::StatementType::RETURN: {
-            *body_ << "return ";
-            const common::Expression
-                *expr = dynamic_cast<const common::Return &>(smt).expression();
-            if (expr) {
-                codegen_expression(*expr);
+            const common::Return &ret = dynamic_cast<const common::Return &>(
+                smt);
+            if (ret.expression()) {
+                if (!codegen_expression(*ret.expression())) {
+                    return false;
+                }
+
+                push_op(vm::Op::RETURN, 1);
+            } else {
+                push_op(vm::Op::RETURN);
             }
-            *body_ << ';';
             break;
         }
         case common::StatementType::EXPRESSION: {
@@ -301,24 +396,31 @@ namespace codegen {
                 *expr = dynamic_cast<const common::ExpressionStatement &>(smt)
                             .expression();
             codegen_expression(*expr);
-            *body_ << ';';
+            if (expr->type()) {
+                push_op(vm::Op::POP);
+            }
             break;
         }
         case common::StatementType::VARIABLE:
-            codegen_var(*ast_->get_var(
+            return codegen_var(*ast_->get_var(
                 dynamic_cast<const common::VariableDeclatarion &>(smt)
                     .variable()));
-            break;
         case common::StatementType::BRANCH:
-            codegen_branch(dynamic_cast<const common::Branch &>(smt));
+            return codegen_branch(dynamic_cast<const common::Branch &>(smt));
             break;
         case common::StatementType::LOOP:
-            codegen_loop(dynamic_cast<const common::Loop &>(smt));
+            return codegen_loop(dynamic_cast<const common::Loop &>(smt));
             break;
-        case common::StatementType::BREAK: *body_ << "break;"; break;
-        case common::StatementType::CONTINUE: *body_ << "continue;"; break;
-        default: report_error("statement type not supported"); return;
+        case common::StatementType::BREAK:
+            break_jumps.back().push_back(&push_op(vm::Op::JUMP));
+            break;
+        case common::StatementType::CONTINUE:
+            continue_jumps.back().push_back(&push_op(vm::Op::JUMP));
+            break;
+        default: report_error("statement type not supported"); return false;
         }
+
+        return true;
     }
 
     void Generator::codegen_type(const common::Type *type, std::ostream *out) {

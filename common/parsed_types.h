@@ -2,10 +2,12 @@
 #define COMPILER_V2_COMMON_PARSED_TYPES_HDR_
 
 #include "common/base_classes.h"
+#include "common/declarations.h"
 #include "common/util.h"
 
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 namespace common {
 
@@ -55,21 +57,25 @@ namespace common {
 
     class ParsedStructType final : public ParsedType {
       public:
-        ParsedStructType(IdentifierID name, std::vector<VariableID> fields)
-            : ParsedType(static_kind(), 0), name_(name), fields_(fields) {}
+        ParsedStructType(IdentifierID name, std::vector<Variable> &&fields,
+                         TokenPos pos)
+            : ParsedType(static_kind(), 0), name_(name),
+              fields_(std::move(fields)), pos_(pos) {}
 
         COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(ParsedStructType,
                                                      ParsedTypeKind,
                                                      ParsedTypeKind::STRUCT,
                                                      delete)
         IdentifierID name() const noexcept { return name_; }
-        const std::vector<VariableID> &fields() const noexcept {
-            return fields_;
-        }
+        std::vector<Variable> &fields() noexcept { return fields_; }
+        const std::vector<Variable> &fields() const noexcept { return fields_; }
+
+        TokenPos pos() const noexcept { return pos_; }
 
       private:
         IdentifierID name_;
-        std::vector<VariableID> fields_;
+        std::vector<Variable> fields_;
+        TokenPos pos_;
     };
 
     class ParsedErrorType final : public ParsedType {

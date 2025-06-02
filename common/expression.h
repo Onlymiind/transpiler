@@ -106,14 +106,15 @@ namespace common {
 
     class ErrorExpression final : public Expression {
       public:
-        ErrorExpression(size_t pos) : Expression(ExpressionKind::ERROR, pos) {}
+        ErrorExpression(TokenPos pos)
+            : Expression(ExpressionKind::ERROR, pos) {}
         ~ErrorExpression() override = default;
     };
 
     class UnaryExpression final : public Expression {
       public:
         UnaryExpression(UnaryOp op, std::unique_ptr<Expression> &&expr,
-                        size_t pos)
+                        TokenPos pos)
             : Expression(static_kind(), pos), op_(op), expr_(std::move(expr)) {}
 
         COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(UnaryExpression,
@@ -137,7 +138,7 @@ namespace common {
     class BinaryExpression final : public Expression {
       public:
         BinaryExpression(BinaryOp op, std::unique_ptr<Expression> &&lhs,
-                         std::unique_ptr<Expression> &&rhs, size_t pos)
+                         std::unique_ptr<Expression> &&rhs, TokenPos pos)
             : Expression(static_kind(), pos), op_(op), lhs_(std::move(lhs)),
               rhs_(std::move(rhs)) {}
 
@@ -169,7 +170,7 @@ namespace common {
       public:
         FunctionCall(IdentifierID name,
                      std::vector<std::unique_ptr<Expression>> &&args,
-                     size_t pos)
+                     TokenPos pos)
             : Expression(static_kind(), pos), name_(name),
               args_(std::move(args)) {}
 
@@ -197,7 +198,7 @@ namespace common {
     class Cast final : public Expression {
       public:
         Cast(std::unique_ptr<ParsedType> &&to,
-             std::unique_ptr<Expression> &&from, size_t pos)
+             std::unique_ptr<Expression> &&from, TokenPos pos)
             : Expression(static_kind(), pos), to_(std::move(to)),
               from_(std::move(from)) {}
         COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(Cast, ExpressionKind,
@@ -220,7 +221,7 @@ namespace common {
 
     class VariableReference final : public Expression {
       public:
-        VariableReference(IdentifierID name, size_t pos)
+        VariableReference(IdentifierID name, TokenPos pos)
             : Expression(static_kind(), pos), name_(name) {}
         COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(
             VariableReference, ExpressionKind, ExpressionKind::VARIABLE_REF,
@@ -236,11 +237,11 @@ namespace common {
     };
 
     class Literal final : public Expression {
-        using Storage = std::variant<bool, uint64_t, double, std::nullptr_t>;
+        using Storage = std::variant<bool, int64_t, double, std::nullptr_t>;
 
       public:
         template <typename T>
-        Literal(T value, size_t pos)
+        Literal(T value, TokenPos pos)
             requires std::is_constructible_v<Storage, T>
             : Expression(static_kind(), pos), value_(value) {}
         COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(Literal, ExpressionKind,
@@ -298,7 +299,7 @@ namespace common {
     class IndexExpression final : public Expression {
       public:
         IndexExpression(std::unique_ptr<Expression> &&container,
-                        std::unique_ptr<Expression> &&index, size_t pos)
+                        std::unique_ptr<Expression> &&index, TokenPos pos)
             : Expression(static_kind(), pos), container_(std::move(container)),
               index_(std::move(index)) {}
         COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(IndexExpression,
@@ -309,11 +310,42 @@ namespace common {
         std::unique_ptr<Expression> &container() noexcept { return container_; }
         std::unique_ptr<Expression> &index() noexcept { return index_; }
 
-        const Expression* container() const noexcept { return container_.get(); }
-        const Expression* index() const noexcept { return index_.get(); }
+        const Expression *container() const noexcept {
+            return container_.get();
+        }
+        const Expression *index() const noexcept { return index_.get(); }
+
       private:
         std::unique_ptr<Expression> container_;
         std::unique_ptr<Expression> index_;
+    };
+
+    class MemberAccess final : public Expression {
+      public:
+        MemberAccess(std::unique_ptr<Expression> &&record,
+                     std::unique_ptr<Expression> &&member, TokenPos pos)
+            : Expression(static_kind(), pos), record_(std::move(record)),
+              member_(std::move(member)) {}
+
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(
+            MemberAccess, ExpressionKind, ExpressionKind::MEMBER_ACCESS, delete)
+
+        std::unique_ptr<Expression> &record() noexcept { return record_; }
+        void record(std::unique_ptr<Expression> &&record) noexcept {
+            record_ = std::move(record);
+        }
+        std::unique_ptr<Expression> &member() noexcept { return member_; }
+
+        const Expression *record() const noexcept { return record_.get(); }
+        const Expression *member() const noexcept { return member_.get(); }
+
+        IdentifierID member_name() const noexcept { return member_name_; }
+        void member_name(IdentifierID name) noexcept { member_name_ = name; }
+
+      private:
+        std::unique_ptr<Expression> record_;
+        std::unique_ptr<Expression> member_;
+        IdentifierID member_name_;
     };
 
 } // namespace common

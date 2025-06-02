@@ -4,7 +4,6 @@
 #include "common/ast.h"
 #include "common/base_classes.h"
 #include "common/declarations.h"
-#include "common/expression.h"
 #include "common/statement.h"
 #include "common/token.h"
 #include "common/util.h"
@@ -35,7 +34,9 @@ namespace parser {
         std::unique_ptr<common::Expression> parse_identifier_ref();
         std::unique_ptr<common::Expression> parse_cast();
         std::unique_ptr<common::Expression>
-        parse_function_call(common::IdentifierID name = {}, size_t pos = 0);
+        parse_function_call(common::IdentifierID name = {},
+                            common::TokenPos pos = {});
+        std::unique_ptr<common::Expression> parse_member_access();
 
         void parse_function();
         void parse_global_variabe();
@@ -50,9 +51,9 @@ namespace parser {
         common::VariableID parse_func_param();
         std::unique_ptr<common::ParsedType> parse_type();
         std::unique_ptr<common::ParsedType> parse_array_type();
-        std::unique_ptr<common::ParsedType> parse_struct_decl();
+        void parse_struct_decl();
 
-        common::VariableID parse_field();
+        common::Variable parse_field();
 
         common::Variable parse_variable();
 

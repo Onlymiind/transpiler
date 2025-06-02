@@ -2,9 +2,11 @@
 #define COMPILER_V2_COMMON_TYPES_HDR_
 
 #include "common/base_classes.h"
+#include "common/declarations.h"
 #include "common/util.h"
 
 #include <cstddef>
+#include <unordered_map>
 
 namespace common {
     enum class BuiltinTypes {
@@ -54,7 +56,7 @@ namespace common {
     // level)
     class PointerType final : public Type {
       public:
-        PointerType(const Type &pointee)
+        explicit PointerType(const Type &pointee)
             : Type(static_kind(), TypeTraits::DEREFERENCABLE, g_pointer_size),
               pointee_type_(&pointee) {}
 
@@ -70,6 +72,38 @@ namespace common {
         PointerType() : Type(static_kind(), TypeTraits::NONE, g_pointer_size) {}
 
         const Type *pointee_type_ = nullptr;
+    };
+
+    class StructType final : public Type {
+      public:
+        StructType(IdentifierID name)
+            : Type(static_kind(), TypeTraits::NONE, 0) {}
+
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(StructType, TypeKind,
+                                                     TypeKind::STRUCT, delete);
+
+        bool add_fields(std::vector<Variable> &&fields);
+
+        bool is_defined() const noexcept { return is_defined_; }
+
+        IdentifierID name() const noexcept { return name_; }
+        const std::vector<Variable> &fields() const noexcept {
+            return fields_;
+        };
+
+        bool has_field(IdentifierID name) const {
+            return name_to_field_.contains(name);
+        }
+        const Variable *get_field(IdentifierID name) const {
+            auto it = name_to_field_.find(name);
+            return it == name_to_field_.end() ? nullptr : it->second;
+        }
+
+      private:
+        IdentifierID name_;
+        std::vector<Variable> fields_;
+        std::unordered_map<IdentifierID, const Variable *> name_to_field_;
+        bool is_defined_ = false;
     };
 
 } // namespace common

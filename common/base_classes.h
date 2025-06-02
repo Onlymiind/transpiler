@@ -57,6 +57,7 @@ namespace common {
         FUNCTION_CALL,
         VARIABLE_REF,
         INDEX,
+        MEMBER_ACCESS,
 
         ERROR = 0xff,
     };
@@ -105,6 +106,8 @@ namespace common {
         size_t size() const noexcept { return size_; }
 
       protected:
+        void set_size(size_t size) noexcept { size_ = size; }
+
         Type(TypeKind kind, TypeTraits traits, size_t size)
             : kind_(kind), traits_(traits), size_(size) {}
         Type(const Type &) = default;
@@ -128,14 +131,15 @@ namespace common {
         }
 
         ExpressionKind kind() const noexcept { return kind_; }
-        size_t pos() const noexcept { return pos_; }
+        TokenPos pos() const noexcept { return pos_; }
         const Type *type() const noexcept { return type_; }
         void type(const Type *type) noexcept { type_ = type; }
 
         bool is_lvalue() const;
 
       protected:
-        Expression(ExpressionKind kind, size_t pos) : kind_(kind), pos_(pos) {}
+        Expression(ExpressionKind kind, TokenPos pos)
+            : kind_(kind), pos_(pos) {}
         Expression(const Expression &) = default;
         Expression(Expression &&) = default;
         Expression &operator=(const Expression &) = default;
@@ -143,7 +147,7 @@ namespace common {
 
       private:
         ExpressionKind kind_ = ExpressionKind::ERROR;
-        size_t pos_ = 1;
+        TokenPos pos_;
         const Type *type_ = nullptr;
     };
 
@@ -169,12 +173,12 @@ namespace common {
 
         bool is_error() const noexcept { return kind_ == StatementType::ERROR; }
         StatementType kind() const noexcept { return kind_; }
-        size_t pos() const noexcept { return pos_; }
+        TokenPos pos() const noexcept { return pos_; }
         bool reachable() const noexcept { return is_reachable_; }
         void reachable(bool reachable) noexcept { is_reachable_ = reachable; }
 
       protected:
-        Statement(StatementType kind, size_t pos, bool reachable)
+        Statement(StatementType kind, TokenPos pos, bool reachable)
             : kind_(kind), pos_(pos), is_reachable_(reachable) {}
         Statement(const Statement &) = default;
         Statement(Statement &&) = default;
@@ -184,7 +188,7 @@ namespace common {
       private:
         StatementType kind_{};
         bool is_reachable_ = true;
-        size_t pos_ = 1;
+        TokenPos pos_;
     };
 
     enum class DeclaredTypeKind : uint8_t {
@@ -193,11 +197,11 @@ namespace common {
     class DeclaredType {
       public:
         DeclaredTypeKind kind() const noexcept { return kind_; }
-        size_t pos() const noexcept { return pos_; }
+        TokenPos pos() const noexcept { return pos_; }
         IdentifierID name() const noexcept { return name_; }
 
       protected:
-        DeclaredType(IdentifierID name, DeclaredTypeKind kind, size_t pos)
+        DeclaredType(IdentifierID name, DeclaredTypeKind kind, TokenPos pos)
             : kind_(kind), name_(name), pos_(pos) {}
         ~DeclaredType() = default;
         DeclaredType(const DeclaredType &) = delete;
@@ -208,7 +212,7 @@ namespace common {
       private:
         DeclaredTypeKind kind_{};
         IdentifierID name_{};
-        size_t pos_ = 1;
+        TokenPos pos_;
     };
 
     enum class DeclarationKind : uint8_t { VARIABLE, FUNCTION, STRUCT };
@@ -216,11 +220,11 @@ namespace common {
     class Declaration {
       public:
         DeclarationKind kind() const noexcept { return kind_; }
-        size_t pos() const noexcept { return pos_; }
+        TokenPos pos() const noexcept { return pos_; }
         IdentifierID name() const noexcept { return name_; }
 
       protected:
-        Declaration(IdentifierID name, DeclarationKind kind, size_t pos)
+        Declaration(IdentifierID name, DeclarationKind kind, TokenPos pos)
             : kind_(kind), name_(name), pos_(pos) {}
         ~Declaration() = default;
         Declaration(const Declaration &) = delete;
@@ -230,7 +234,7 @@ namespace common {
 
       private:
         DeclarationKind kind_{};
-        size_t pos_ = 1;
+        TokenPos pos_;
         IdentifierID name_{};
     };
 

@@ -1,4 +1,4 @@
-var a 64;
+var a f64;
 
 func main() {
     var a f64;

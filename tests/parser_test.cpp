@@ -40,7 +40,7 @@ class PolishNotationParser {
 
     std::unique_ptr<common::Expression> parse_expression() {
         if (auto op = common::to_binary_op(next().type()); op) {
-            size_t pos = next().pos();
+            common::TokenPos pos = next().pos();
             consume();
             auto lhs = parse_expression();
             auto rhs = parse_expression();
@@ -70,7 +70,7 @@ class PolishNotationParser {
             consume();
             return parse_unary_expression();
         case common::TokenType::IDENTIFIER: {
-            size_t pos = next().pos();
+            common::TokenPos pos = next().pos();
             common::IdentifierID to_name = *next().get<common::IdentifierID>();
             consume();
             auto from = parse_expression();
@@ -80,7 +80,7 @@ class PolishNotationParser {
                               std::move(from), pos);
         }
         case common::TokenType::LEFT_BRACKET: {
-            size_t pos = next().pos();
+            common::TokenPos pos = next().pos();
             consume();
             auto index = parse_expression();
             auto container = parse_expression();
@@ -94,7 +94,7 @@ class PolishNotationParser {
         return nullptr;
     }
     std::unique_ptr<common::Expression> parse_unary_expression() {
-        size_t pos = next().pos();
+        common::TokenPos pos = next().pos();
         auto op = common::to_unary_op(next().type());
         consume();
         if (!op) {

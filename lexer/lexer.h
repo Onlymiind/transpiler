@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <istream>
 #include <optional>
+#include <stack>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -21,7 +22,7 @@ namespace lexer {
     class Lexer {
       public:
         Lexer() = default;
-        Lexer(std::istream &file) : file_(&file) {}
+        Lexer(std::istream &file) : file_(&file) { current_pos_.push(0); }
 
         void set_file(std::istream &file) { file_ = &file; }
 
@@ -43,7 +44,7 @@ namespace lexer {
 
         void report_error(std::string_view error) {
             err_.msg = error;
-            err_.pos = current_pos_;
+            err_.pos = common::TokenPos{current_line_, current_pos_.top()};
         }
 
         const common::Error &get_error() const { return err_; }
@@ -53,7 +54,8 @@ namespace lexer {
         std::istream *file_ = nullptr;
 
         common::Error err_;
-        size_t current_pos_ = 1;
+        std::stack<size_t> current_pos_;
+        size_t current_line_ = 1;
     };
 } // namespace lexer
 
