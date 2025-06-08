@@ -17,6 +17,8 @@ namespace common {
         FLOAT,
         BOOL,
         NULLPTR,
+        STRING,
+        CHAR,
 
         // operators
         OP_START,
@@ -38,10 +40,15 @@ namespace common {
         ASSIGN,
         BITWISE_OR,
         BITWISE_AND,
+        XOR,
+        SLA,
+        SRA,
+        SRL,
 
         BINARY_OP_END,
 
         NOT,
+        INV,
         OP_END,
 
         // keywords
@@ -55,6 +62,7 @@ namespace common {
         CONTINUE,
         CAST,
         STRUCT,
+        EXTERNAL,
 
         // identifier
         IDENTIFIER,
@@ -91,7 +99,8 @@ namespace common {
 
     constexpr inline bool is_unary_op(TokenType type) noexcept {
         return type == TokenType::SUB || type == TokenType::NOT ||
-               type == TokenType::BITWISE_AND || type == TokenType::MUL;
+               type == TokenType::BITWISE_AND || type == TokenType::MUL ||
+               type == TokenType::INV;
     }
 
     class Token {
@@ -150,17 +159,19 @@ namespace common {
       private:
         TokenType type_ = TokenType::ERROR;
         union {
-            uint64_t integer = 0;
+            int64_t integer = 0;
             double floating;
             IdentifierID identifier;
+            StringID str;
             bool boolean;
+            char c;
         };
 
         TokenPos pos_;
     };
 
     template <>
-    inline Token Token::with_value(uint64_t value, TokenPos pos) noexcept {
+    inline Token Token::with_value(int64_t value, TokenPos pos) noexcept {
         Token result;
         result.type_ = TokenType::INTEGER;
         result.integer = value;
@@ -196,12 +207,40 @@ namespace common {
     }
 
     template <>
+    inline Token Token::with_value(StringID value, TokenPos pos) noexcept {
+        Token result;
+        result.type_ = TokenType::STRING;
+        result.str = value;
+        result.pos_ = pos;
+        return result;
+    }
+
+    template <>
+    inline Token Token::with_value(char value, TokenPos pos) noexcept {
+        Token result;
+        result.type_ = TokenType::CHAR;
+        result.c = value;
+        result.pos_ = pos;
+        return result;
+    }
+
+    template <>
     inline Token Token::with_value(std::nullptr_t value,
                                    TokenPos pos) noexcept {
         Token result;
         result.type_ = TokenType::NULLPTR;
         result.pos_ = pos;
         return result;
+    }
+
+    template <>
+    constexpr inline char *Token::get<char>() noexcept {
+        return type_ != TokenType::CHAR ? nullptr : &c;
+    }
+
+    template <>
+    constexpr inline const char *Token::get<char>() const noexcept {
+        return type_ != TokenType::CHAR ? nullptr : &c;
     }
 
     template <>
@@ -215,12 +254,12 @@ namespace common {
     }
 
     template <>
-    constexpr inline uint64_t *Token::get<uint64_t>() noexcept {
+    constexpr inline int64_t *Token::get<int64_t>() noexcept {
         return type_ != TokenType::INTEGER ? nullptr : &integer;
     }
 
     template <>
-    constexpr inline const uint64_t *Token::get<uint64_t>() const noexcept {
+    constexpr inline const int64_t *Token::get<int64_t>() const noexcept {
         return type_ != TokenType::INTEGER ? nullptr : &integer;
     }
 
@@ -243,6 +282,16 @@ namespace common {
     constexpr inline const IdentifierID *
     Token::get<IdentifierID>() const noexcept {
         return type_ != TokenType::IDENTIFIER ? nullptr : &identifier;
+    }
+
+    template <>
+    constexpr inline StringID *Token::get<StringID>() noexcept {
+        return type_ != TokenType::STRING ? nullptr : &str;
+    }
+
+    template <>
+    constexpr inline const StringID *Token::get<StringID>() const noexcept {
+        return type_ != TokenType::STRING ? nullptr : &str;
     }
 
     class Tokens : private std::span<const Token> {

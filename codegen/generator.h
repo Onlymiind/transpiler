@@ -13,52 +13,17 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <ios>
-#include <ostream>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
 
 namespace codegen {
-    constexpr std::string_view g_prelude = R"(#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#ifndef __cplusplus
-#if __STDC_VERSION__ >= 199901L
-#include <stdbool.h>
-#else
-typedef uint8_t bool;
-#endif
-#endif
-typedef uint64_t u64;
-typedef double f64;
-
-u64 check_index(u64 idx, u64 size) {
-    if(idx >= size) {
-        printf("index out of bounds\n");
-        exit(1);
-    }
-    return idx;
-}
-void* check_pointer(void* ptr) {
-    if(!ptr) {
-        printf("null pointer dereference\n");
-        exit(1);
-    }
-    return ptr;
-}
-)";
-
-    constexpr std::string_view g_main = "int main(void) {\n"
-                                        "func_main();\n"
-                                        "}\n";
 
     class Generator {
       public:
-        Generator(std::ostream &body, std::ostream &header, common::Module &mod,
-                  common::AST &ast, common::Identifiers &identifiers)
-            : body_(&body), header_(&header), mod_(&mod), ast_(&ast),
+        Generator(common::Global &global, common::Module &mod, common::AST &ast,
+                  common::Identifiers &identifiers)
+            : global_(&global), mod_(&mod), ast_(&ast),
               identifiers_(&identifiers) {}
 
         bool codegen();
@@ -98,37 +63,22 @@ void* check_pointer(void* ptr) {
 
         bool codegen_loop(const common::Loop &loop);
 
-        bool codegen_type(const common::Type *type,
-                          std::ostream *out = nullptr);
-
-        bool codegen_function_decl(const common::Function &func);
-
-        bool codegen_decls();
-
-        bool codegen_type_decl(const common::Type *type);
-        common::IdentifierID generate_type_name(const common::Type *type);
-
-        bool codegen_var_name(common::IdentifierID name);
-        bool codegen_func_name(common::IdentifierID name);
-
         void report_error(std::string_view err) { err_ = err; }
         std::string_view get_error() const { return err_; }
 
         bool error_occured() { return !err_.empty(); }
 
-        void push_binop(const common::BinaryExpression &expr, vm::Op int_op,
-                        vm::Op float_op);
+        void push_arithmetic_op(const common::Type *typ, vm::Op int_op,
+                                vm::Op float_op);
         vm::Instruction &push_op(vm::Op op, uint64_t arg = 0) {
             return output.emplace_back(vm::Instruction{.op = op, .arg = arg});
         }
         void push_equals(const common::Type *type);
         void push_assign(const common::Type *type);
+        void push_read(const common::Type *type);
         bool push_allocate(const common::Type *type);
 
-        std::optional<uint64_t> get_func_idx(common::FunctionID name);
-        std::optional<uint64_t> get_local_idx(common::VariableID var);
-        std::optional<uint64_t> get_global_idx(common::VariableID var);
-        std::optional<uint64_t> get_type_info_idx(const common::Type *typ);
+        void push_truncate(size_t bytes);
 
       private:
         std::vector<vm::Instruction> output;
@@ -137,14 +87,21 @@ void* check_pointer(void* ptr) {
         std::vector<std::vector<vm::Instruction *>> break_jumps;
         std::vector<std::vector<vm::Instruction *>> continue_jumps;
 
+        vm::Program program;
+        std::unordered_map<common::FunctionID, uint64_t> func_to_idx;
+        std::vector<common::FunctionID> func_ids;
+
+        std::unordered_map<common::VariableID, uint64_t> var_to_idx;
+
+        std::unordered_map<const common::Type *, uint64_t> type_to_idx;
+
+        common::Global *global_ = nullptr;
         common::Module *mod_ = nullptr;
         common::AST *ast_ = nullptr;
         common::Identifiers *identifiers_ = nullptr;
         std::string_view err_;
-        std::ostream *body_ = nullptr;
-        std::ostream *header_ = nullptr;
-        std::unordered_map<const common::Type *, common::IdentifierID>
-            type_names_;
+
+        common::IdentifierID append_name;
     };
 } // namespace codegen
 

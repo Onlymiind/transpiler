@@ -59,7 +59,7 @@ class PolishNotationParser {
 
         switch (next().type()) {
         case common::TokenType::BOOL: return make_literal_expr(bool{});
-        case common::TokenType::INTEGER: return make_literal_expr(uint64_t{});
+        case common::TokenType::INTEGER: return make_literal_expr(int64_t{});
         case common::TokenType::FLOAT: return make_literal_expr(double{});
         case common::TokenType::NULLPTR: {
             common::Literal result{nullptr, next().pos()};

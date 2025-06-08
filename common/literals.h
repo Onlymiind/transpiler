@@ -28,6 +28,15 @@ namespace common {
             return it->second;
         }
 
+        StringID add_string(std::string str) {
+            auto [it, inserted] = string_to_id_.try_emplace(std::move(str),
+                                                            strings_.size());
+            if (inserted) {
+                strings_.push_back(&it->first);
+            }
+            return it->second;
+        }
+
         const std::string *get(IdentifierID id) const {
             return id == IdentifierID{} || *id >= id_to_name_.size()
                        ? nullptr
@@ -39,9 +48,21 @@ namespace common {
             return it == name_to_id_.end() ? IdentifierID{} : it->second;
         }
 
+        const std::string *get(StringID id) const {
+            return id == StringID{} || *id >= strings_.size() ? nullptr
+                                                              : strings_[*id];
+        }
+
+        const std::vector<const std::string *> &strings() const noexcept {
+            return strings_;
+        }
+
       private:
         std::vector<const std::string *> id_to_name_;
         std::unordered_map<std::string, IdentifierID> name_to_id_;
+
+        std::vector<const std::string *> strings_;
+        std::unordered_map<std::string, StringID> string_to_id_;
     };
 } // namespace common
 

@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <string>
@@ -44,22 +45,30 @@ namespace checker {
                      bool do_constant_folding)
         : ast_(&ast), identifiers_(&identifiers),
           do_constant_folding_(do_constant_folding) {
-        std::vector<common::PrimitiveType>
-            primitives{common::PrimitiveType(identifiers_->add("u64"),
-                                             common::BuiltinTypes::UINT,
-                                             common::TypeTraits::INTEGER, 8),
-                       common::PrimitiveType(identifiers_->add("f64"),
-                                             common::BuiltinTypes::FLOAT,
-                                             common::TypeTraits::FLOATING_POINT,
-                                             8),
-                       common::PrimitiveType(identifiers_->add("bool"),
-                                             common::BuiltinTypes::BOOL,
-                                             common::TypeTraits::BOOLEAN, 1)};
+        std::vector<common::PrimitiveType> primitives{
+            common::PrimitiveType(identifiers_->add("int"),
+                                  common::BuiltinTypes::INT,
+                                  common::TypeTraits::INTEGER, 8),
+            common::PrimitiveType(identifiers_->add("float"),
+                                  common::BuiltinTypes::FLOAT,
+                                  common::TypeTraits::FLOATING_POINT, 8),
+            common::PrimitiveType(identifiers_->add("bool"),
+                                  common::BuiltinTypes::BOOL,
+                                  common::TypeTraits::BOOLEAN, 1),
+            common::PrimitiveType(identifiers_->add("char"),
+                                  common::BuiltinTypes::CHAR,
+                                  common::TypeTraits::INTEGER, 1),
+        };
         global_types_ = std::make_unique<common::Global>(std::move(primitives));
         for (const auto &[name, type] : global_types_->primitives()) {
-            module_.add_type(name, &type);
-            builtin_types_[type.type()] = &type;
+            module_.add_type(name, type);
+            builtin_types_[type->type()] = type;
         }
+
+        cap_name_ = identifiers_->add("cap");
+        len_name_ = identifiers_->add("len");
+        data_name_ = identifiers_->add("data");
+        append_name_ = identifiers_->add("append");
     }
 
     void Checker::add_declarations() {
@@ -116,19 +125,11 @@ namespace checker {
             if (!check_function(func)) {
                 return;
             }
-
-            if (*identifiers_->get(func.name) == "main") {
-                module_.entrypoint(func.id);
-            }
-        }
-
-        if (module_.entrypoint() == common::FunctionID{}) {
-            ERROR_GUARD(common::TokenPos{});
-            report_error("entrypoint not declared");
         }
     }
 
-    bool Checker::check_expression(std::unique_ptr<common::Expression> &expr) {
+    bool Checker::check_expression(std::unique_ptr<common::Expression> &expr,
+                                   bool allow_assing) {
         if (!expr) {
             return false;
         }
@@ -155,7 +156,7 @@ namespace checker {
         case common::ExpressionKind::BINARY: {
             common::BinaryExpression
                 &binary = dynamic_cast<common::BinaryExpression &>(*expr);
-            result = check_binary_expression(binary);
+            result = check_binary_expression(binary, allow_assing);
             if (result && do_constant_folding_) {
                 if (auto computed = try_compute(binary)) {
                     computed->type(expr->type());
@@ -208,11 +209,20 @@ namespace checker {
             }
             expr.type(expr.expression()->type());
             break;
+        case common::UnaryOp::INVERT:
+            if (!expr.expression()->type()->has_trait(
+                    common::TypeTraits::INTEGER)) {
+                report_error(
+                    "bitwise operations are defined only for integers");
+                return false;
+            }
+            expr.type(expr.expression()->type());
+            break;
         case common::UnaryOp::NEGATE:
             // no signed integer type for now
             if (!expr.expression()->type()->has_trait(
-                    common::TypeTraits::FLOATING_POINT)) {
-                report_error("unary '-' is defined only for floats");
+                    common::TypeTraits::NUMERIC)) {
+                report_error("unary '-' is defined only for numbers");
                 return false;
             }
             expr.type(expr.expression()->type());
@@ -245,7 +255,8 @@ namespace checker {
         return true;
     }
 
-    bool Checker::check_binary_expression(common::BinaryExpression &expr) {
+    bool Checker::check_binary_expression(common::BinaryExpression &expr,
+                                          bool allow_assing) {
         if (!expr.lhs() || expr.lhs()->is_error() || !expr.rhs() ||
             expr.rhs()->is_error()) {
             return false;
@@ -258,12 +269,16 @@ namespace checker {
             return false;
         }
 
-        const common::Type *lhs = expr.lhs()->type();
-        const common::Type *rhs = expr.rhs()->type();
-        if (!lhs || !rhs) {
-            report_error("assignment doesn't return a value");
+        if (!allow_assing && expr.op() == common::BinaryOp::ASSIGN) {
+            report_error("assignment doesn't return a value and cannot be used "
+                         "in expressions");
             return false;
         }
+
+        // Note that `allow_assign` isn't passed further, so lhs and rhs are
+        // non-null ath this point
+        const common::Type *lhs = expr.lhs()->type();
+        const common::Type *rhs = expr.rhs()->type();
 
         if (lhs->is_pointer() && rhs->is_pointer()) {
             if (dynamic_cast<const common::PointerType &>(*lhs).is_nullptr()) {
@@ -357,9 +372,9 @@ namespace checker {
             return true;
         }
 
-        if (cast.type()->kind() == common::TypeKind::ARRAY ||
-            cast.from()->type()->kind() == common::TypeKind::ARRAY) {
-            report_error("converting array types is not allowed");
+        if (!cast.type()->is_pointer() && !cast.type()->is_primitive()) {
+            report_error(
+                "conversion between non-primitive types is not allowed");
             return false;
         }
 
@@ -388,12 +403,16 @@ namespace checker {
     bool Checker::set_literal_type(common::Literal &lit) {
         if (lit.is<bool>()) {
             lit.type(builtin_types_.at(common::BuiltinTypes::BOOL));
-        } else if (lit.is<uint64_t>()) {
-            lit.type(builtin_types_.at(common::BuiltinTypes::UINT));
+        } else if (lit.is<int64_t>()) {
+            lit.type(builtin_types_.at(common::BuiltinTypes::INT));
         } else if (lit.is<double>()) {
             lit.type(builtin_types_.at(common::BuiltinTypes::FLOAT));
         } else if (lit.is<std::nullptr_t>()) {
             lit.type(global_types_->get_pointer(nullptr));
+        } else if (lit.is<char>()) {
+            lit.type(builtin_types_.at(common::BuiltinTypes::CHAR));
+        } else if (lit.is<common::StringID>()) {
+            lit.type(get_slice(builtin_types_.at(common::BuiltinTypes::CHAR)));
         } else {
             report_error("unknown literal type");
             return false;
@@ -401,7 +420,54 @@ namespace checker {
         return true;
     }
 
+    const common::Type *Checker::get_slice(const common::Type *element_type) {
+        return global_types_->get_slice(builtin_types_.at(
+                                            common::BuiltinTypes::INT),
+                                        element_type, cap_name_, len_name_,
+                                        data_name_);
+    }
+
     bool Checker::check_function_call(common::FunctionCall &call) {
+        ERROR_GUARD(call.pos());
+        if (call.name() == append_name_) {
+            auto &args = call.arguments();
+            if (args.size() < 2) {
+                report_error("'append' accepts at least 2 arguments");
+                return false;
+            }
+
+            if (!check_expression(args[0])) {
+                return false;
+            }
+            if (!args[0]->type()->is_slice()) {
+                ERROR_GUARD(args[0]->pos());
+                report_error("first argumant to 'append' must be a slice");
+                return false;
+            }
+
+            const common::StructType
+                *slice = dynamic_cast<const common::StructType *>(
+                    args[0]->type());
+            const common::Type
+                *element_type = dynamic_cast<const common::PointerType *>(
+                                    slice->get_field(data_name_)->type)
+                                    ->pointee_type();
+
+            for (size_t i = 1; i < args.size(); ++i) {
+                ERROR_GUARD(args[i]->pos());
+                if (!check_expression(args[i])) {
+                    return false;
+                }
+
+                if (args[i]->type() != element_type) {
+                    report_error("'append' argument type mismatch");
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         common::FunctionID func_id = module_.get_function(call.name());
         if (func_id == common::FunctionID{}) {
             report_error(*identifiers_->get(call.name()) +
@@ -411,13 +477,9 @@ namespace checker {
 
         common::Function &func = *ast_->get_function(func_id);
         call.id(func.id);
-        if (func.decl_only) {
+        if (func.decl_only && !func.is_native) {
             // function declared, but not defined
             report_error("function not defined");
-            return false;
-        }
-        if (*identifiers_->get(func.name) == "main") {
-            report_error("main() must not be called");
             return false;
         }
         auto &args = call.arguments();
@@ -435,7 +497,7 @@ namespace checker {
                 return false;
             }
             if (args[i]->type() != param.type) {
-                report_error("function call argument's type mismatch");
+                report_error("function call argument type mismatch");
                 return false;
             }
         }
@@ -444,6 +506,10 @@ namespace checker {
     }
 
     bool Checker::check_function(common::Function &func) {
+        if (func.decl_only) {
+            // declaration has already been checked
+            return true;
+        }
         SCOPE_GUARD();
         REACHABILITY_GUARD(Reachability::REACHABLE);
         current_function_ = func.id;
@@ -485,20 +551,18 @@ namespace checker {
 
     bool Checker::check_function_decl(common::Function &func) {
         ERROR_GUARD(func.pos);
-        if (!module_.add_function(func.name, func.id)) {
-            report_error("can not declare a function: name " +
-                         *identifiers_->get(func.name) + " already used");
+        if (func.name == append_name_) {
+            report_error(
+                "can not declare a function: name 'append' already used");
             return false;
         }
-        if (*identifiers_->get(func.name) == "main") {
-            if (func.parsed_return_type) {
-                report_error("main() must return void");
-                return false;
-            } else if (!func.params.empty()) {
-                report_error("main() must have zero arguments");
-                return false;
-            }
+
+        if (!module_.add_function(func.name, func.id)) {
+            report_error("can not declare a function: name '" +
+                         *identifiers_->get(func.name) + "' already used");
+            return false;
         }
+
         if (func.parsed_return_type) {
             func.return_type = get_type(*func.parsed_return_type);
             if (!func.return_type) {
@@ -584,8 +648,10 @@ namespace checker {
         ERROR_GUARD(smt.pos());
         switch (smt.kind()) {
         case common::StatementType::EXPRESSION:
-            return check_expression(
-                dynamic_cast<common::ExpressionStatement &>(smt).expression());
+            return check_expression(dynamic_cast<common::ExpressionStatement &>(
+                                        smt)
+                                        .expression(),
+                                    true);
         case common::StatementType::BRANCH:
             return check_branch(dynamic_cast<common::Branch &>(smt));
         case common::StatementType::RETURN: {
@@ -704,7 +770,7 @@ namespace checker {
             }
         }
         if (loop.iteration()) {
-            if (!check_expression(loop.iteration())) {
+            if (!check_expression(loop.iteration(), true)) {
                 return false;
             }
         }
@@ -722,28 +788,29 @@ namespace checker {
 
         if (!expr.container()->type()->has_trait(
                 common::TypeTraits::INDEXABLE)) {
-            report_error("index expressions are allowed only for array types");
+            report_error(
+                "index expressions are allowed only for array and slice types");
             return false;
         }
 
-        const common::ArrayType
-            &array = dynamic_cast<const common::ArrayType &>(
-                *expr.container()->type());
-        expr.type(array.element_type());
-        // TODO: also check if index is positive when signed integers are added
+        if (expr.container()->type()->kind() == common::TypeKind::ARRAY) {
+            const common::ArrayType
+                &array = dynamic_cast<const common::ArrayType &>(
+                    *expr.container()->type());
+            expr.type(array.element_type());
+        } else {
+            const common::StructType
+                &slice = dynamic_cast<const common::StructType &>(
+                    *expr.container()->type());
+            expr.type(dynamic_cast<const common::PointerType *>(
+                          slice.get_field(data_name_)->type)
+                          ->pointee_type());
+        }
+
         if (!expr.index()->type()->has_trait(common::TypeTraits::INTEGER)) {
             report_error("index must be an integer");
             return false;
         }
-        if (expr.index()->kind() == common::ExpressionKind::LITERAL) {
-            const common::Literal &lit = dynamic_cast<common::Literal &>(
-                *expr.index());
-            if (*lit.get<uint64_t>() >= array.count()) {
-                report_error("array index out of bounds");
-                return false;
-            }
-        }
-
         return true;
     }
 
@@ -768,8 +835,16 @@ namespace checker {
             *expr.expression());
         switch (expr.op()) {
         case common::UnaryOp::NEGATE:
-            return std::make_unique<common::Literal>(-*lit.get<double>(),
-                                                     expr.pos());
+            if (lit.is<int64_t>()) {
+                int64_t val = *lit.get<int64_t>();
+                if (val != std::numeric_limits<int64_t>::lowest()) {
+                    val = -val;
+                }
+                return std::make_unique<common::Literal>(val, expr.pos());
+            } else if (lit.is<double>()) {
+                return std::make_unique<common::Literal>(-*lit.get<double>(),
+                                                         expr.pos());
+            }
         case common::UnaryOp::NOT:
             return std::make_unique<common::Literal>(!*lit.get<bool>(),
                                                      expr.pos());
@@ -845,24 +920,24 @@ namespace checker {
                 return nullptr;
             }
             return std::make_unique<common::Literal>(*val, expr.pos());
-        } else if (lhs.is<uint64_t>()) {
+        } else if (lhs.is<int64_t>()) {
             if (common::is_relational(expr.op())) {
                 std::optional<bool> val = do_rel_op(expr.op(),
-                                                    *lhs.get<uint64_t>(),
-                                                    *rhs.get<uint64_t>());
+                                                    *lhs.get<int64_t>(),
+                                                    *rhs.get<int64_t>());
                 if (!val) {
                     return nullptr;
                 }
                 return std::make_unique<common::Literal>(*val, expr.pos());
             } else {
-                std::optional<uint64_t> val;
+                std::optional<int64_t> val;
                 if (common::is_bitwise(expr.op()) ||
                     expr.op() == common::BinaryOp::REMAINDER) {
-                    val = do_integer_op(expr.op(), *lhs.get<uint64_t>(),
-                                        *rhs.get<uint64_t>());
+                    val = do_integer_op(expr.op(), *lhs.get<int64_t>(),
+                                        *rhs.get<int64_t>());
                 } else {
-                    val = do_op(expr.op(), *lhs.get<uint64_t>(),
-                                *rhs.get<uint64_t>());
+                    val = do_op(expr.op(), *lhs.get<int64_t>(),
+                                *rhs.get<int64_t>());
                 }
                 if (!val) {
                     return nullptr;
@@ -898,28 +973,28 @@ namespace checker {
         const common::Type
             *floating_type = builtin_types_[common::BuiltinTypes::FLOAT];
         const common::Type
-            *integer_type = builtin_types_[common::BuiltinTypes::UINT];
+            *integer_type = builtin_types_[common::BuiltinTypes::INT];
         const common::Type
             *boolean_type = builtin_types_[common::BuiltinTypes::BOOL];
 
         common::Literal &from = dynamic_cast<common::Literal &>(*cast.from());
         std::optional<common::Literal> result;
         if (cast.type() == floating_type) {
-            if (!from.is<uint64_t>() && !from.is<double>()) {
+            if (!from.is<int64_t>() && !from.is<double>()) {
                 return nullptr;
-            } else if (uint64_t *uint = from.get<uint64_t>(); uint) {
+            } else if (int64_t *uint = from.get<int64_t>(); uint) {
                 result = common::Literal{static_cast<double>(*uint),
                                          cast.pos()};
             } else {
                 result = common::Literal{*from.get<double>(), cast.pos()};
             }
         } else if (cast.type() == integer_type) {
-            if (!from.is<uint64_t>() && !from.is<double>()) {
+            if (!from.is<int64_t>() && !from.is<double>()) {
                 return nullptr;
             } else if (double *d = from.get<double>(); d) {
-                result = common::Literal{static_cast<uint64_t>(*d), cast.pos()};
+                result = common::Literal{static_cast<int64_t>(*d), cast.pos()};
             } else {
-                result = common::Literal{*from.get<uint64_t>(), cast.pos()};
+                result = common::Literal{*from.get<int64_t>(), cast.pos()};
             }
         } else if (cast.type() == boolean_type) {
             if (!from.is<bool>()) {
@@ -952,11 +1027,11 @@ namespace checker {
             }
             const common::Literal &lit = dynamic_cast<const common::Literal &>(
                 *array.size());
-            if (!lit.is<uint64_t>()) {
+            if (!lit.is<int64_t>() || *lit.get<int64_t>() <= 0) {
                 report_error("array size must be a positive integer");
                 return nullptr;
             }
-            size_t count = *lit.get<uint64_t>();
+            size_t count = static_cast<size_t>(*lit.get<int64_t>());
             if (count == 0) {
                 report_error("zero-sized arrays are not supported");
                 return nullptr;
@@ -966,6 +1041,16 @@ namespace checker {
                 return nullptr;
             }
             result = global_types_->get_array(count, element);
+            break;
+        }
+        case common::ParsedTypeKind::SLICE: {
+            common::ParsedSliceType
+                &slice = dynamic_cast<common::ParsedSliceType &>(parsed);
+            const common::Type *element_type = get_type(*slice.element_type());
+            if (!element_type) {
+                return nullptr;
+            }
+            result = get_slice(element_type);
             break;
         }
         default: report_error("unknown parsed type kind");
@@ -1097,6 +1182,15 @@ namespace checker {
             access_ptr->record(std::move(deref));
         }
 
+        if (type->kind() == common::TypeKind::ARRAY && name == len_name_) {
+            size_t size = dynamic_cast<const common::ArrayType *>(type)
+                              ->count();
+            access = std::make_unique<common::Literal>(static_cast<int64_t>(
+                                                           size),
+                                                       access->pos());
+            return true;
+        }
+
         if (type->kind() != common::TypeKind::STRUCT) {
             report_error("dot operator can only be applied to structs and "
                          "pointers to structs");
@@ -1108,6 +1202,10 @@ namespace checker {
         if (!field) {
             report_error("field with name " + *identifiers_->get(name) +
                          " is not defined on this struct");
+            return false;
+        } else if (field->has_flag(common::FieldFlags::HIDDEN)) {
+            report_error("field with name " + *identifiers_->get(name) +
+                         " is inaccessible");
             return false;
         }
         access_ptr->type(field->type);

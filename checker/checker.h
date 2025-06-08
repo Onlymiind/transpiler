@@ -31,9 +31,11 @@ namespace checker {
         void add_declarations();
         void check();
 
-        bool check_expression(std::unique_ptr<common::Expression> &expr);
+        bool check_expression(std::unique_ptr<common::Expression> &expr,
+                              bool allow_assing = false);
         bool check_unary_expression(common::UnaryExpression &expr);
-        bool check_binary_expression(common::BinaryExpression &expr);
+        bool check_binary_expression(common::BinaryExpression &expr,
+                                     bool allow_assign);
         bool check_cast(common::Cast &cast);
         bool check_function_call(common::FunctionCall &call);
         bool check_variable_ref(common::VariableReference &name);
@@ -68,7 +70,6 @@ namespace checker {
 
         std::pair<common::Module, std::unique_ptr<common::Global>> reset() {
             std::unique_ptr<common::Global> global = std::move(global_types_);
-            global_types_ = std::make_unique<common::Global>(*global);
             return {std::move(module_), std::move(global)};
         }
 
@@ -79,6 +80,8 @@ namespace checker {
             err_.pos = err_positions_.top();
         }
         const common::Error &get_error() const { return err_; }
+
+        const common::Type *get_slice(const common::Type *element_type);
 
       private:
         common::Module module_;
@@ -95,6 +98,11 @@ namespace checker {
         common::FunctionID current_function_;
         uint64_t loop_cout_ = 0;
         bool do_constant_folding_ = false;
+
+        common::IdentifierID cap_name_;
+        common::IdentifierID len_name_;
+        common::IdentifierID data_name_;
+        common::IdentifierID append_name_;
     };
 
 } // namespace checker

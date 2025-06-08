@@ -74,11 +74,11 @@ namespace compiler {
         return checker.reset();
     }
 
-    void generate(common::Module &mod, common::AST &ast,
+    void generate(common::Global &global, common::Module &mod, common::AST &ast,
                   common::Identifiers &identifiers, std::ostream &out,
                   std::ostream &err) {
         std::stringstream temp_body;
-        codegen::Generator generator{temp_body, out, mod, ast, identifiers};
+        codegen::Generator generator{global, mod, ast, identifiers};
         generator.codegen();
         std::string_view error = generator.get_error();
         if (!error.empty()) {
@@ -141,7 +141,8 @@ namespace compiler {
         }
 
         try {
-            generate(*mod, *parsed, lexer_result.identifiers, out, err);
+            generate(*global_types, *mod, *parsed, lexer_result.identifiers,
+                     out, err);
         } catch (...) {
             err << "unknown exception in generator\n" << std::endl;
             return;

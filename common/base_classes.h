@@ -18,7 +18,13 @@ namespace common {
     class_name &operator=(const class_name &) = copy_policy;                   \
     constexpr static kind_type static_kind() noexcept { return kind_name; }
 
-    enum class ParsedTypeKind { ERROR, NAMED, ARRAY, STRUCT };
+    enum class ParsedTypeKind {
+        ERROR,
+        NAMED,
+        ARRAY,
+        STRUCT,
+        SLICE,
+    };
 
     class ParsedType {
       public:
@@ -99,17 +105,27 @@ namespace common {
         }
         bool is_pointer() const noexcept { return kind_ == TypeKind::POINTER; }
 
+        bool is_slice() const noexcept {
+            return kind_ == TypeKind::STRUCT &&
+                   has_trait(TypeTraits::INDEXABLE);
+        }
+
         bool has_trait(TypeTraits trait) const noexcept {
             return (traits_ & trait) != static_cast<TypeTraits>(0);
         }
 
         size_t size() const noexcept { return size_; }
+        size_t alignment() const noexcept { return alignment_; }
 
       protected:
         void set_size(size_t size) noexcept { size_ = size; }
+        void set_alignment(size_t alignment) noexcept {
+            alignment_ = alignment;
+        }
 
-        Type(TypeKind kind, TypeTraits traits, size_t size)
-            : kind_(kind), traits_(traits), size_(size) {}
+        Type(TypeKind kind, TypeTraits traits, size_t size, size_t alignment)
+            : kind_(kind), traits_(traits), size_(size), alignment_(alignment) {
+        }
         Type(const Type &) = default;
         Type(Type &&) = default;
         Type &operator=(const Type &) = default;
@@ -119,6 +135,7 @@ namespace common {
         TypeKind kind_{};
         TypeTraits traits_{};
         size_t size_{};
+        size_t alignment_{};
     };
 
     class Expression {

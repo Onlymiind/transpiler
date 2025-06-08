@@ -30,7 +30,7 @@ namespace common {
     class ParsedArrayType final : public ParsedType {
       public:
         ParsedArrayType(std::unique_ptr<Expression> &&size,
-                        std::unique_ptr<ParsedType> base,
+                        std::unique_ptr<ParsedType> &&base,
                         uint64_t indirection_level = 0)
             : ParsedType(static_kind(), indirection_level),
               size_(std::move(size)), element_type_(std::move(base)) {}
@@ -52,6 +52,29 @@ namespace common {
 
       private:
         std::unique_ptr<Expression> size_;
+        std::unique_ptr<ParsedType> element_type_;
+    };
+
+    class ParsedSliceType final : public ParsedType {
+      public:
+        explicit ParsedSliceType(std::unique_ptr<ParsedType> &&element_type,
+                                 uint64_t indirection_level = 0)
+            : ParsedType(static_kind(), indirection_level),
+              element_type_(std::move(element_type)) {}
+
+        COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(ParsedSliceType,
+                                                     ParsedTypeKind,
+                                                     ParsedTypeKind::SLICE,
+                                                     delete)
+        std::unique_ptr<ParsedType> &element_type() noexcept {
+            return element_type_;
+        }
+
+        const ParsedType *element_type() const noexcept {
+            return element_type_.get();
+        }
+
+      private:
         std::unique_ptr<ParsedType> element_type_;
     };
 

@@ -18,6 +18,7 @@ namespace common {
 
         TokenPos pos;
         bool decl_only = false;
+        bool is_native = false;
 
         const Type *return_type = nullptr;
 
@@ -36,6 +37,7 @@ namespace common {
         std::unique_ptr<Expression> initial_value;
         TokenPos pos;
         const Type *type = nullptr;
+        bool is_gloabl = false;
     };
 
 } // namespace common

@@ -6,12 +6,15 @@
 #include "common/util.h"
 
 #include <cstddef>
+#include <cstdint>
+#include <deque>
 #include <unordered_map>
 
 namespace common {
     enum class BuiltinTypes {
         BOOL,
-        UINT,
+        CHAR,
+        INT,
         FLOAT,
     };
 
@@ -19,7 +22,8 @@ namespace common {
       public:
         PrimitiveType(IdentifierID name, BuiltinTypes type, TypeTraits traits,
                       size_t size)
-            : Type(static_kind(), traits, size), name_(name), type_(type) {}
+            : Type(static_kind(), traits, size, size), name_(name),
+              type_(type) {}
         COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(PrimitiveType, TypeKind,
                                                      TypeKind::PRIMITIVE,
                                                      default)
@@ -36,7 +40,7 @@ namespace common {
       public:
         ArrayType(const Type &element_type, size_t count)
             : Type(static_kind(), TypeTraits::INDEXABLE,
-                   element_type.size() * count),
+                   element_type.size() * count, element_type.alignment()),
               count_(count), element_type_(&element_type) {}
 
         COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(ArrayType, TypeKind,
@@ -57,7 +61,8 @@ namespace common {
     class PointerType final : public Type {
       public:
         explicit PointerType(const Type &pointee)
-            : Type(static_kind(), TypeTraits::DEREFERENCABLE, g_pointer_size),
+            : Type(static_kind(), TypeTraits::DEREFERENCABLE, g_pointer_size,
+                   g_pointer_size),
               pointee_type_(&pointee) {}
 
         COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(PointerType, TypeKind,
@@ -69,40 +74,76 @@ namespace common {
         bool is_nullptr() const noexcept { return pointee_type_ == nullptr; }
 
       private:
-        PointerType() : Type(static_kind(), TypeTraits::NONE, g_pointer_size) {}
+        PointerType()
+            : Type(static_kind(), TypeTraits::NONE, g_pointer_size,
+                   g_pointer_size) {}
 
         const Type *pointee_type_ = nullptr;
     };
 
+    enum class FieldFlags {
+        NONE = 0,
+        READONLY = 1 << 0,
+        HIDDEN = 1 << 1,
+    };
+
+    constexpr inline FieldFlags operator|(FieldFlags lhs, FieldFlags rhs) {
+        return static_cast<FieldFlags>(to_underlying(lhs) | to_underlying(rhs));
+    }
+
+    constexpr inline FieldFlags operator&(FieldFlags lhs, FieldFlags rhs) {
+        return static_cast<FieldFlags>(to_underlying(lhs) & to_underlying(rhs));
+    }
+
+    struct Field {
+        IdentifierID name;
+        const Type *type = nullptr;
+        uint64_t offset = 0;
+        TokenPos pos;
+        FieldFlags flags = FieldFlags::NONE;
+
+        constexpr bool has_flag(FieldFlags flag) const noexcept {
+            return (flags & flag) != FieldFlags::NONE;
+        }
+    };
+
     class StructType final : public Type {
       public:
-        StructType(IdentifierID name)
-            : Type(static_kind(), TypeTraits::NONE, 0) {}
+        explicit StructType(IdentifierID name)
+            : Type(static_kind(), TypeTraits::NONE, 0, 0) {}
 
         COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(StructType, TypeKind,
                                                      TypeKind::STRUCT, delete);
 
         bool add_fields(std::vector<Variable> &&fields);
+        bool add_fields(std::vector<Field> &&fields);
 
         bool is_defined() const noexcept { return is_defined_; }
 
         IdentifierID name() const noexcept { return name_; }
-        const std::vector<Variable> &fields() const noexcept {
-            return fields_;
-        };
+        const std::deque<Field> &fields() const noexcept { return fields_; };
 
         bool has_field(IdentifierID name) const {
             return name_to_field_.contains(name);
         }
-        const Variable *get_field(IdentifierID name) const {
+        const Field *get_field(IdentifierID name) const {
             auto it = name_to_field_.find(name);
             return it == name_to_field_.end() ? nullptr : it->second;
         }
 
+        static StructType make_slice_type(const Type *size_type,
+                                          const Type *element_type,
+                                          IdentifierID cap_name,
+                                          IdentifierID size_name,
+                                          IdentifierID data_name);
+
       private:
+        explicit StructType(TypeTraits traits, size_t size)
+            : Type(static_kind(), traits, size, g_pointer_size) {}
+
         IdentifierID name_;
-        std::vector<Variable> fields_;
-        std::unordered_map<IdentifierID, const Variable *> name_to_field_;
+        std::deque<Field> fields_;
+        std::unordered_map<IdentifierID, const Field *> name_to_field_;
         bool is_defined_ = false;
     };
 

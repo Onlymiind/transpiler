@@ -129,8 +129,10 @@ namespace parser {
             break;
         case IDENTIFIER: result = parse_identifier_ref(); break;
         case BOOL: result = make_literal_expr(bool{}); break;
-        case INTEGER: result = make_literal_expr(uint64_t{}); break;
+        case INTEGER: result = make_literal_expr(int64_t{}); break;
         case FLOAT: result = make_literal_expr(double{}); break;
+        case STRING: result = make_literal_expr(common::StringID{}); break;
+        case CHAR: result = make_literal_expr(char{}); break;
         case NULLPTR:
             result = std::make_unique<common::Literal>(nullptr, next().pos());
             consume();
@@ -247,6 +249,11 @@ namespace parser {
 
     void Parser::parse_function() {
         common::Function result{.pos = next().pos()};
+        result.is_native = next().is(common::TokenType::EXTERNAL);
+        if (result.is_native) {
+            consume();
+        }
+
         if (!match(common::TokenType::FUNC, "exprected 'func' keyword")) {
             return;
         }
@@ -288,6 +295,10 @@ namespace parser {
             consume();
             result.decl_only = true;
             ast_.add(std::move(result));
+            return;
+        }
+        if (result.is_native) {
+            report_error("native functions must not have a body");
             return;
         }
 
@@ -548,6 +559,16 @@ namespace parser {
                    "expected '[' at the start of an array type")) {
             return std::make_unique<common::ParsedErrorType>();
         }
+        if (next().is(common::TokenType::RIGHT_BRACKET)) {
+            // slice type
+            std::unique_ptr<common::ParsedType> element_type = parse_type();
+            if (element_type->is_error()) {
+                return std::make_unique<common::ParsedErrorType>();
+            }
+            return std::make_unique<common::ParsedSliceType>(
+                std::move(element_type));
+        }
+
         std::unique_ptr<common::Expression> size = parse_expression();
         if (size->is_error()) {
             return std::make_unique<common::ParsedErrorType>();

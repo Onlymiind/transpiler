@@ -78,7 +78,7 @@ namespace common {
             IDENTIFIER,
             FUNCTION,
             VARIABLE,
-            STRUCT,
+            STRING,
 
             COUNT,
         };
@@ -90,23 +90,7 @@ namespace common {
     using IdentifierID = IDBase<IDType::IDENTIFIER>;
     using FunctionID = IDBase<IDType::FUNCTION>;
     using VariableID = IDBase<IDType::VARIABLE>;
-    using StructID = IDBase<IDType::STRUCT>;
-
-    template <typename ID, typename Type>
-    constexpr inline ID make_id(Type tag, uint64_t idx)
-        requires std::is_enum_v<Type> &&
-                 std::is_same_v<std::underlying_type_t<Type>, uint8_t>
-    {
-        return ID{(static_cast<uint64_t>(tag) << 56) | idx};
-    }
-
-    template <typename Type, size_t TAG>
-    constexpr inline std::pair<Type, uint64_t> decompose(IDBase<TAG> id)
-        requires std::is_enum_v<Type> &&
-                 std::is_same_v<std::underlying_type_t<Type>, uint8_t>
-    {
-        return {static_cast<Type>(*id >> 56), *id & 0xffffffffffffff};
-    }
+    using StringID = IDBase<IDType::STRING>;
 
     template <typename ReleaseFunc>
     class RAIIGuard {

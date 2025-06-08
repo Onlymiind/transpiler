@@ -4,7 +4,6 @@
 #include "common/util.h"
 
 #include <cctype>
-#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string_view>
@@ -64,6 +63,10 @@ namespace lexer {
                 tok = get_numeric();
             } else if (std::isalpha(c)) {
                 tok = get_identifier();
+            } else if (c == '"') {
+                tok = get_string();
+            } else if (c == '\'') {
+                tok = get_char_literal();
             } else {
                 tok = get_op();
             }
@@ -77,6 +80,27 @@ namespace lexer {
 
             consume_spaces();
         }
+    }
+
+    common::Token Lexer::get_char_literal() {
+        common::TokenPos pos{current_line_, current_pos_.top()};
+        auto c = get_char();
+        if (!c || c != '\'') {
+            return {};
+        }
+
+        c = get_string_char();
+        if (!c) {
+            return {};
+        }
+
+        common::Token result = common::Token::with_value(*c, pos);
+
+        if (!(c = get_char()) || c != '\'') {
+            return {};
+        }
+
+        return result;
     }
 
     static const std::unordered_map<std::string_view, common::Token> g_keywords{
@@ -93,6 +117,7 @@ namespace lexer {
         {"continue", common::Token{common::TokenType::CONTINUE}},
         {"cast", common::Token{common::TokenType::CAST}},
         {"struct", common::Token{common::TokenType::STRUCT}},
+        {"external", common::Token{common::TokenType::EXTERNAL}},
     };
 
     common::Token Lexer::get_identifier() {
@@ -143,7 +168,8 @@ namespace lexer {
             if (c) {
                 put_back(*c);
             }
-            return common::Token::with_value(integer, pos);
+            return common::Token::with_value(static_cast<int64_t>(integer),
+                                             pos);
         } else if (*c != '.') {
             report_error("expected either . or a space after numeric literal");
             return common::Token{};
@@ -207,9 +233,38 @@ namespace lexer {
         case '[': result.type(LEFT_BRACKET); return result;
         case ']': result.type(RIGHT_BRACKET); return result;
         case '.': result.type(DOT); return result;
+        case '~': result.type(INV); return result;
+        case '^': result.type(XOR); return result;
         case '!': return handle_wide_op(NOT, '=', NOT_EQUALS);
-        case '<': return handle_wide_op(LESS, '=', LESS_EQUALS);
-        case '>': return handle_wide_op(GREATER, '=', GREATER_EQUALS);
+        case '<': {
+
+            result.type(LESS);
+            const char next = static_cast<char>(file_->peek());
+            if (next == '=') {
+                result.type(LESS_EQUALS);
+                get_char();
+            } else if (next == '<') {
+                result.type(SLA);
+                get_char();
+            }
+            return result;
+        }
+        case '>': {
+            result.type(GREATER);
+            const char next = static_cast<char>(file_->peek());
+            if (next == '=') {
+                result.type(GREATER_EQUALS);
+            } else if (next == '>') {
+                result.type(SRA);
+                get_char();
+                if (file_->peek() == '>') {
+                    result.type(SRL);
+                    get_char();
+                }
+            }
+
+            return result;
+        }
         case '=': return handle_wide_op(ASSIGN, '=', EQUALS);
         case '&': return handle_wide_op(BITWISE_AND, '&', AND);
         case '|': return handle_wide_op(BITWISE_OR, '|', OR);
@@ -220,6 +275,70 @@ namespace lexer {
         }
 
         return result;
+    }
+
+    common::Token Lexer::get_string() {
+        common::Token result;
+        common::TokenPos pos{current_line_, current_pos_.top()};
+        if (file_->peek() != '"') {
+            return result;
+        }
+
+        get_char();
+
+        std::string value;
+        for (char c = static_cast<char>(file_->peek()); file_ && c != '"';
+             c = static_cast<char>(file_->peek())) {
+            std::optional<char> val = get_string_char();
+            if (!val) {
+                return result;
+            }
+
+            value.push_back(*val);
+        }
+
+        if (!file_) {
+            report_error("string not terminated");
+            return result;
+        }
+
+        return common::Token::with_value(result_.identifiers.add_string(
+                                             std::move(value)),
+                                         pos);
+    }
+
+    std::optional<char> Lexer::get_string_char() {
+        auto c = get_char();
+        if (!c) {
+            report_error("expected a string character");
+            return {};
+        } else if (c == '\n') {
+            report_error("runaway string detected");
+            return {};
+        }
+
+        if (c != '\\') {
+            return c;
+        }
+        c = get_char();
+        if (!c) {
+            report_error("expected escape sequence");
+            return {};
+        }
+
+        switch (*c) {
+        case 'n': return '\n';
+        case 't': return '\t';
+        case 'r': return '\r';
+        case '0': return '\0';
+        case '\\': return '\\';
+        case 'v': return '\v';
+        case '"': return '\"';
+        case '\'': return '\'';
+        case 'b': return '\b';
+        case 'f': return '\f';
+        default: report_error("unknown escape sequence"); return {};
+        }
     }
 
 } // namespace lexer

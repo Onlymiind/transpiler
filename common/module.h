@@ -14,37 +14,32 @@ namespace common {
     // handles primitives, arrays and pointers
     class Global {
       public:
-        Global(std::vector<PrimitiveType> primitives) {
-            for (auto &type : primitives) {
-                primitives_.emplace(type.name(), std::move(type));
-            }
-            pointers_.emplace(nullptr, PointerType::make_nullptr_type());
-        }
+        explicit Global(std::vector<PrimitiveType> primitives);
 
-        const PrimitiveType *get_primitive(IdentifierID name) const noexcept {
-            auto it = primitives_.find(name);
-            return it == primitives_.end() ? nullptr : &it->second;
-        }
+        const PrimitiveType *get_primitive(IdentifierID name) const noexcept;
 
-        const ArrayType *get_array(size_t count, const Type *element_type) {
-            if (!element_type) {
-                return nullptr;
-            }
-            std::pair<size_t, const Type *> key{count, element_type};
-            return &arrays_.try_emplace(key, ArrayType(*element_type, count))
-                        .first->second;
-        }
+        const ArrayType *get_array(size_t count, const Type *element_type);
 
-        const PointerType *get_pointer(const Type *to) {
-            if (!to) {
-                return &pointers_.at(nullptr);
-            }
-            return &pointers_.try_emplace(to, PointerType(*to)).first->second;
-        }
+        const PointerType *get_pointer(const Type *to);
 
-        const std::unordered_map<IdentifierID, PrimitiveType> &
+        const StructType *get_slice(const Type *size_type,
+                                    const Type *element_type,
+                                    IdentifierID cap_name,
+                                    IdentifierID len_name,
+                                    IdentifierID data_name);
+
+        const std::unordered_map<IdentifierID, const PrimitiveType *> &
         primitives() const noexcept {
             return primitives_;
+        }
+
+        std::vector<std::unique_ptr<common::Type>> &types() noexcept {
+            return types_;
+        }
+
+        const std::vector<std::unique_ptr<common::Type>> &
+        types() const noexcept {
+            return types_;
         }
 
       private:
@@ -56,10 +51,13 @@ namespace common {
             }
         };
 
-        std::unordered_map<IdentifierID, PrimitiveType> primitives_;
-        std::unordered_map<std::pair<size_t, const Type *>, ArrayType, PairHash>
+        std::vector<std::unique_ptr<common::Type>> types_;
+        std::unordered_map<IdentifierID, const PrimitiveType *> primitives_;
+        std::unordered_map<std::pair<size_t, const Type *>, const ArrayType *,
+                           PairHash>
             arrays_;
-        std::unordered_map<const Type *, PointerType> pointers_;
+        std::unordered_map<const Type *, const PointerType *> pointers_;
+        std::unordered_map<const Type *, const StructType *> slices_;
     };
 
     class Module {
@@ -96,11 +94,12 @@ namespace common {
             return functions_;
         }
 
-        FunctionID entrypoint() const noexcept { return entrypoint_; }
-        void entrypoint(FunctionID function) { entrypoint_ = function; }
-
         bool has_name(IdentifierID name) const {
             return defined_names_.contains(name);
+        }
+
+        std::vector<std::unique_ptr<StructType>> &get_structs() noexcept {
+            return structs_;
         }
 
       private:
@@ -113,9 +112,7 @@ namespace common {
         std::unordered_map<IdentifierID, VariableID> variables_;
         std::unordered_map<IdentifierID, FunctionID> functions_;
 
-        std::deque<StructType> structs_;
-
-        FunctionID entrypoint_;
+        std::vector<std::unique_ptr<StructType>> structs_;
     };
 } // namespace common
 

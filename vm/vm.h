@@ -1,8 +1,16 @@
 #pragma once
 
+#include "common/base_classes.h"
+#include "common/literals.h"
+#include "common/types.h"
+#include "common/util.h"
+
 #include <cstddef>
 #include <cstdint>
+#include <map>
+#include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -17,9 +25,16 @@ namespace vm {
     };
 
     struct TypeInfo {
-        size_t size = 0;
         std::vector<bool> is_ptr;
         AllocationFlags flags = AllocationFlags::NO_POINTERS;
+        bool is_heap_only = false;
+        const common::Type *description = nullptr;
+    };
+
+    struct Allocation {
+        uint8_t *memory = nullptr;
+        size_t size = 0;
+        const TypeInfo *info = nullptr;
     };
 
     enum class Op {
@@ -51,10 +66,17 @@ namespace vm {
         TO_FLOAT,
 
         NOT,
+        NEGATE_I,
+        NEGATE_F,
 
         GET_LOCAL,
         GET_GLOBAL,
         COPY_CONST,
+
+        INDEX_ARRAY,
+        APPEND,
+        SLICE,
+        ASSERT_NOT_NULL,
 
         READ,
         WRITE,
@@ -63,6 +85,7 @@ namespace vm {
         PUSH,
         POP,
         DUP,
+        SWAP,
 
         ALLOCATE,
         ALLOCATE_ARRAY,
@@ -74,6 +97,11 @@ namespace vm {
         RETURN,
     };
 
+    constexpr inline bool needs_truncation(Op op) {
+        return op == Op::ADD_I || op == Op::SUB_I || op == Op::MUL_I ||
+               op == Op::SLA || op == Op::NEGATE_I || op == Op::NOT;
+    }
+
     std::string_view to_string(Op op);
 
     struct Instruction {
@@ -84,17 +112,53 @@ namespace vm {
     struct Function {
         std::string name;
         std::vector<Instruction> code;
-        size_t arg_count = 0;
+        std::vector<const common::Type *> args;
     };
 
     class VM;
 
+    class Value {
+        friend class VM;
+
+      public:
+        int64_t get_int() const;
+        char get_char() const;
+        std::string get_string() const;
+        double get_float() const;
+        Value dereference() const;
+
+        size_t get_size() const;
+        Value get_element(size_t idx) const;
+        Value get_field(const std::string &name) const;
+        bool has_field(const std::string &name) const;
+
+        bool has_value() const;
+
+        bool set(int64_t val);
+        bool set(double val);
+        bool set(char val);
+        bool set(const std::string &val);
+        bool set(size_t idx, Value val);
+        bool set(const std::string &field_name, Value val);
+        bool set(Value pointee);
+
+        bool append(Value val);
+
+      private:
+        Value(uint64_t ptr, VM &vm, const common::Type *type)
+            : ptr_(ptr), vm_(&vm), type_(type) {}
+
+        uint64_t ptr_ = 0;
+        VM *vm_ = nullptr;
+        const common::Type *type_ = nullptr;
+    };
+
     struct NativeFunction {
-        bool (*handler)(VM &, void *) = nullptr;
-        void *userdata = nullptr;
-        uint64_t arg_count = 0;
         std::string name;
-        bool returns_value = false;
+        std::vector<const common::Type *> args;
+        const common::Type *return_type = nullptr;
+        bool (*handler)(VM &, std::span<Value> args, void *) = nullptr;
+        void *userdata = nullptr;
     };
 
     struct StackFrame {
@@ -103,26 +167,63 @@ namespace vm {
         uint64_t instruction_ptr = 0;
     };
 
+    struct Program {
+        common::Identifiers identifiers;
+        std::vector<std::unique_ptr<common::Type>> types;
+        std::vector<std::unique_ptr<TypeInfo>> type_infos;
+        std::vector<Function> functions;
+        std::vector<NativeFunction> native_functions;
+        std::vector<Instruction> global_init;
+        uint64_t global_count;
+        common::IdentifierID cap_name;
+        common::IdentifierID size_name;
+        common::IdentifierID data_name;
+    };
+
     class VM {
       public:
+        static_assert(sizeof(uintptr_t) <= sizeof(uint64_t),
+                      "pointers must fit into 64-bit unsigned integer");
+
         static constexpr uint64_t false_value = 0;
         static constexpr uint64_t true_value = ~false_value;
         static constexpr uint64_t null_value = 0;
+        static constexpr uint64_t read_is_ptr_mask = static_cast<uint64_t>(1)
+                                                     << 63;
+        static constexpr uint64_t read_size_mask = 0b1111;
+
+        Value make_value(const common::Type *type);
+        Value make_slice(const common::Type *element);
+        Value make_array(const common::Type *element, size_t size);
+        Value make_ptr(const common::Type *pointee);
+
+        bool delete_value(Value val);
+        const common::Type *get_type(const std::string &name);
+
+        bool call_function(const std::string &name, std::span<Value> args,
+                           std::string *err_msg);
 
       private:
-        uint64_t pop();
+        uint64_t top(bool *is_ptr = nullptr);
+        uint64_t pop(bool *is_ptr = nullptr);
         void push(uint64_t val, bool is_ptr = false);
 
-        std::optional<uint64_t> mem_read(uint64_t addr, bool &is_ptr);
-        bool mem_write(uint64_t addr, uint64_t val);
+        std::optional<uint64_t> mem_read(uint64_t addr, uint64_t size);
+        bool mem_write(uint64_t addr, uint64_t val, uint64_t size);
         bool mem_copy(uint64_t src, uint64_t dst, uint64_t size);
         bool mem_cmp(uint64_t lhs, uint64_t rhs, uint64_t size, bool &result);
         bool allocate(const TypeInfo *type, uint64_t count, uint64_t &ptr);
         bool mem_copy_const(uint64_t idx, uint64_t &ptr);
 
+        std::optional<uint64_t> read_struct_field(uint64_t addr,
+                                                  const common::Field &field);
+        bool write_struct_field(uint64_t addr, const common::Field &field,
+                                uint64_t val);
+
         const TypeInfo *get_type_info(uint64_t idx);
         const Function *get_function_info(uint64_t idx);
         const NativeFunction *get_native_function(uint64_t idx);
+        const TypeInfo *get_allocation_type(uint64_t ptr);
 
         StackFrame &current_frame();
         bool pop_frame();
@@ -133,11 +234,19 @@ namespace vm {
         template <typename... Args>
         void report_error(Args... args);
 
+        Allocation *find_allocation(uint8_t *ptr);
+
       private:
         std::vector<uint64_t> stack_;
         std::vector<bool> is_pointer_;
         std::vector<StackFrame> stack_frames_;
-        uint64_t global_count_;
+        Program program;
+
+        common::IdentifierID cap_name_;
+        common::IdentifierID size_name_;
+        common::IdentifierID data_name_;
+
+        std::map<uint8_t *, Allocation> allocations_;
 
         std::string err;
     };

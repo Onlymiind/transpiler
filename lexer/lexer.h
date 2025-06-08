@@ -37,6 +37,9 @@ namespace lexer {
 
         common::Token get_numeric();
         common::Token get_identifier();
+        common::Token get_string();
+        common::Token get_char_literal();
+        std::optional<char> get_string_char();
         common::Token get_op();
 
         std::optional<char> get_char();

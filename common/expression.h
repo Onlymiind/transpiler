@@ -31,6 +31,10 @@ namespace common {
         ASSIGN,
         BITWISE_OR,
         BITWISE_AND,
+        XOR,
+        SLA,
+        SRA,
+        SRL,
     };
 
     constexpr inline bool is_logic_op(BinaryOp op) {
@@ -46,7 +50,7 @@ namespace common {
     }
 
     constexpr inline bool is_bitwise(BinaryOp op) {
-        return op == BinaryOp::BITWISE_AND || op == BinaryOp::BITWISE_OR;
+        return op >= BinaryOp::BITWISE_AND && op <= BinaryOp::SRL;
     }
 
     constexpr inline std::optional<BinaryOp> to_binary_op(TokenType type) {
@@ -60,17 +64,22 @@ namespace common {
 
     constexpr uint8_t g_invalid_precedence = 0;
     constexpr inline uint8_t get_precedence(BinaryOp op) {
-        // based on C++ operator precedence
         using enum BinaryOp;
         switch (op) {
-        case BITWISE_OR: [[fallthrough]];
-        case ADD: [[fallthrough]];
-        case SUB: return 5;
 
         case BITWISE_AND: [[fallthrough]];
+        case XOR: [[fallthrough]];
         case MUL: [[fallthrough]];
         case DIV: [[fallthrough]];
         case REMAINDER: return 8;
+
+        case BITWISE_OR: [[fallthrough]];
+        case ADD: [[fallthrough]];
+        case SUB: return 6;
+
+        case SRA: [[fallthrough]];
+        case SRL: [[fallthrough]];
+        case SLA: return 5;
 
         case LESS: [[fallthrough]];
         case GREATER: [[fallthrough]];
@@ -92,6 +101,7 @@ namespace common {
         NOT,
         ADDRESS_OF,
         DEREFERENCE,
+        INVERT,
     };
 
     constexpr inline std::optional<UnaryOp> to_unary_op(TokenType type) {
@@ -100,6 +110,7 @@ namespace common {
         case TokenType::SUB: return UnaryOp::NEGATE;
         case TokenType::BITWISE_AND: return UnaryOp::ADDRESS_OF;
         case TokenType::MUL: return UnaryOp::DEREFERENCE;
+        case TokenType::INV: return UnaryOp::INVERT;
         default: return {};
         }
     }
@@ -237,7 +248,8 @@ namespace common {
     };
 
     class Literal final : public Expression {
-        using Storage = std::variant<bool, int64_t, double, std::nullptr_t>;
+        using Storage = std::variant<bool, char, int64_t, double, StringID,
+                                     std::nullptr_t>;
 
       public:
         template <typename T>

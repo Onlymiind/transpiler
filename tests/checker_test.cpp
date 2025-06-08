@@ -59,7 +59,7 @@ TEST_CASE("checker: literals", "[checker]") {
     std::vector<CheckerTestCase> cases{
         {.data = "true", .expected = BOOL},
         {.data = "false", .expected = BOOL},
-        {.data = "1234", .expected = UINT},
+        {.data = "1234", .expected = INT},
         {.data = "1234.00", .expected = FLOAT},
     };
     run_tests(cases);
@@ -72,15 +72,15 @@ TEST_CASE("checher: binary operators", "[checker]") {
         {.data = "false || true", .expected = BOOL},
         {.data = "true == true", .expected = BOOL},
         {.data = "true != false", .expected = BOOL},
-        {.data = "1234 + 1234", .expected = UINT},
+        {.data = "1234 + 1234", .expected = INT},
         {.data = "1234.00 + 1234.00", .expected = FLOAT},
-        {.data = "1234 - 1234", .expected = UINT},
+        {.data = "1234 - 1234", .expected = INT},
         {.data = "1234.00 - 1234.00", .expected = FLOAT},
-        {.data = "1234 * 1234", .expected = UINT},
+        {.data = "1234 * 1234", .expected = INT},
         {.data = "1234.00 * 1234.00", .expected = FLOAT},
-        {.data = "1234 / 1234", .expected = UINT},
+        {.data = "1234 / 1234", .expected = INT},
         {.data = "1234.00 / 1234.00", .expected = FLOAT},
-        {.data = "1234 % 1234", .expected = UINT},
+        {.data = "1234 % 1234", .expected = INT},
         {.data = "1234 == 1234", .expected = BOOL},
         {.data = "1234.00 == 1234.00", .expected = BOOL},
         {.data = "1234 != 1234", .expected = BOOL},
@@ -110,7 +110,7 @@ TEST_CASE("checker: expressions", "[checker]") {
     using enum common::BuiltinTypes;
     std::vector<CheckerTestCase> cases{
         {.data = "true && false || !true", .expected = BOOL},
-        {.data = "1 + 2 - 3 * 4 % 5 / 6", .expected = UINT},
+        {.data = "1 + 2 - 3 * 4 % 5 / 6", .expected = INT},
         {.data = "1234.00 + 1234.00 +-1.0/10.0", .expected = FLOAT},
     };
     run_tests(cases);
@@ -120,7 +120,7 @@ TEST_CASE("checker: casts", "[checker]") {
     using enum common::BuiltinTypes;
     std::vector<CheckerTestCase> cases{
         {.data = "cast<bool>(true)", .expected = BOOL},
-        {.data = "cast<u64>(1.1)", .expected = UINT},
+        {.data = "cast<u64>(1.1)", .expected = INT},
         {.data = "cast<f64>(1)", .expected = FLOAT},
     };
     run_tests(cases);
