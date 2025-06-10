@@ -7,33 +7,29 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cwchar>
 #include <map>
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <span>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace vm {
 
-    enum class AllocationFlags {
-        NO_POINTERS,
-        POINTERS_ONLY,
-        HAS_POINTERS_SCALAR,
-        HAS_POINTERS_ARRAY,
-    };
-
     struct TypeInfo {
         std::vector<bool> is_ptr;
-        AllocationFlags flags = AllocationFlags::NO_POINTERS;
-        bool is_heap_only = false;
         const common::Type *description = nullptr;
     };
 
     struct Allocation {
         uint8_t *memory = nullptr;
         size_t size = 0;
+        bool marked = false;
         const TypeInfo *info = nullptr;
     };
 
@@ -102,7 +98,7 @@ namespace vm {
                op == Op::SLA || op == Op::NEGATE_I || op == Op::NOT;
     }
 
-    std::string_view to_string(Op op);
+    constexpr std::string_view to_string(Op op);
 
     struct Instruction {
         Op op = Op::NOP;
@@ -113,6 +109,7 @@ namespace vm {
         std::string name;
         std::vector<Instruction> code;
         std::vector<const common::Type *> args;
+        const common::Type *return_type;
     };
 
     class VM;
@@ -121,32 +118,42 @@ namespace vm {
         friend class VM;
 
       public:
-        int64_t get_int() const;
-        char get_char() const;
-        std::string get_string() const;
-        double get_float() const;
-        Value dereference() const;
+        std::optional<int64_t> get_int();
+        std::optional<char> get_char();
+        std::optional<std::string> get_string();
+        std::optional<double> get_float();
+        std::optional<bool> get_bool();
+        Value dereference();
 
-        size_t get_size() const;
-        Value get_element(size_t idx) const;
-        Value get_field(const std::string &name) const;
-        bool has_field(const std::string &name) const;
+        size_t get_size();
+        Value get_element(size_t idx);
+        Value get_field(const std::string &name);
+        bool has_field(const std::string &name);
 
-        bool has_value() const;
+        bool empty() const noexcept;
 
         bool set(int64_t val);
         bool set(double val);
         bool set(char val);
+        bool set(bool val);
         bool set(const std::string &val);
         bool set(size_t idx, Value val);
         bool set(const std::string &field_name, Value val);
         bool set(Value pointee);
 
+        bool assign(Value other);
+        bool set_userdata(uint64_t val);
         bool append(Value val);
 
+        const common::Type *type() const noexcept;
+
       private:
+        std::optional<uint64_t> get_primitive(common::BuiltinTypes kind);
+        bool set_primitive(common::BuiltinTypes kind, uint64_t val);
+
         Value(uint64_t ptr, VM &vm, const common::Type *type)
             : ptr_(ptr), vm_(&vm), type_(type) {}
+        Value() = default;
 
         uint64_t ptr_ = 0;
         VM *vm_ = nullptr;
@@ -178,9 +185,12 @@ namespace vm {
         common::IdentifierID cap_name;
         common::IdentifierID size_name;
         common::IdentifierID data_name;
+        common::IdentifierID char_name;
     };
 
     class VM {
+        friend class Value;
+
       public:
         static_assert(sizeof(uintptr_t) <= sizeof(uint64_t),
                       "pointers must fit into 64-bit unsigned integer");
@@ -197,11 +207,14 @@ namespace vm {
         Value make_array(const common::Type *element, size_t size);
         Value make_ptr(const common::Type *pointee);
 
-        bool delete_value(Value val);
         const common::Type *get_type(const std::string &name);
 
+        bool try_pop();
+
         bool call_function(const std::string &name, std::span<Value> args,
-                           std::string *err_msg);
+                           std::string *err_msg, Value *return_val);
+
+        bool collect_garbage();
 
       private:
         uint64_t top(bool *is_ptr = nullptr);
@@ -221,9 +234,12 @@ namespace vm {
                                 uint64_t val);
 
         const TypeInfo *get_type_info(uint64_t idx);
+        const TypeInfo *get_type_info(const common::Type *type);
         const Function *get_function_info(uint64_t idx);
         const NativeFunction *get_native_function(uint64_t idx);
         const TypeInfo *get_allocation_type(uint64_t ptr);
+
+        uint8_t *to_raw_ptr(uint64_t ptr);
 
         StackFrame &current_frame();
         bool pop_frame();
@@ -236,19 +252,29 @@ namespace vm {
 
         Allocation *find_allocation(uint8_t *ptr);
 
+        bool call(const Function &func, Value *return_val);
+        bool call(const NativeFunction &func, std::span<Value> args,
+                  Value *return_val);
+
       private:
         std::vector<uint64_t> stack_;
         std::vector<bool> is_pointer_;
         std::vector<StackFrame> stack_frames_;
         Program program;
 
-        common::IdentifierID cap_name_;
-        common::IdentifierID size_name_;
-        common::IdentifierID data_name_;
+        std::unordered_map<std::string_view, std::pair<bool, size_t>>
+            name_to_func_;
+
+        std::unordered_map<common::IdentifierID, const TypeInfo *>
+            name_to_type_;
 
         std::map<uint8_t *, Allocation> allocations_;
 
         std::string err;
     };
+
+    void decompile(std::span<Instruction> instrs, std::ostream &out);
+
+    std::optional<Instruction> from_string(const std::string &in);
 
 } // namespace vm

@@ -78,7 +78,7 @@ namespace compiler {
                   common::Identifiers &identifiers, std::ostream &out,
                   std::ostream &err) {
         std::stringstream temp_body;
-        codegen::Generator generator{global, mod, ast, identifiers};
+        codegen::Generator generator{global, mod, ast, std::move(identifiers)};
         generator.codegen();
         std::string_view error = generator.get_error();
         if (!error.empty()) {

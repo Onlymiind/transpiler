@@ -1,4 +1,5 @@
 #include "codegen/generator.h"
+#include "common/token.h"
 #include "compiler/compiler.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -68,6 +69,9 @@ std::vector<FunctionalTestCase> cases{
 };
 
 TEST_CASE("functional tests") {
+    vm::VM vm;
+    vm.call_function("", {}, nullptr, nullptr);
+
     size_t idx = GENERATE(Catch::Generators::range(size_t(0), cases.size()));
 
     const auto &c = cases[idx];
@@ -102,6 +106,6 @@ TEST_CASE("functional tests") {
     }
 
     REQUIRE(!expected_str.empty());
-    std::string result = out.str().substr(codegen::g_prelude.size());
+    std::string result = out.str();
     REQUIRE(result == expected_str);
 }

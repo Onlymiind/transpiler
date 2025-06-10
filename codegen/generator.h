@@ -22,11 +22,13 @@ namespace codegen {
     class Generator {
       public:
         Generator(common::Global &global, common::Module &mod, common::AST &ast,
-                  common::Identifiers &identifiers)
-            : global_(&global), mod_(&mod), ast_(&ast),
-              identifiers_(&identifiers) {}
+                  common::Identifiers &&identifiers);
 
         bool codegen();
+
+        bool generate_pointer_maps();
+
+        const vm::TypeInfo &generate_pointer_map(const common::Type *type);
 
         bool codegen_expression(const common::Expression &expr,
                                 bool want_ptr = false);
@@ -71,7 +73,7 @@ namespace codegen {
         void push_arithmetic_op(const common::Type *typ, vm::Op int_op,
                                 vm::Op float_op);
         vm::Instruction &push_op(vm::Op op, uint64_t arg = 0) {
-            return output.emplace_back(vm::Instruction{.op = op, .arg = arg});
+            return output_.emplace_back(vm::Instruction{.op = op, .arg = arg});
         }
         void push_equals(const common::Type *type);
         void push_assign(const common::Type *type);
@@ -81,27 +83,27 @@ namespace codegen {
         void push_truncate(size_t bytes);
 
       private:
-        std::vector<vm::Instruction> output;
-        size_t local_count = 0;
+        std::vector<vm::Instruction> output_;
+        uint64_t local_idx_ = 0;
 
-        std::vector<std::vector<vm::Instruction *>> break_jumps;
-        std::vector<std::vector<vm::Instruction *>> continue_jumps;
+        std::vector<std::vector<vm::Instruction *>> break_jumps_;
+        std::vector<std::vector<vm::Instruction *>> continue_jumps_;
 
-        vm::Program program;
-        std::unordered_map<common::FunctionID, uint64_t> func_to_idx;
-        std::vector<common::FunctionID> func_ids;
+        vm::Program program_;
+        std::unordered_map<common::FunctionID, uint64_t> func_to_idx_;
+        std::vector<common::FunctionID> func_ids_;
 
-        std::unordered_map<common::VariableID, uint64_t> var_to_idx;
+        std::unordered_map<common::VariableID, uint64_t> var_to_idx_;
 
-        std::unordered_map<const common::Type *, uint64_t> type_to_idx;
+        std::unordered_map<const common::Type *, uint64_t> type_to_idx_;
+        std::unordered_map<const common::Type *, vm::TypeInfo> type_to_info_;
 
         common::Global *global_ = nullptr;
         common::Module *mod_ = nullptr;
         common::AST *ast_ = nullptr;
-        common::Identifiers *identifiers_ = nullptr;
         std::string_view err_;
 
-        common::IdentifierID append_name;
+        common::IdentifierID append_name_;
     };
 } // namespace codegen
 
