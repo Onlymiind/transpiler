@@ -243,7 +243,7 @@ TEST_CASE("parser: literals", "[parser]") {
     parser::Parser p{std::move(lexer_result2.tokens)};
     auto result = p.parse_expression();
     REQUIRE(p.get_error().empty());
-    auto file = p.reset();
+    auto file = p.extract_result();
     REQUIRE(ExprComparer{lexer_result2.identifiers, lexer_result1.identifiers}
                 .compare(*result, *expected.second));
 }
@@ -276,7 +276,7 @@ void run_tests(const std::vector<ParserTestCase> &cases) {
         auto result = p.parse_expression();
         INFO(p.get_error().msg);
         REQUIRE(p.get_error().empty());
-        auto file = p.reset();
+        auto file = p.extract_result();
         REQUIRE(
             ExprComparer{lexer_result2.identifiers, lexer_result1.identifiers}
                 .compare(*result, *expected.second));
@@ -467,7 +467,7 @@ TEST_CASE("parser: global variables", "[parser]") {
         }
 
         REQUIRE(p.get_error().empty());
-        auto ast = p.reset();
+        auto ast = p.extract_result();
         REQUIRE(ast.global_variables().size() == 1);
         auto &var = *ast.get_var(ast.global_variables()[0]);
         REQUIRE(!var.explicit_type->is_error());
@@ -512,7 +512,7 @@ TEST_CASE("parser: function call and variable ref distinction", "[parser]") {
         auto [p, idents, expr] = parse_expression("x");
         REQUIRE(p.get_error().empty());
         REQUIRE(expr->kind() == common::ExpressionKind::VARIABLE_REF);
-        auto ast = p.reset();
+        auto ast = p.extract_result();
         REQUIRE(dynamic_cast<const common::VariableReference &>(*expr).name() !=
                 common::IdentifierID{});
     }
@@ -520,7 +520,7 @@ TEST_CASE("parser: function call and variable ref distinction", "[parser]") {
         auto [p, idents, expr] = parse_expression("x()");
         REQUIRE(p.get_error().empty());
         REQUIRE(expr->kind() == common::ExpressionKind::FUNCTION_CALL);
-        auto ast = p.reset();
+        auto ast = p.extract_result();
         REQUIRE(dynamic_cast<const common::FunctionCall &>(*expr).name() !=
                 common::IdentifierID{});
     }
@@ -712,7 +712,7 @@ TEST_CASE("parser: member access", "[parser]") {
     REQUIRE(p.get_error().empty());
     REQUIRE(!result->is_error());
 
-    auto got_ast = p.reset();
+    auto got_ast = p.extract_result();
 
     auto current = result.get();
     for (int j = static_cast<int>(cases[i].chain.size()); j < 0; --j) {
@@ -804,7 +804,7 @@ TEST_CASE("parser: struct declarations", "[parser]") {
         return;
     }
     REQUIRE(p.get_error().empty());
-    auto ast = p.reset();
+    auto ast = p.extract_result();
     const auto &record = ast.structs()[0];
 
     REQUIRE(record.fields().size() == cases[i].expected_members.size());

@@ -707,4 +707,23 @@ namespace parser {
                                 .explicit_type = std::move(type),
                                 .pos = pos};
     }
+
+    common::IdentifierID Parser::match_identifier(std::string_view err_msg) {
+        if (!next().is(common::TokenType::IDENTIFIER)) {
+            report_error(err_msg);
+            return common::IdentifierID{};
+        }
+        common::IdentifierID result = *next().get<common::IdentifierID>();
+        consume();
+        return result;
+    }
+
+    bool Parser::match(common::TokenType expected, std::string_view err_msg) {
+        if (!next().is(expected)) {
+            report_error(err_msg);
+            return false;
+        }
+        consume();
+        return true;
+    }
 } // namespace parser

@@ -12,6 +12,12 @@ namespace common {
         if (is_defined_) {
             return false;
         }
+        is_defined_ = true;
+        if (fields.empty()) {
+            set_size(0);
+            set_alignment(0);
+            return true;
+        }
 
         size_t size = 0;
         size_t max_align = 0;
@@ -38,7 +44,7 @@ namespace common {
         }
 
         if (size % max_align != 0) {
-            size += size % max_align;
+            size += max_align - size % max_align;
         }
 
         set_size(size);
@@ -50,6 +56,12 @@ namespace common {
     bool StructType::add_fields(std::vector<Field> &&fields) {
         if (is_defined_) {
             return false;
+        }
+        is_defined_ = true;
+        if (fields.empty()) {
+            set_size(0);
+            set_alignment(0);
+            return true;
         }
 
         size_t size = 0;
@@ -75,7 +87,7 @@ namespace common {
         }
 
         if (size % max_align != 0) {
-            size += size % max_align;
+            size += max_align - size % max_align;
         }
 
         set_size(size);

@@ -1,5 +1,3 @@
-#include "codegen/generator.h"
-#include "common/token.h"
 #include "compiler/compiler.h"
 #include "vm/vm.h"
 
@@ -17,62 +15,6 @@
 #include <sstream>
 #include <string>
 #include <string_view>
-
-struct FunctionalTestCase {
-    std::string file;
-    bool do_constant_folding = false;
-};
-
-std::vector<FunctionalTestCase> cases{
-    {"function_calls"},
-    //{"function_def"},
-    //{"use_before_declaration"},
-    //{"wrong_return_type_fail"},
-    //{"missing_return_fail"},
-    //{"main_return_type_fail"},
-    //{"semicolons_in_global_scope"},
-    //{"variables", true},
-    //{"variables_redeclaration_fail"},
-    //{"variables_wrong_init_type_fail"},
-    //{"assignment"},
-    //{"assign_to_rvalue_fail"},
-    //{"assign_to_undeclared_fail"},
-    //{"parameterized_functions"},
-    //{"func_param_shadowing_fail"},
-    //{"if_no_return_statement_fail"},
-    //{"if_no_return_statement2_fail"},
-    //{"if_statement_simple"},
-    //{"if_statement_nested"},
-    //{"if_statement_return"},
-    //{"loop_reachability_fail"},
-    //{"loop_reachability2_fail"},
-    //{"return_after_break_fail"},
-    //{"return_after_continue_fail"},
-    //{"loop_reachability_nested_fail"},
-    //{"always_reachable_after_loop_fail"},
-    //{"loop_invalid_condition_type_fail"},
-    //{"loop_basic"},
-    //{"pointers"},
-    //{"address_of_rvalue_fail"},
-    //{"invalid_op_bitwise_and_fail"},
-    //{"invalid_op_bitwise_or_fail"},
-    //{"invalid_op_dereference_fail"},
-    //{"float_ops", true},
-    //{"integer_ops", true},
-    //{"boolean_ops", true},
-    //{"casts_folding", true},
-    //{"constant_folding", true},
-    //{"division_by_zero_integers_fail", true},
-    //{"division_by_zero_floats_fail", true},
-    //{"division_by_zero_constant_folding_integers_fail", true},
-    //{"division_by_zero_constant_folding_floats_fail", true},
-    //{"non_constexpr_global_initializer_fail", true},
-    //{"arrays", true},
-    //{"array_cast_fail", true},
-    //{"array_indexing", true},
-    //{"array_index_out_of_bounds_fail", true},
-    //{"assing_to_rvalue_array_fail", true},
-};
 
 static const std::string base_dir = "generator_test_data/";
 

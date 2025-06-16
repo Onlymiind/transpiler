@@ -30,7 +30,7 @@ void run_tests(const std::vector<CheckerTestCase> cases) {
         parser::Parser p{std::move(lexer_result.tokens)};
         auto expr = p.parse_expression();
         REQUIRE(p.get_error().empty());
-        auto ast = p.reset();
+        auto ast = p.extract_result();
         checker::Checker ch{ast, lexer_result.identifiers, false};
         bool check_result = ch.check_expression(expr);
         INFO(ch.get_error().msg);
@@ -41,7 +41,7 @@ void run_tests(const std::vector<CheckerTestCase> cases) {
 
         REQUIRE(ch.get_error().empty());
 
-        auto mod = ch.reset();
+        auto mod = ch.extract_result();
         REQUIRE(
             c.expected ==
             dynamic_cast<const common::PrimitiveType &>(*expr->type()).type());
@@ -136,7 +136,7 @@ TEST_CASE("checker: types", "[checker]") {
         parser::Parser p{std::move(lexed.tokens)};
         auto parsed_type = p.parse_type();
         REQUIRE(p.get_error().empty());
-        auto ast = p.reset();
+        auto ast = p.extract_result();
         checker::Checker c{ast, lexed.identifiers};
         auto checked = c.get_type(*parsed_type);
         REQUIRE(checked);
@@ -151,7 +151,7 @@ TEST_CASE("checker: types", "[checker]") {
         parser::Parser p{std::move(lexed.tokens)};
         auto parsed_type = p.parse_type();
         REQUIRE(p.get_error().empty());
-        auto ast = p.reset();
+        auto ast = p.extract_result();
         checker::Checker c{ast, lexed.identifiers};
         auto checked = c.get_type(*parsed_type);
         REQUIRE(checked);
@@ -168,7 +168,7 @@ TEST_CASE("checker: types", "[checker]") {
         parser::Parser p{std::move(lexed.tokens)};
         auto parsed_type = p.parse_type();
         REQUIRE(p.get_error().empty());
-        auto ast = p.reset();
+        auto ast = p.extract_result();
         checker::Checker c{ast, lexed.identifiers};
         auto checked = c.get_type(*parsed_type);
         REQUIRE(c.get_error().empty());
@@ -187,7 +187,7 @@ TEST_CASE("checker: types", "[checker]") {
         parser::Parser p{std::move(lexed.tokens)};
         auto parsed_type = p.parse_type();
         REQUIRE(p.get_error().empty());
-        auto ast = p.reset();
+        auto ast = p.extract_result();
         checker::Checker c{ast, lexed.identifiers};
         auto checked = c.get_type(*parsed_type);
         REQUIRE(c.get_error().empty());

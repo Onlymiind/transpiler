@@ -69,7 +69,7 @@ namespace compiler {
             return {};
         }
 
-        common::AST ast = parser.reset();
+        common::AST ast = parser.extract_result();
 
         checker::Checker checker{ast, lexer_result.identifiers, true};
         checker.check();
@@ -81,7 +81,7 @@ namespace compiler {
             return {};
         }
 
-        auto [module, global] = checker.reset();
+        auto [module, global] = checker.extract_result();
 
         codegen::Generator generator{std::move(*global), module, ast,
                                      std::move(lexer_result.identifiers)};

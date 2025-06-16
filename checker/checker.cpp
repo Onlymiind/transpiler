@@ -199,7 +199,7 @@ namespace checker {
             break;
         default: report_error("unknown expression type"); return false;
         }
-        if (!expr->type() && !allow_assing) {
+        if (result && !expr->type() && !allow_assing) {
             report_error("expression does not evaluate to a type");
             return false;
         }
@@ -1146,7 +1146,7 @@ namespace checker {
                 }
             }
 
-            if (!struct_ptr) {
+            if (!struct_ptr || struct_ptr->is_slice()) {
                 continue;
             }
 
@@ -1185,7 +1185,9 @@ namespace checker {
         }
 
         ERROR_GUARD(access_ptr->pos());
-        check_expression(access_ptr->record());
+        if (!check_expression(access_ptr->record())) {
+            return false;
+        }
 
         if (access_ptr->member()->kind() ==
             common::ExpressionKind::FUNCTION_CALL) {

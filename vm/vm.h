@@ -298,6 +298,8 @@ namespace vm {
         std::map<uint8_t *, Allocation> allocations_;
 
         std::string err_;
+
+        bool took_branch_ = false;
     };
 
     void decompile(std::span<Instruction> instrs, std::ostream &out);

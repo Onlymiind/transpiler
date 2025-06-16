@@ -5,6 +5,7 @@
 #include "common/token.h"
 #include "common/util.h"
 
+#include <cstddef>
 #include <cstdio>
 #include <istream>
 #include <optional>
@@ -22,7 +23,10 @@ namespace lexer {
     class Lexer {
       public:
         Lexer() = default;
-        Lexer(std::istream &file) : file_(&file) { current_pos_.push_back(file_->tellg()); }
+        Lexer(std::istream &file) : file_(&file) {
+            current_pos_.push_back(file_->tellg());
+            line_starts_.push_back(file_->tellg());
+        }
 
         void set_file(std::istream &file) { file_ = &file; }
 
@@ -60,6 +64,7 @@ namespace lexer {
 
         common::Error err_;
         std::vector<size_t> current_pos_;
+        std::vector<size_t> line_starts_;
         size_t current_line_ = 1;
     };
 } // namespace lexer

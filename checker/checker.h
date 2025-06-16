@@ -52,7 +52,6 @@ namespace checker {
                           std::unordered_set<const common::StructType *>
                               *in_progress = nullptr);
         bool check_member_access(std::unique_ptr<common::Expression> &access);
-
         bool is_reachable() const {
             return reachability_stack_.top() == Reachability::REACHABLE;
         }
@@ -67,7 +66,8 @@ namespace checker {
         try_compute(common::BinaryExpression &expr);
         std::unique_ptr<common::Expression> try_compute(common::Cast &cast);
 
-        std::pair<common::Module, std::unique_ptr<common::Global>> reset() {
+        std::pair<common::Module, std::unique_ptr<common::Global>>
+        extract_result() {
             std::unique_ptr<common::Global> global = std::move(global_types_);
             return {std::move(module_), std::move(global)};
         }
@@ -79,7 +79,6 @@ namespace checker {
             err_.pos = err_positions_.top();
         }
         const common::Error &get_error() const { return err_; }
-
         const common::Type *get_slice(const common::Type *element_type);
 
       private:

@@ -117,9 +117,10 @@ namespace codegen {
         // now generate all the functions
         for (const auto funcID : func_ids_) {
             const common::Function &func = *ast_->get_function(funcID);
-            if (func.decl_only) {
+            if (func.is_native) {
                 continue;
             }
+
             if (!codegen_function(func)) {
                 return false;
             }
@@ -175,14 +176,17 @@ namespace codegen {
                 *record = dynamic_cast<const common::StructType *>(type);
 
             size_t last_offset = 0;
+            bool skipped = false;
             for (const auto &field : record->fields()) {
                 if (field.type->alignment() < common::g_pointer_size) {
+                    skipped = true;
                     continue;
                 }
 
-                for (; last_offset < field.offset; ++last_offset) {
+                for (; skipped && last_offset < field.offset; last_offset += 8) {
                     info.is_ptr.push_back(false);
                 }
+                skipped = false;
                 last_offset = field.offset;
 
                 const vm::TypeInfo &field_info = generate_pointer_map(
@@ -190,7 +194,7 @@ namespace codegen {
                 info.is_ptr.insert(info.is_ptr.end(), field_info.is_ptr.begin(),
                                    field_info.is_ptr.end());
             }
-            for (; last_offset < record->size(); ++last_offset) {
+            for (; skipped && last_offset < record->size(); last_offset += 8) {
                 info.is_ptr.push_back(false);
             }
         }
@@ -306,7 +310,7 @@ namespace codegen {
         if (type->is_pointer() || type->is_primitive()) {
             push_op(vm::Op::EQUALS);
         } else {
-            push_op(vm::Op::MEM_EQUALS);
+            push_op(vm::Op::MEM_EQUALS, type->size());
         }
     }
 
@@ -391,6 +395,9 @@ namespace codegen {
     }
 
     bool Generator::codegen_cast(const common::Cast &cast) {
+        if (!codegen_expression(*cast.from())) {
+            return false;
+        }
         if (cast.type() == cast.from()->type() || cast.type()->is_pointer()) {
             return true;
         } else if (cast.type()->has_trait(common::TypeTraits::INTEGER) &&

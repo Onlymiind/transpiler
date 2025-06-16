@@ -1,0 +1,155 @@
+external func assert(val bool);
+external func print(val int);
+
+struct arr_like {
+    a int;
+    b [4]*int;
+    c []*float;
+    ptr *arr_like;
+}
+
+func test_int_ops() {
+    var a int = 1;
+    var b int = 3;
+
+    assert(a + b == 4);
+    assert(a - b == -2);
+    assert(a % b == 1);
+    assert(a * b == 3);
+    assert(a / b == 0);
+    assert(a < b);
+    assert(a <= b);
+    assert(!(a > b));
+    assert(b >= a);
+    assert(a == 1);
+    assert(a != b);
+    assert(a & b == 1);
+    assert(a | b == 3);
+    assert(a ^ b == 2);
+    assert(a << 1 == 2);
+    assert(b >> 1 == 1);
+    assert(b >>> 1 == 1);
+    assert(-a >> 1 == -1);
+    assert(-a >>> 1 == (-1 & ~(1 << 63)));
+
+    a = 10;
+    assert(a == 10);
+}
+
+func test_char_ops() {
+    var a_c char = cast<char>(1);
+    var b_c char = cast<char>(3);
+
+    assert(a_c + b_c == cast<char>(4));
+    assert(a_c - b_c == cast<char>(-2));
+    assert(a_c % b_c == cast<char>(1));
+    assert(a_c * b_c == cast<char>(3));
+    assert(a_c / b_c == cast<char>(0));
+    assert(a_c < b_c);
+    assert(a_c <= b_c);
+    assert(!(a_c > b_c));
+    assert(b_c >= a_c);
+    assert(a_c == cast<char>(1));
+    assert(a_c != b_c);
+    assert(a_c & b_c == cast<char>(1));
+    assert(a_c | b_c == cast<char>(3));
+    assert(a_c ^ b_c == cast<char>(2));
+    assert(a_c << cast<char>(1) == cast<char>(2));
+    assert(b_c >> cast<char>(1) == cast<char>(1));
+    assert(b_c >>> cast<char>(1) == cast<char>(1));
+    assert(-a_c >> cast<char>(1) == cast<char>(127));
+    assert(-a_c >>> cast<char>(1) == cast<char>(127));
+}
+
+func test_float_ops() {
+    var a_f float = 1.0;
+    var b_f float = 4.0;
+
+    assert(a_f + b_f == 5.);
+    assert(a_f - b_f == -3.);
+    assert(a_f * b_f == 4.);
+    assert(a_f / b_f == 0.25);
+    assert(a_f < b_f);
+    assert(a_f <= b_f);
+    assert(!(a_f > b_f));
+    assert(b_f >= a_f);
+    assert(a_f == 1.0);
+    assert(a_f != b_f);
+    
+    assert(&a_f == &a_f);
+    assert(&a_f != &b_f);
+}
+
+func test_bool_ops() {
+    var t = true;
+    var f = false;
+    assert(!f);
+    assert(!!t);
+    assert(t != f);
+}
+
+func mem_test() arr_like {
+    var arr arr_like;
+
+    var arr2 arr_like;
+    arr2.a = 10;
+    arr.ptr = &arr2;
+
+    for var i = 0; i < arr.b.len; i = i + 1 {
+        var a int = 11;
+        var b float = 2.0;
+
+        arr.b[i] = &a;
+        arr.c.append(&b);
+    }
+
+    for var i = 0; i < 1000; i = i + 1 {
+        var a [20]int;
+    }
+
+    return arr;
+}
+
+func test_misc_ops() {
+
+    var arr [6]int;
+    assert(arr.len == 6);
+    for var i = 0; i < arr.len; i = i + 1 {
+        assert(arr[i] == 0);
+    }
+
+    arr[4] = 10;
+    assert(arr[4] == 10);
+
+    var arr2 = arr;
+    assert(arr2.len == 6);
+    assert(arr == arr2);
+    assert(arr2[4] == 10);
+
+    arr2[4] = 11;
+    assert(arr != arr2);
+
+    if(arr[4] != 10) {
+        assert(false);
+    }
+}
+
+
+func test_mem() {
+    var arr = mem_test();
+
+    assert(arr.c.len == 4);
+    for var i = 0; i < arr.b.len; i = i + 1 {
+        assert(*arr.b[i] == 11);
+        assert(*arr.c[i] == 2.0);
+    }
+
+    assert(arr.ptr.a == 10);
+}
+
+func test_strings() {
+    var a = "abc\n";
+    assert(a.len == 4);
+    assert(a[0] == 'a');
+    assert(a[3] == '\n');
+}

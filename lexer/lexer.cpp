@@ -21,9 +21,9 @@ namespace lexer {
         pos.symbol = current_pos_.back();
         if (current_pos_.size() > 1) {
             size_t prev = current_pos_[current_pos_.size() - 2];
-            pos.symbol -= prev;
-            pos.line_start = prev;
+            pos.symbol -= prev + 1;
         }
+        pos.line_start = line_starts_.back();
         return pos;
     }
 
@@ -38,6 +38,7 @@ namespace lexer {
         case '\n':
             ++current_line_;
             current_pos_.push_back(file_->tellg());
+            line_starts_.push_back(file_->tellg());
             return '\n';
         }
         current_pos_.back() = file_->tellg();

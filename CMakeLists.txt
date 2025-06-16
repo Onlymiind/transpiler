@@ -43,10 +43,6 @@ set(COMPILER_SRC
 add_library(compiler_lib ${COMPILER_SRC})
 target_include_directories(compiler_lib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable(compiler main.cpp)
-target_include_directories(compiler PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(compiler compiler_lib)
-
 set(TEST_SRCS
 	tests/common.h
 	tests/common.cpp
@@ -55,6 +51,7 @@ set(TEST_SRCS
 	tests/parser_test.cpp
 	tests/checker_test.cpp
 	tests/generator_test.cpp
+    tests/vm_test.cpp
 )
 
 add_executable(tests ${TEST_SRCS})
