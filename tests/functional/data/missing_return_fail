@@ -1,5 +1,0 @@
-func a() u64 {}
-
-func b() f64 { 1;2;3;4;}
-
-func main() {}

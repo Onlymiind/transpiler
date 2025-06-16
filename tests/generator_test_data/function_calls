@@ -1,0 +1,71 @@
+PUSH 2
+ALLOCATE_ARRAY
+
+GET_LOCAL 0
+PUSH 2
+PUSH 0
+INDEX_ARRAY 8
+PUSH f10.0
+WRITE 8
+
+CALL
+POP
+
+ALLOCATE
+DUP
+PUSH 1
+WRITE 8
+PUSH 2
+ALLOCATE_ARRAY
+DUP
+GET_LOCAL 0
+COPY 16
+CALL
+POP
+
+ALLOCATE
+DUP
+PUSH 3
+WRITE 8
+PUSH 2
+ALLOCATE_ARRAY
+DUP
+GET_LOCAL 0
+COPY 16
+CALL
+POP
+
+ALLOCATE
+DUP
+PUSH 1
+WRITE 8
+ALLOCATE
+DUP
+PUSH f1.0
+WRITE 8
+ALLOCATE
+DUP
+PUSH 97
+WRITE 1
+NATIVE_CALL
+
+RETURN
+
+@END
+
+func a() int {return 1 + 2;}
+func b(foo int, bar [2]float) float {return cast<float>(foo) * bar[0];}
+external func c(foo int, bar float, baz char);
+
+func main() {
+    var i [2]float;
+    i[0] = 10.0;
+
+    a();
+
+    b(1, i);
+
+    (1 + 2).b(i);
+
+    c(1, 1.0, 'a');
+}

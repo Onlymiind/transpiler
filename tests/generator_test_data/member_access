@@ -1,0 +1,62 @@
+ALLOCATE
+ALLOCATE
+
+GET_LOCAL 0
+PUSH 0
+ADD_I 8
+READ 8
+POP
+
+GET_LOCAL 1
+PUSH 8
+ADD_I 8
+READ 1
+POP
+
+GET_LOCAL 1
+PUSH 9
+ADD_I 8
+READ 1
+POP
+
+GET_LOCAL 1
+PUSH 16
+ADD_I 8
+READ 9223372036854775816
+ASSERT_NOT_NULL
+PUSH 0
+ADD_I 8
+READ 8
+POP
+
+GET_LOCAL 1
+PUSH 24
+ADD_I 8
+POP
+
+RETURN
+@END
+
+struct foo {
+    a int;
+}
+
+struct bar {
+    a int;
+    b char;
+    c bool;
+    d *bar;
+    f foo;
+}
+
+func main() {
+    var a foo;
+    var b bar;
+
+    a.a;
+
+    b.b;
+    b.c;
+    b.d.a;
+    b.f;
+}

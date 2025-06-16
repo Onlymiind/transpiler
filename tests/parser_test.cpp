@@ -1,3 +1,4 @@
+#include "catch2/catch_message.hpp"
 #include "catch2/generators/catch_generators_range.hpp"
 #include "common/ast.h"
 #include "common/base_classes.h"
@@ -17,7 +18,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
@@ -61,6 +61,9 @@ class PolishNotationParser {
         case common::TokenType::BOOL: return make_literal_expr(bool{});
         case common::TokenType::INTEGER: return make_literal_expr(int64_t{});
         case common::TokenType::FLOAT: return make_literal_expr(double{});
+        case common::TokenType::STRING:
+            return make_literal_expr(common::StringID{});
+        case common::TokenType::CHAR: return make_literal_expr(char{});
         case common::TokenType::NULLPTR: {
             common::Literal result{nullptr, next().pos()};
             consume();
@@ -88,6 +91,14 @@ class PolishNotationParser {
                                                                  container),
                                                              std::move(index),
                                                              pos);
+        }
+        case common::TokenType::DOT: {
+            auto pos = next().pos();
+            consume();
+            auto lhs = parse_expression();
+            auto rhs = parse_expression();
+            return std::make_unique<common::MemberAccess>(std::move(lhs),
+                                                          std::move(rhs), pos);
         }
         }
 
@@ -244,6 +255,7 @@ struct ParserTestCase {
 
 void run_tests(const std::vector<ParserTestCase> &cases) {
     for (const auto &c : cases) {
+        INFO(c.expr);
         std::stringstream str(c.pn_expr);
         lexer::Lexer l{str};
         l.split();
@@ -262,6 +274,7 @@ void run_tests(const std::vector<ParserTestCase> &cases) {
 
         parser::Parser p{std::move(lexer_result2.tokens)};
         auto result = p.parse_expression();
+        INFO(p.get_error().msg);
         REQUIRE(p.get_error().empty());
         auto file = p.reset();
         REQUIRE(
@@ -279,6 +292,7 @@ TEST_CASE("parser: unary operators", "[parser]") {
         ParserTestCase{"!!1234.1234", "(!(!1234.1234"},
         ParserTestCase{"& & &1234.1234", "(&(&(&1234.1234"},
         ParserTestCase{"*1234.1234", "(*1234.1234"},
+        ParserTestCase{"~1234", "(~1234"},
     };
 
     run_tests(cases);
@@ -290,6 +304,7 @@ TEST_CASE("parser: casts", "[parser]") {
         ParserTestCase{"cast<bool>(1234)", "bool 1234"},
         ParserTestCase{"cast<int>(!true)", "int (!true"},
         ParserTestCase{"cast<float>(1 + 2)", "float + 1 2"},
+        ParserTestCase{"cast<char>(1 + 2)", "char + 1 2"},
     };
 
     run_tests(cases);
@@ -314,6 +329,10 @@ TEST_CASE("parser: binary operators", "[parser]") {
         ParserTestCase{"1234 = 5678", "= 1234 5678"},
         ParserTestCase{"1234 & 5678", "& 1234 5678"},
         ParserTestCase{"1234 | 5678", "| 1234 5678"},
+        ParserTestCase{"1234 ^ 5678", "^ 1234 5678"},
+        ParserTestCase{"1234 << 5678", "<< 1234 5678"},
+        ParserTestCase{"1234 >> 5678", ">> 1234 5678"},
+        ParserTestCase{"1234 >>> 5678", ">>> 1234 5678"},
     };
 
     run_tests(cases);
@@ -344,7 +363,7 @@ TEST_CASE("parser: precedence", "[parser]") {
     std::vector<ParserTestCase> cases = {
         ParserTestCase{"1234 + 5678 * true + 9012",
                        "+ + 1234 * 5678 true 9012"},
-        ParserTestCase{"1 || 2 && 3 == 4 + 5 * 6", "|| 1 && 2 == 3 + 4 * 5 6"},
+        ParserTestCase{"1 || 2 && 3 == 4 + 5 * 6", "&& || 1 2 == 3 + 4 * 5 6"},
         ParserTestCase{"1 || (2 && 3.0) == (4 + 5) * 6 = 7",
                        "= || 1 == && 2 3.0 * + 4 5 6 7"},
         ParserTestCase{"7 - 10 * 3 - 1", "- - 7 * 10 3 1"},
@@ -652,18 +671,33 @@ TEST_CASE("parser: loops", "[parser]") {
     }
 }
 
-TEST_CASE("parser: universal call syntax", "[parser]") {
+TEST_CASE("parser: member access", "[parser]") {
     struct Case {
         std::string dot_call;
-        std::string normal_call;
+        std::vector<common::ExpressionKind> chain;
         bool should_fail = false;
     };
     std::vector<Case> cases{
-        Case{"(1).foo()", "foo(1)"},
-        Case{"a.foo()", "foo(a)"},
-        Case{"a.foo(1, 2, 3)", "foo(a, 1, 2, 3)"},
-        Case{"a.foo(1).bar(2, 3)", "bar(foo(a, 1), 2, 3)"},
+        Case{"(1).foo()",
+             {common::ExpressionKind::LITERAL,
+              common::ExpressionKind::FUNCTION_CALL}},
+        Case{"a.foo()",
+             {common::ExpressionKind::VARIABLE_REF,
+              common::ExpressionKind::FUNCTION_CALL}},
+        Case{"a.foo(1, 2, 3).b",
+             {common::ExpressionKind::VARIABLE_REF,
+              common::ExpressionKind::FUNCTION_CALL,
+              common::ExpressionKind::VARIABLE_REF}},
+        Case{"a.foo(1).bar(2, 3)[1].a[2].b",
+             {common::ExpressionKind::VARIABLE_REF,
+              common::ExpressionKind::FUNCTION_CALL,
+              common::ExpressionKind::FUNCTION_CALL,
+              common::ExpressionKind::INDEX,
+              common::ExpressionKind::VARIABLE_REF,
+              common::ExpressionKind::INDEX,
+              common::ExpressionKind::VARIABLE_REF}},
         Case{.dot_call = ".foo()", .should_fail = true},
+        Case{.dot_call = "a.1", .should_fail = true},
     };
     size_t i = GENERATE_REF(Catch::Generators::range(size_t(0), cases.size()));
     INFO(cases[i].dot_call);
@@ -676,12 +710,25 @@ TEST_CASE("parser: universal call syntax", "[parser]") {
 
     REQUIRE(p.get_error().empty());
     REQUIRE(!result->is_error());
-    REQUIRE(result->kind() == common::ExpressionKind::FUNCTION_CALL);
 
-    auto [p2, idents2, expected] = parse_expression(cases[i].normal_call);
     auto got_ast = p.reset();
-    auto expected_ast = p2.reset();
-    REQUIRE(ExprComparer{idents, idents2}.compare(*result, *expected));
+
+    auto current = result.get();
+    for (int j = static_cast<int>(cases[i].chain.size()); j < 0; --j) {
+        common::ExpressionKind kind = cases[i].chain[j];
+        if (kind == common::ExpressionKind::INDEX) {
+            auto expr = dynamic_cast<common::IndexExpression *>(current);
+            REQUIRE(expr);
+            current = expr->container().get();
+        } else if (i != 0) {
+            auto expr = dynamic_cast<common::MemberAccess *>(current);
+            REQUIRE(expr);
+            REQUIRE(expr->member()->kind() == kind);
+            current = expr->record().get();
+        } else {
+            REQUIRE(current->kind() == kind);
+        }
+    }
 }
 
 TEST_CASE("parser: types", "[parser]") {
@@ -699,6 +746,7 @@ TEST_CASE("parser: types", "[parser]") {
         Case{"[1 + 2 * 3]foo", common::ParsedTypeKind::ARRAY},
         Case{"**[1 + 3]foo", common::ParsedTypeKind::ARRAY, 2},
         Case{"[1]**foo", common::ParsedTypeKind::ARRAY, 0},
+        Case{"[]foo", common::ParsedTypeKind::SLICE, 0},
         Case{"[13][10]**[1 + 2]foo", common::ParsedTypeKind::ARRAY, 0},
     };
 
@@ -708,6 +756,7 @@ TEST_CASE("parser: types", "[parser]") {
 
     parser::Parser p{std::move(lexer_result.tokens)};
     auto type = p.parse_type();
+    INFO(p.get_error().msg);
     REQUIRE(p.get_error().empty());
     REQUIRE((type && !type->is_error()));
 
@@ -718,16 +767,22 @@ TEST_CASE("parser: types", "[parser]") {
 TEST_CASE("parser: struct declarations", "[parser]") {
     struct Case {
         std::string str;
-        std::vector<common::ParsedTypeKind> expected_members;
+        std::vector<std::pair<common::ParsedTypeKind, uint64_t>>
+            expected_members;
         bool should_fail = false;
     };
 
     std::vector<Case> cases{
         Case{.str = "struct A {}"},
-        Case{.str = "struct A { foo u8; }"},
-        Case{.str = "struct A { foo *u8; }"},
-        Case{.str = "struct A { foo [1]u8; }"},
-        Case{.str = "struct A { a [2 + 3 * 8]u8; b *[1]u8; c u8; }"},
+        Case{"struct A { foo u8; }", {{common::ParsedTypeKind::NAMED, 0}}},
+        Case{"struct A { foo *u8; }", {{common::ParsedTypeKind::NAMED, 1}}},
+        Case{"struct A { foo [1]u8; }", {{common::ParsedTypeKind::ARRAY, 0}}},
+        Case{"struct A { a [2 + 3 * 8]u8; b *[1]u8; c u8; }",
+             {
+                 {common::ParsedTypeKind::ARRAY, 0},
+                 {common::ParsedTypeKind::ARRAY, 1},
+                 {common::ParsedTypeKind::NAMED, 0},
+             }},
         Case{.str = "A { foo u8}", .should_fail = true},
         Case{.str = "struct {foo u8}", .should_fail = true},
         Case{.str = "struct A foo u8}", .should_fail = true},
@@ -749,4 +804,16 @@ TEST_CASE("parser: struct declarations", "[parser]") {
     }
     REQUIRE(p.get_error().empty());
     auto ast = p.reset();
+    const auto &record = ast.structs()[0];
+
+    REQUIRE(record.fields().size() == cases[i].expected_members.size());
+
+    for (size_t j = 0; j < record.fields().size(); ++j) {
+        const auto &type = record.fields()[j].explicit_type;
+        auto [expected_kind,
+              expected_indirection] = cases[i].expected_members[j];
+        REQUIRE(type);
+        REQUIRE(type->kind() == expected_kind);
+        REQUIRE(type->indirection_level() == expected_indirection);
+    }
 }

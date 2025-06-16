@@ -1,0 +1,48 @@
+PUSH 4
+ALLOCATE_ARRAY
+ALLOCATE
+DUP
+PUSH 1
+WRITE 8
+GET_LOCAL 0
+PUSH 4
+PUSH 1
+GET_LOCAL 1
+READ 8
+ADD_I 8
+PUSH 1
+MUL_I 8
+INDEX_ARRAY 8
+READ 8
+POP
+
+ALLOCATE
+GET_LOCAL 2
+DUP
+PUSH 16
+ADD_I 8
+READ 9223372036854775816
+SWAP
+PUSH 8
+ADD_I 8
+READ 8
+PUSH 1
+INDEX_ARRAY 8
+POP
+
+RETURN
+
+@END
+
+struct foo {
+    i int;
+}
+
+func main() {
+	var a [4]int;
+    var b = 1;
+	a[(1 + b) * 1];
+
+    var c []foo;
+    c[1];
+}

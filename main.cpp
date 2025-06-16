@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    compiler::compile(file, out, std::cerr);
+    compiler::compile(file, &std::cerr);
 
     return 0;
 }

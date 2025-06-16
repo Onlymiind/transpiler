@@ -1,0 +1,9 @@
+func foo() int {
+    for {
+        if true {
+            break;
+        } else {
+            return 1;
+        }
+    }
+}

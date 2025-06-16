@@ -1,5 +1,0 @@
-func foo() u64 {return 1;}
-
-var a u64 = foo();
-
-func main() {}

@@ -1,5 +1,0 @@
-func foo() u64 {
-    for {
-        return 1;
-    }
-}

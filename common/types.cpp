@@ -23,7 +23,7 @@ namespace common {
             max_align = std::max(max_align, align);
 
             if (size % align != 0) {
-                size += size % align;
+                size += align - size % align;
             }
 
             auto &field = fields_.emplace_back(Field{.name = var.name,
@@ -62,7 +62,7 @@ namespace common {
             max_align = std::max(max_align, align);
 
             if (size % align != 0) {
-                size += size % align;
+                size += align - size % align;
             }
 
             field.offset = size;

@@ -1,0 +1,8 @@
+func foo() [4]int {
+	var a [4]int;
+	return a;
+}
+
+func main() {
+	foo()[0] = 1;
+}

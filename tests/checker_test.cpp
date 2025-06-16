@@ -13,12 +13,6 @@
 #include <string>
 #include <vector>
 
-// TODO: Module class is simple for now,
-// later should definitely write tests for it
-
-// TODO: those tests don't check if Checker assigns correct types to all
-// expressions in the tree
-
 struct CheckerTestCase {
     std::string data;
     bool should_fail = false;
@@ -61,6 +55,8 @@ TEST_CASE("checker: literals", "[checker]") {
         {.data = "false", .expected = BOOL},
         {.data = "1234", .expected = INT},
         {.data = "1234.00", .expected = FLOAT},
+        {.data = "'a'", .expected = CHAR},
+        {.data = "'\\n'", .expected = CHAR},
     };
     run_tests(cases);
 }
@@ -93,6 +89,8 @@ TEST_CASE("checher: binary operators", "[checker]") {
         {.data = "1234.00 <= 1234.00", .expected = BOOL},
         {.data = "1234 >= 1234", .expected = BOOL},
         {.data = "1234.00 >= 1234.00", .expected = BOOL},
+        {.data = "'a' & 'b'", .expected = CHAR},
+        {.data = "'a' * 'b'", .expected = CHAR},
     };
     run_tests(cases);
 }
@@ -102,6 +100,8 @@ TEST_CASE("checker: unary operators", "[checker]") {
     std::vector<CheckerTestCase> cases{
         {.data = "!false", .expected = BOOL},
         {.data = "-1234.00", .expected = FLOAT},
+        {.data = "-1234", .expected = INT},
+        {.data = "-'a'", .expected = CHAR},
     };
     run_tests(cases);
 }
@@ -120,15 +120,19 @@ TEST_CASE("checker: casts", "[checker]") {
     using enum common::BuiltinTypes;
     std::vector<CheckerTestCase> cases{
         {.data = "cast<bool>(true)", .expected = BOOL},
-        {.data = "cast<u64>(1.1)", .expected = INT},
-        {.data = "cast<f64>(1)", .expected = FLOAT},
+        {.data = "cast<int>(1.1)", .expected = INT},
+        {.data = "cast<float>(1)", .expected = FLOAT},
+        {.data = "cast<char>(1)", .expected = CHAR},
+        {.data = "cast<char>(1.1)", .expected = CHAR},
+        {.data = "cast<float>('a')", .expected = FLOAT},
+        {.data = "cast<int>('\\n')", .expected = INT},
     };
     run_tests(cases);
 }
 
 TEST_CASE("checker: types", "[checker]") {
     SECTION("named") {
-        auto lexed = lex("u64");
+        auto lexed = lex("int");
         parser::Parser p{std::move(lexed.tokens)};
         auto parsed_type = p.parse_type();
         REQUIRE(p.get_error().empty());
@@ -140,10 +144,10 @@ TEST_CASE("checker: types", "[checker]") {
         REQUIRE(
             *lexed.identifiers.get(
                 dynamic_cast<const common::PrimitiveType &>(*checked).name()) ==
-            "u64");
+            "int");
     }
     SECTION("pointer") {
-        auto lexed = lex("*u64");
+        auto lexed = lex("*int");
         parser::Parser p{std::move(lexed.tokens)};
         auto parsed_type = p.parse_type();
         REQUIRE(p.get_error().empty());
@@ -157,10 +161,10 @@ TEST_CASE("checker: types", "[checker]") {
         REQUIRE(
             *lexed.identifiers.get(
                 dynamic_cast<const common::PrimitiveType &>(*pointee).name()) ==
-            "u64");
+            "int");
     }
     SECTION("array") {
-        auto lexed = lex("[1 + 2 * 3]u64");
+        auto lexed = lex("[1 + 2 * 3]int");
         parser::Parser p{std::move(lexed.tokens)};
         auto parsed_type = p.parse_type();
         REQUIRE(p.get_error().empty());
@@ -176,9 +180,35 @@ TEST_CASE("checker: types", "[checker]") {
         REQUIRE(
             *lexed.identifiers.get(
                 dynamic_cast<const common::PrimitiveType &>(*arr.element_type())
-                    .name()) == "u64");
+                    .name()) == "int");
     }
-    // TODO: check more complex types
+    SECTION("slice") {
+        auto lexed = lex("[]int");
+        parser::Parser p{std::move(lexed.tokens)};
+        auto parsed_type = p.parse_type();
+        REQUIRE(p.get_error().empty());
+        auto ast = p.reset();
+        checker::Checker c{ast, lexed.identifiers};
+        auto checked = c.get_type(*parsed_type);
+        REQUIRE(c.get_error().empty());
+        REQUIRE(checked);
+        REQUIRE(checked->kind() == common::TypeKind::STRUCT);
+        const common::StructType
+            &slice = dynamic_cast<const common::StructType &>(*checked);
+
+        const common::Field *data_field = slice.get_field(
+            lexed.identifiers.get("data"));
+        REQUIRE(data_field);
+        REQUIRE(data_field->type->is_pointer());
+        const auto *elem = dynamic_cast<const common::PointerType *>(
+                               data_field->type)
+                               ->pointee_type();
+        REQUIRE(elem);
+        REQUIRE(
+            *lexed.identifiers.get(
+                dynamic_cast<const common::PrimitiveType &>(*elem).name()) ==
+            "int");
+    }
 }
 
 TEST_CASE("checker: fails", "[checker]") {
@@ -194,7 +224,6 @@ TEST_CASE("checker: fails", "[checker]") {
         {.data = "true > true", .should_fail = true},
         {.data = "true <= false", .should_fail = true},
         {.data = "true >= true", .should_fail = true},
-        {.data = "-1234", .should_fail = true},
         {.data = "1.0 % 2.0", .should_fail = true},
 
         // type mismatch
@@ -205,9 +234,10 @@ TEST_CASE("checker: fails", "[checker]") {
         {.data = "1234 - true", .should_fail = true},
 
         // casts
-        {.data = "bool(1)", .should_fail = true},
-        {.data = "u64(true)", .should_fail = true},
-        {.data = "f64(false)", .should_fail = true},
+        {.data = "cast<bool>(1)", .should_fail = true},
+        {.data = "cast<int>(true)", .should_fail = true},
+        {.data = "cast<float>(false)", .should_fail = true},
+        {.data = "cast<bool>('b')", .should_fail = true},
     };
     run_tests(cases);
 }

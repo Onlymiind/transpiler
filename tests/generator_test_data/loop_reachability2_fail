@@ -1,0 +1,9 @@
+func foo() int {
+    for {
+        continue;
+    }
+}
+
+func main() {
+    foo();
+}

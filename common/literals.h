@@ -4,7 +4,6 @@
 #include "common/util.h"
 
 #include <string>
-#include <unordered_map>
 #include <utility>
 
 namespace common {
@@ -43,7 +42,7 @@ namespace common {
                        : id_to_name_[*id];
         }
 
-        IdentifierID get(const std::string &name) const {
+        IdentifierID get(std::string_view name) const {
             auto it = name_to_id_.find(name);
             return it == name_to_id_.end() ? IdentifierID{} : it->second;
         }
@@ -59,10 +58,10 @@ namespace common {
 
       private:
         std::vector<const std::string *> id_to_name_;
-        std::unordered_map<std::string, IdentifierID> name_to_id_;
+        StringMap<std::string, IdentifierID> name_to_id_;
 
         std::vector<const std::string *> strings_;
-        std::unordered_map<std::string, StringID> string_to_id_;
+        StringMap<std::string, StringID> string_to_id_;
     };
 } // namespace common
 

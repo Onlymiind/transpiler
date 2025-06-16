@@ -1,0 +1,12 @@
+func foo(a [10]int) [12]int{
+	var b [11]float;
+	var c [((1 + 1) * 2 + 2) * 2]int;
+	var d [10]**[6]*bool;
+	return c;
+}
+
+func main() {
+	var a [10]int;
+	var b [10]int = cast<[10]int>(a); 
+	foo(a);
+}

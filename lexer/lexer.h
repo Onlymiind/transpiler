@@ -22,7 +22,7 @@ namespace lexer {
     class Lexer {
       public:
         Lexer() = default;
-        Lexer(std::istream &file) : file_(&file) { current_pos_.push(0); }
+        Lexer(std::istream &file) : file_(&file) { current_pos_.push_back(file_->tellg()); }
 
         void set_file(std::istream &file) { file_ = &file; }
 
@@ -43,21 +43,23 @@ namespace lexer {
         common::Token get_op();
 
         std::optional<char> get_char();
-        void put_back(char c);
+        void put_back();
 
         void report_error(std::string_view error) {
             err_.msg = error;
-            err_.pos = common::TokenPos{current_line_, current_pos_.top()};
+            err_.pos = make_pos();
         }
 
         const common::Error &get_error() const { return err_; }
 
       private:
+        common::TokenPos make_pos() const;
+
         LexerResult result_;
         std::istream *file_ = nullptr;
 
         common::Error err_;
-        std::stack<size_t> current_pos_;
+        std::vector<size_t> current_pos_;
         size_t current_line_ = 1;
     };
 } // namespace lexer

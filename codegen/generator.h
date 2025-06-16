@@ -11,6 +11,7 @@
 #include "common/util.h"
 #include "vm/vm.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
@@ -21,8 +22,8 @@ namespace codegen {
 
     class Generator {
       public:
-        Generator(common::Global &global, common::Module &mod, common::AST &ast,
-                  common::Identifiers &&identifiers);
+        Generator(common::Global &&global, common::Module &mod,
+                  common::AST &ast, common::Identifiers &&identifiers);
 
         bool codegen();
 
@@ -82,6 +83,11 @@ namespace codegen {
 
         void push_truncate(size_t bytes);
 
+        [[nodiscard]] vm::Program get_result() {
+            vm::Program program{std::move(program_)};
+            return program;
+        }
+
       private:
         std::vector<vm::Instruction> output_;
         uint64_t local_idx_ = 0;
@@ -98,7 +104,6 @@ namespace codegen {
         std::unordered_map<const common::Type *, uint64_t> type_to_idx_;
         std::unordered_map<const common::Type *, vm::TypeInfo> type_to_info_;
 
-        common::Global *global_ = nullptr;
         common::Module *mod_ = nullptr;
         common::AST *ast_ = nullptr;
         std::string_view err_;

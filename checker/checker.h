@@ -41,7 +41,6 @@ namespace checker {
         bool check_variable_ref(common::VariableReference &name);
         bool check_function(common::Function &func);
         bool check_function_decl(common::Function &func);
-        bool check_struct_decl(const common::ParsedStructType &record, bool);
         bool check_branch(common::Branch &branch);
         bool check_variable(common::Variable &var);
         bool check_statement(common::Statement &smt);

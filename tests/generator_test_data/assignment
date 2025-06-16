@@ -1,0 +1,59 @@
+ALLOCATE
+GET_LOCAL 0
+PUSH 1
+WRITE 8
+
+ALLOCATE
+ALLOCATE
+GET_LOCAL 2
+PUSH 8
+ADD_I 8
+PUSH f1
+WRITE 8
+
+GET_LOCAL 1
+GET_LOCAL 2
+COPY 16
+
+PUSH 4
+ALLOCATE_ARRAY
+PUSH 4
+ALLOCATE_ARRAY
+
+GET_LOCAL 3
+GET_LOCAL 4
+COPY 32
+
+ALLOCATE
+ALLOCATE
+GET_LOCAL 5
+GET_LOCAL 6
+COPY 24
+
+RETURN
+@END
+struct foo {
+    a int;
+    b float;
+}
+
+func main() {
+    var a int;
+    a = 1;
+
+    var bar foo;
+    var baz foo;
+    baz.b = 1.;
+
+    bar = baz;
+
+    var arr [4]int;
+    var arr2 [4]int;
+
+    arr = arr2;
+
+    var slice []int;
+    var slice2 []int;
+
+    slice = slice2;
+}

@@ -2,12 +2,34 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "type": "cppdbg",
+            "request": "launch",
+            "name": "tests_vscode",
+            "program": "${workspaceFolder}/build/tests",
+            "args": ["-n", "generator: fails"],
+            "cwd": "${workspaceFolder}/tests",
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
             "type": "codelldb",
             "request": "launch",
             "name": "tests",
             "program": "${workspaceFolder}/build/tests",
-            "args": ["{workspaceFolder}/tests/functional/data/if_no_return_statement2_fail"],
-            "cwd": "${workspaceFolder}/tests/functional",
+            "args": ["-n", "generator: fails"],
+            "cwd": "${workspaceFolder}/tests",
             "externalConsole": false,
             "MIMode": "gdb",
             "setupCommands": [

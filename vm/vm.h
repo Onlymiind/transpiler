@@ -2,6 +2,7 @@
 
 #include "common/base_classes.h"
 #include "common/literals.h"
+#include "common/module.h"
 #include "common/types.h"
 #include "common/util.h"
 
@@ -16,7 +17,6 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 namespace vm {
@@ -62,6 +62,7 @@ namespace vm {
         TO_FLOAT,
 
         NOT,
+        INV,
         NEGATE_I,
         NEGATE_F,
 
@@ -71,7 +72,6 @@ namespace vm {
 
         INDEX_ARRAY,
         APPEND,
-        SLICE,
         ASSERT_NOT_NULL,
 
         READ,
@@ -95,10 +95,10 @@ namespace vm {
 
     constexpr inline bool needs_truncation(Op op) {
         return op == Op::ADD_I || op == Op::SUB_I || op == Op::MUL_I ||
-               op == Op::SLA || op == Op::NEGATE_I || op == Op::NOT;
+               op == Op::SLA || op == Op::NEGATE_I || op == Op::INV;
     }
 
-    constexpr std::string_view to_string(Op op);
+    std::string_view to_string(Op op);
 
     struct Instruction {
         Op op = Op::NOP;
@@ -160,11 +160,12 @@ namespace vm {
         const common::Type *type_ = nullptr;
     };
 
+    using NativeHandler = bool (*)(VM &, std::span<Value>, Value &, void *);
     struct NativeFunction {
         std::string name;
         std::vector<const common::Type *> args;
         const common::Type *return_type = nullptr;
-        bool (*handler)(VM &, std::span<Value> args, void *) = nullptr;
+        NativeHandler handler = nullptr;
         void *userdata = nullptr;
     };
 
@@ -176,11 +177,10 @@ namespace vm {
 
     struct Program {
         common::Identifiers identifiers;
-        std::vector<std::unique_ptr<common::Type>> types;
+        common::TypeStorage types;
         std::vector<std::unique_ptr<TypeInfo>> type_infos;
         std::vector<Function> functions;
         std::vector<NativeFunction> native_functions;
-        std::vector<Instruction> global_init;
         uint64_t global_count;
         common::IdentifierID cap_name;
         common::IdentifierID size_name;
@@ -192,29 +192,49 @@ namespace vm {
         friend class Value;
 
       public:
+        explicit VM(Program &&program);
+        ~VM();
+
+        VM(const VM &) = delete;
+        VM(VM &&) = default;
+
+        VM &operator=(const VM &) = delete;
+        VM &operator=(VM &&) = default;
+
         static_assert(sizeof(uintptr_t) <= sizeof(uint64_t),
                       "pointers must fit into 64-bit unsigned integer");
 
+        static constexpr std::string_view global_init_name = "@global_init";
         static constexpr uint64_t false_value = 0;
-        static constexpr uint64_t true_value = ~false_value;
+        static constexpr uint64_t true_value = 1;
         static constexpr uint64_t null_value = 0;
         static constexpr uint64_t read_is_ptr_mask = static_cast<uint64_t>(1)
                                                      << 63;
         static constexpr uint64_t read_size_mask = 0b1111;
 
         Value make_value(const common::Type *type);
-        Value make_slice(const common::Type *element);
-        Value make_array(const common::Type *element, size_t size);
-        Value make_ptr(const common::Type *pointee);
 
         const common::Type *get_type(const std::string &name);
+        const common::Type *get_ptr(const common::Type *to);
+        const common::Type *get_array(const common::Type *element, size_t size);
+        const common::Type *get_slice(const common::Type *element);
 
         bool try_pop();
 
         bool call_function(const std::string &name, std::span<Value> args,
                            std::string *err_msg, Value *return_val);
 
+        bool bind_native(const std::string &name, NativeHandler func,
+                         void *userdata = nullptr, bool override = true);
+
         bool collect_garbage();
+
+        bool reset();
+
+        const std::string &get_error() const noexcept;
+
+        static std::unique_ptr<VM> create(std::istream &in,
+                                          std::ostream *err_out);
 
       private:
         uint64_t top(bool *is_ptr = nullptr);
@@ -241,9 +261,10 @@ namespace vm {
 
         uint8_t *to_raw_ptr(uint64_t ptr);
 
-        StackFrame &current_frame();
+        StackFrame *current_frame();
         bool pop_frame();
         void push_frame(const Function *function, uint64_t arg_count);
+        bool push_value(Value val);
 
         bool execute(Instruction instr);
 
@@ -256,21 +277,26 @@ namespace vm {
         bool call(const NativeFunction &func, std::span<Value> args,
                   Value *return_val);
 
+        void clear_memory();
+        bool run_function();
+
+        uint64_t truncate(uint64_t value, uint64_t size) const;
+
       private:
         std::vector<uint64_t> stack_;
         std::vector<bool> is_pointer_;
         std::vector<StackFrame> stack_frames_;
-        Program program;
+        Program program_;
 
-        std::unordered_map<std::string_view, std::pair<bool, size_t>>
+        common::StringMap<std::string_view, std::pair<bool, size_t>>
             name_to_func_;
 
-        std::unordered_map<common::IdentifierID, const TypeInfo *>
-            name_to_type_;
+        std::unordered_map<const common::Type *, const TypeInfo *>
+            type_to_info_;
 
         std::map<uint8_t *, Allocation> allocations_;
 
-        std::string err;
+        std::string err_;
     };
 
     void decompile(std::span<Instruction> instrs, std::ostream &out);

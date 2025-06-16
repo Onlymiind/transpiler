@@ -140,7 +140,8 @@ namespace checker {
         bool result = false;
         switch (expr->kind()) {
         case common::ExpressionKind::LITERAL:
-            return set_literal_type(dynamic_cast<common::Literal &>(*expr));
+            result = set_literal_type(dynamic_cast<common::Literal &>(*expr));
+            break;
         case common::ExpressionKind::UNARY: {
             common::UnaryExpression
                 &unary = dynamic_cast<common::UnaryExpression &>(*expr);
@@ -177,18 +178,27 @@ namespace checker {
             break;
         }
         case common::ExpressionKind::INDEX:
-            return check_index_expression(
+            result = check_index_expression(
                 dynamic_cast<common::IndexExpression &>(*expr));
+            break;
         case common::ExpressionKind::FUNCTION_CALL:
-            return check_function_call(
+            result = check_function_call(
                 dynamic_cast<common::FunctionCall &>(*expr));
+            break;
         case common::ExpressionKind::VARIABLE_REF:
-            return check_variable_ref(
+            result = check_variable_ref(
                 dynamic_cast<common::VariableReference &>(*expr));
+            break;
         case common::ExpressionKind::MEMBER_ACCESS:
-            return check_member_access(expr);
+            result = check_member_access(expr);
+            break;
         default: report_error("unknown expression type"); return false;
         }
+        if (!expr->type() && !allow_assing) {
+            report_error("expression does not evaluate to a type");
+            return false;
+        }
+
         return result;
     }
 
@@ -234,22 +244,27 @@ namespace checker {
             }
             expr.type(global_types_->get_pointer(expr.expression()->type()));
             break;
-        case common::UnaryOp::DEREFERENCE:
+        case common::UnaryOp::DEREFERENCE: {
             if (!expr.expression()->type()->is_pointer()) {
                 report_error("can't dereference type that is not a pointer");
                 return false;
             }
-            {
-                const common::PointerType
-                    &ptr = dynamic_cast<const common::PointerType &>(
-                        *expr.expression()->type());
-                if (ptr.is_nullptr()) {
-                    report_error("null dereference");
-                    return false;
-                }
-                expr.type(ptr.pointee_type());
+
+            const common::PointerType
+                &ptr = dynamic_cast<const common::PointerType &>(
+                    *expr.expression()->type());
+            if (ptr.is_nullptr()) {
+                report_error("null dereference");
+                return false;
             }
+            if (ptr.pointee_type()->size() == 0) {
+                report_error("cannot dereference pointer to zero-sized type");
+                return false;
+            }
+
+            expr.type(ptr.pointee_type());
             break;
+        }
         default: report_error("unknown unary operator"); return false;
         }
         return true;
@@ -372,7 +387,9 @@ namespace checker {
             return true;
         }
 
-        if (!cast.type()->is_pointer() && !cast.type()->is_primitive()) {
+        if ((!cast.type()->is_pointer() && !cast.type()->is_primitive()) ||
+            (!cast.from()->type()->is_pointer() &&
+             !cast.from()->type()->is_primitive())) {
             report_error(
                 "conversion between non-primitive types is not allowed");
             return false;
@@ -465,6 +482,7 @@ namespace checker {
                 }
             }
 
+            call.type(args[0]->type());
             return true;
         }
 
@@ -569,6 +587,10 @@ namespace checker {
                 report_error("unknown return type");
                 return false;
             }
+            if (func.return_type->size() == 0) {
+                report_error("function return type size must be non-zero");
+                return false;
+            }
         }
 
         // NOTE: maybe it wasn't a good idea to get rid of persistently stored
@@ -588,6 +610,9 @@ namespace checker {
             if (!param.type) {
                 report_error("invalid function parameter type");
                 return false;
+            }
+            if (param.type->size() == 0) {
+                report_error("parameter type size must be non-zero");
             }
             if (param.initial_value) {
                 report_error(
@@ -714,6 +739,10 @@ namespace checker {
             var.type = get_type(*var.explicit_type);
             if (!var.type) {
                 report_error("invalid variable type");
+                return false;
+            }
+            if (var.type->size() == 0) {
+                report_error("cannot declare a variable with zero size");
                 return false;
             }
         }
@@ -1070,7 +1099,10 @@ namespace checker {
         std::unordered_set<const common::StructType *> *in_progress) {
         if (!in_progress) {
             std::unordered_set<const common::StructType *> in_progress;
-            check_struct(record, info, &in_progress);
+            return check_struct(record, info, &in_progress);
+        }
+        if (record.is_defined()) {
+            return true;
         }
 
         in_progress->insert(&record);
@@ -1118,6 +1150,10 @@ namespace checker {
 
             auto [typ, parsed] = *it;
             if (!check_struct(*typ, *parsed, in_progress)) {
+                return false;
+            }
+            if (typ->size() == 0) {
+                report_error("record fields cannot have zero-sized type");
                 return false;
             }
         }
@@ -1188,6 +1224,7 @@ namespace checker {
             access = std::make_unique<common::Literal>(static_cast<int64_t>(
                                                            size),
                                                        access->pos());
+            access->type(builtin_types_[common::BuiltinTypes::INT]);
             return true;
         }
 

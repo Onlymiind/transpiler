@@ -1,9 +1,0 @@
-func foo() u64 {
-    for {
-        if true {
-            break;
-        } else {
-            return 1;
-        }
-    }
-}

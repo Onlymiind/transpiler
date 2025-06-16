@@ -1,0 +1,39 @@
+ALLOCATE
+
+GET_LOCAL 0
+PUSH 1
+APPEND
+POP
+
+GET_LOCAL 0
+PUSH 1
+APPEND
+PUSH 2
+APPEND
+POP
+
+ALLOCATE
+ALLOCATE
+GET_LOCAL 1
+GET_LOCAL 2
+APPEND
+POP
+
+
+RETURN
+@END
+struct foo {
+    c char;
+}
+
+func main() {
+    var a []int;
+
+    a.append(1);
+    append(a, 1, 2);
+
+    var b []foo;
+    var d foo;
+
+    b.append(d);
+}

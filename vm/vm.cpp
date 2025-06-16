@@ -1,12 +1,17 @@
 #include "vm/vm.h"
+#include "checker/checker.h"
+#include "codegen/generator.h"
+#include "common/ast.h"
 #include "common/base_classes.h"
 #include "common/types.h"
+#include "compiler/compiler.h"
+#include "lexer/lexer.h"
+#include "parser/parser.h"
 
-#include <algorithm>
-#include <alloca.h>
 #include <bit>
 #include <cctype>
 #include <charconv>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -15,22 +20,44 @@
 #include <functional>
 #include <ios>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <sstream>
 #include <system_error>
 #include <unordered_map>
 
 namespace vm {
+
+    VM::VM(Program &&program) : program_(std::move(program)) {
+        for (size_t i = 0; i < program_.functions.size(); ++i) {
+            name_to_func_[program_.functions[i].name] = std::pair{false, i};
+        }
+        for (size_t i = 0; i < program_.native_functions.size(); ++i) {
+            name_to_func_[program_.native_functions[i].name] = std::pair{true,
+                                                                         i};
+        }
+
+        for (const auto &type_info : program_.type_infos) {
+            type_to_info_[type_info->description] = type_info.get();
+        }
+    }
+
+    VM::~VM() {
+        for (auto &[ptr, allocation] : allocations_) {
+            std::free(allocation.memory);
+        }
+    }
+
     template <typename... Args>
     void VM::report_error(Args... args) {
         std::stringstream out;
         out << "error";
         if (stack_frames_.empty()) {
             out << " during global initialization";
-        } else if (!current_frame().function) {
+        } else if (!current_frame()->function) {
             out << " in native function";
         } else {
-            const StackFrame &frame = current_frame();
+            const StackFrame &frame = *current_frame();
             out << " in function " << frame.function->name;
             if (frame.instruction_ptr < frame.function->code.size()) {
                 out << " at instruction "
@@ -41,7 +68,11 @@ namespace vm {
         out << ':';
 
         ((out << ' ' << args), ...);
-        err = out.str();
+        err_ = out.str();
+    }
+
+    uint64_t VM::truncate(uint64_t value, uint64_t size) const {
+        return size == 1 ? value & 0xff : value;
     }
 
     bool VM::execute(Instruction instr) {
@@ -50,13 +81,13 @@ namespace vm {
         case Op::ADD_I: {
             uint64_t rhs = pop();
             uint64_t lhs = pop();
-            push(lhs + rhs);
+            push(truncate(lhs + rhs, instr.arg));
             break;
         }
         case Op::SUB_I: {
             uint64_t rhs = pop();
             uint64_t lhs = pop();
-            push(lhs - rhs);
+            push(truncate(lhs - rhs, instr.arg));
             break;
         }
         case Op::DIV_I: {
@@ -93,7 +124,7 @@ namespace vm {
         case Op::MUL_I: {
             int64_t rhs = static_cast<int64_t>(pop());
             int64_t lhs = static_cast<int64_t>(pop());
-            push(static_cast<uint64_t>(lhs * rhs));
+            push(truncate(static_cast<uint64_t>(lhs * rhs), instr.arg));
             break;
         }
         case Op::BITWISE_OR: {
@@ -122,7 +153,7 @@ namespace vm {
             }
 
             uint64_t lhs = pop();
-            push(lhs << rhs);
+            push(truncate(lhs << rhs, instr.arg));
             break;
         }
         case Op::SRA: {
@@ -159,7 +190,12 @@ namespace vm {
         }
         case Op::NOT: {
             uint64_t val = pop();
-            push(~val);
+            push(val != 0 ? 1 : 0);
+            break;
+        }
+        case Op::INV: {
+            uint64_t val = pop();
+            push(truncate(~val, instr.arg));
             break;
         }
         case Op::EQUALS: {
@@ -312,26 +348,35 @@ namespace vm {
         case Op::BRANCH: {
             uint64_t cond = pop();
             if (cond == true_value) {
-                StackFrame &frame = current_frame();
-                if (instr.arg >= frame.function->code.size()) {
+                StackFrame *frame = current_frame();
+                if (!frame) {
+                    report_error("not in a function");
+                    return false;
+                }
+                if (instr.arg >= frame->function->code.size()) {
                     report_error("branch destination ", instr.arg,
                                  " out of bounds (max ",
-                                 frame.function->code.size(), ")");
+                                 frame->function->code.size(), ")");
                     return false;
                 }
 
-                frame.instruction_ptr = instr.arg;
+                frame->instruction_ptr = instr.arg - 1;
             }
             break;
         }
         case Op::GET_LOCAL: {
             uint64_t offset = instr.arg;
-            uint64_t base = current_frame().stack_base;
+            StackFrame *frame = current_frame();
+            if (!frame) {
+                report_error("not in a function");
+                return false;
+            }
+
+            uint64_t base = frame->stack_base;
             uint64_t idx = base + offset;
-            if (idx >= stack_.size() || idx < current_frame().stack_base) {
+            if (idx >= stack_.size() || idx < frame->stack_base) {
                 report_error("local index ", idx, " out of bounds (max ",
-                             stack_.size(), ", min ",
-                             current_frame().stack_base, ")");
+                             stack_.size(), ", min ", frame->stack_base, ")");
                 return false;
             }
 
@@ -339,10 +384,9 @@ namespace vm {
             break;
         }
         case Op::CALL: {
-            uint64_t func_idx = pop();
-            const Function *info = get_function_info(func_idx);
+            const Function *info = get_function_info(instr.arg);
             if (!info) {
-                report_error("function ", func_idx, " not found");
+                report_error("function ", instr.arg, " not found");
                 return false;
             }
 
@@ -366,9 +410,9 @@ namespace vm {
         }
         case Op::GET_GLOBAL: {
             uint64_t idx = instr.arg;
-            if (idx >= program.global_count) {
+            if (idx >= program_.global_count) {
                 report_error("global index ", idx, " out of bounds (max ",
-                             program.global_count, ")");
+                             program_.global_count, ")");
                 return false;
             }
             push(stack_[idx], true);
@@ -397,33 +441,41 @@ namespace vm {
 
             std::vector<Value> args;
             args.reserve(func->args.size());
-            for (size_t i = 0; i < func->args.size(); ++i) {
-                args.emplace_back(Value{stack_[current_frame().stack_base + i],
-                                        *this, func->args[i]});
+            StackFrame *frame = current_frame();
+            if (!frame) {
+                report_error("not in a function");
+                return false;
             }
 
-            func->handler(*this, args, func->userdata);
-            if (!func->return_type) {
-                if (!pop_frame()) {
-                    return false;
-                }
-            } else {
-                if (stack_.size() < program.global_count + 1) {
-                    report_error("native function (idx: ", idx,
-                                 ", name: ", func->name,
+            for (size_t i = 0; i < func->args.size(); ++i) {
+                args.emplace_back(Value{
+                    stack_[frame->stack_base + i],
+                    *this,
+                    func->args[i],
+                });
+            }
+
+            Value ret;
+            func->handler(*this, args, ret, func->userdata);
+            if (!pop_frame()) {
+                return false;
+            }
+            if (func->return_type) {
+                if (ret.empty()) {
+                    report_error("native function (name: ", func->name,
                                  ") didn't return a value");
                     return false;
                 }
-
-                bool is_ptr = is_pointer_[stack_.size() - 1];
-                uint64_t ret = pop();
-                if (!pop_frame()) {
+                if (ret.type() != func->return_type) {
+                    report_error("native function (name: ", func->name,
+                                 ") return type mismatch");
                     return false;
                 }
 
-                push(ret, is_ptr);
+                if (!push_value(ret)) {
+                    return false;
+                }
             }
-
             break;
         }
         case Op::DUP: {
@@ -459,20 +511,25 @@ namespace vm {
             break;
         }
         case Op::JUMP: {
-            StackFrame &frame = current_frame();
-            if (instr.arg >= frame.function->code.size()) {
-                report_error("jump destination ", instr.arg,
-                             " out of bounds (max ",
-                             frame.function->code.size(), ")");
+            StackFrame *frame = current_frame();
+            if (!frame) {
+                report_error("not in a function");
                 return false;
             }
 
-            frame.instruction_ptr = instr.arg;
+            if (instr.arg >= frame->function->code.size()) {
+                report_error("jump destination ", instr.arg,
+                             " out of bounds (max ",
+                             frame->function->code.size(), ")");
+                return false;
+            }
+
+            frame->instruction_ptr = instr.arg - 1;
             break;
         }
         case Op::NEGATE_I: {
             uint64_t val = pop();
-            push(~val + 1);
+            push(truncate(~val + 1, instr.arg));
             break;
         }
         case Op::NEGATE_F: {
@@ -493,12 +550,6 @@ namespace vm {
             break;
         }
         case Op::INDEX_ARRAY: {
-            const TypeInfo *element_type = get_type_info(instr.arg);
-            if (!element_type) {
-                report_error("indexing array of unknown type: ", instr.arg);
-                return false;
-            }
-
             int64_t idx = static_cast<int64_t>(pop());
             uint64_t size = pop();
             uint64_t addr = pop();
@@ -510,7 +561,7 @@ namespace vm {
                              size);
                 return false;
             }
-            push(addr + idx * element_type->description->size());
+            push(addr + idx * instr.arg);
             break;
         }
         case Op::APPEND: {
@@ -536,11 +587,11 @@ namespace vm {
                     slice_type->description);
 
             const common::Field &cap_field = *slice_struct->get_field(
-                program.cap_name);
+                program_.cap_name);
             const common::Field &size_field = *slice_struct->get_field(
-                program.size_name);
+                program_.size_name);
             const common::Field &data_field = *slice_struct->get_field(
-                program.data_name);
+                program_.data_name);
 
             auto cap = read_struct_field(slice, cap_field);
             auto size = read_struct_field(slice, size_field);
@@ -552,24 +603,9 @@ namespace vm {
 
             if (*size + 1 >= *cap) {
                 uint64_t new_cap = *cap == 0 ? 1 : *cap * 2;
-                uint64_t new_slice = 0;
-                if (!allocate(slice_type, 1, new_slice)) {
-                    report_error("failed to allocate new slice struct");
-                    return false;
-                }
-                push(new_slice, true);
                 uint64_t new_array = 0;
                 if (!allocate(element_type, new_cap, new_array)) {
                     report_error("failed to allocate new array");
-                    return false;
-                }
-
-                if (!write_struct_field(new_slice, data_field, new_array)) {
-                    report_error("failed to set new pointer to data");
-                    return false;
-                }
-                if (!write_struct_field(new_slice, cap_field, new_cap)) {
-                    report_error("failed to set new capacity");
                     return false;
                 }
 
@@ -577,12 +613,14 @@ namespace vm {
                     report_error("failed to copy old slice data");
                     return false;
                 }
-
-                pop();
-                pop();
-                pop();
-                push(new_slice, true);
-                push(val, is_ptr);
+                if (!write_struct_field(slice, data_field, new_array)) {
+                    report_error("failed to set new pointer to data");
+                    return false;
+                }
+                if (!write_struct_field(slice, cap_field, new_cap)) {
+                    report_error("failed to set new capacity");
+                    return false;
+                }
 
                 data = new_array;
                 cap = new_cap;
@@ -619,17 +657,40 @@ namespace vm {
         return true;
     }
 
+    bool VM::push_value(Value val) {
+        if (val.empty()) {
+            report_error("trying to push empty value");
+            return false;
+        }
+
+        const common::Type *type = val.type();
+        if (type->is_primitive() || type->is_pointer()) {
+            auto value = mem_read(val.ptr_, type->size());
+            if (!value) {
+                report_error("failed to read value");
+                return false;
+            }
+            push(*value, type->is_pointer());
+        } else {
+            push(val.ptr_, true);
+        }
+        return true;
+    }
+
     void VM::push_frame(const Function *function, uint64_t arg_count) {
-        stack_frames_.emplace_back(
-            StackFrame{.function = function,
-                       .stack_base = stack_.size() - arg_count});
+
+        stack_frames_.emplace_back(StackFrame{
+            .function = function,
+            .stack_base = stack_.size() - arg_count,
+            .instruction_ptr = static_cast<uint64_t>(-1),
+        });
     }
 
     bool VM::pop_frame() {
         if (stack_frames_.empty()) {
             return false;
         }
-        uint64_t new_size = current_frame().stack_base;
+        uint64_t new_size = current_frame()->stack_base;
         stack_frames_.pop_back();
         stack_.resize(new_size);
         is_pointer_.resize(new_size);
@@ -661,9 +722,11 @@ namespace vm {
         is_pointer_.push_back(is_ptr);
     }
 
-    StackFrame &VM::current_frame() { return stack_frames_.back(); }
+    StackFrame *VM::current_frame() {
+        return stack_frames_.empty() ? nullptr : &stack_frames_.back();
+    }
 
-    constexpr std::string_view to_string(Op op) {
+    std::string_view to_string(Op op) {
 #define CASE(name)                                                             \
     case Op::name: return #name
         switch (op) {
@@ -697,6 +760,7 @@ namespace vm {
             CASE(PUSH);
             CASE(POP);
             CASE(DUP);
+            CASE(SWAP);
             CASE(ALLOCATE);
             CASE(ALLOCATE_ARRAY);
             CASE(BRANCH);
@@ -706,12 +770,14 @@ namespace vm {
             CASE(XOR);
             CASE(TO_INTEGER);
             CASE(TO_FLOAT);
+            CASE(APPEND);
             CASE(JUMP);
             CASE(NEGATE_I);
             CASE(NEGATE_F);
             CASE(NOP);
             CASE(INDEX_ARRAY);
             CASE(ASSERT_NOT_NULL);
+            CASE(INV);
         default: return "unknown instruction";
         }
 #undef CASE
@@ -728,29 +794,26 @@ namespace vm {
     }
 
     const TypeInfo *VM::get_type_info(uint64_t idx) {
-        return idx >= program.type_infos.size() ? nullptr
-                                                : program.type_infos[idx].get();
+        return idx >= program_.type_infos.size()
+                   ? nullptr
+                   : program_.type_infos[idx].get();
     }
 
     const TypeInfo *VM::get_type_info(const common::Type *type) {
-        auto it = std::find_if(program.type_infos.begin(),
-                               program.type_infos.end(),
-                               [type](const auto &info) {
-                                   return info->description == type;
-                               });
+        auto it = type_to_info_.find(type);
 
-        return it == program.type_infos.end() ? nullptr : it->get();
+        return it == type_to_info_.end() ? nullptr : it->second;
     }
 
     const Function *VM::get_function_info(uint64_t idx) {
-        return idx >= program.functions.size() ? nullptr
-                                               : &program.functions[idx];
+        return idx >= program_.functions.size() ? nullptr
+                                                : &program_.functions[idx];
     }
 
     const NativeFunction *VM::get_native_function(uint64_t idx) {
-        return idx >= program.native_functions.size()
+        return idx >= program_.native_functions.size()
                    ? nullptr
-                   : &program.native_functions[idx];
+                   : &program_.native_functions[idx];
     }
 
     const TypeInfo *VM::get_allocation_type(uint64_t ptr) {
@@ -776,7 +839,9 @@ namespace vm {
 
     bool VM::call_function(const std::string &name, std::span<Value> args,
                            std::string *err_msg, Value *return_val) {
-        if (!name_to_func_.contains(name)) {
+        err_.clear();
+        if (!name_to_func_.contains(name) || name == global_init_name) {
+            report_error("function '", name, "' not found");
             return false;
         }
 
@@ -784,12 +849,14 @@ namespace vm {
 
         std::span<const common::Type *> args_info;
         if (is_native) {
-            args_info = program.native_functions[idx].args;
+            args_info = program_.native_functions[idx].args;
         } else {
-            args_info = program.functions[idx].args;
+            args_info = program_.functions[idx].args;
         }
 
         if (args.size() != args_info.size()) {
+            report_error("argument count mismatch: expected ", args_info.size(),
+                         ", got ", args.size());
             return false;
         }
 
@@ -806,23 +873,24 @@ namespace vm {
 
         bool result = false;
         try {
-            result = is_native
-                         ? call(program.native_functions[idx], args, return_val)
-                         : call(program.functions[idx], return_val);
+            result = is_native ? call(program_.native_functions[idx], args,
+                                      return_val)
+                               : call(program_.functions[idx], return_val);
         } catch (const std::exception &e) {
             report_error(e.what());
         }
 
         if (!result) {
             if (err_msg) {
-                *err_msg = std::move(err);
+                *err_msg = std::move(err_);
             }
-            err.clear();
+            err_.clear();
         }
         return result;
     }
 
     bool VM::collect_garbage() {
+        err_.clear();
         if (allocations_.empty()) {
             return true;
         }
@@ -850,23 +918,29 @@ namespace vm {
             }
 
             allocation->marked = true;
+
+            size_t elem_size = allocation->info->description->size();
+            size_t count = allocation->size / elem_size;
             const auto &is_ptr = allocation->info->is_ptr;
-            for (size_t i = 0; i < is_ptr.size(); ++i) {
-                if (!is_ptr[i]) {
-                    continue;
+
+            for (size_t elem = 0; elem < count; ++elem) {
+                for (size_t i = 0; i < is_ptr.size(); ++i) {
+                    if (!is_ptr[i]) {
+                        continue;
+                    }
+
+                    uint64_t ptr_val = std::bit_cast<uint64_t *>(
+                        allocation->memory)[elem * elem_size + i];
+
+                    Allocation *ptr = find_allocation(to_raw_ptr(ptr_val));
+                    if (!ptr) {
+                        report_error("cannot find allocation for pointer ",
+                                     ptr_val);
+                        continue;
+                    }
+
+                    gray.push_back(ptr);
                 }
-
-                uint64_t ptr_val = std::bit_cast<uint64_t *>(
-                    allocation->memory)[i];
-
-                Allocation *ptr = find_allocation(to_raw_ptr(ptr_val));
-                if (!ptr) {
-                    report_error("cannot find allocation for pointer ",
-                                 ptr_val);
-                    continue;
-                }
-
-                gray.push_back(ptr);
             }
         }
 
@@ -994,21 +1068,51 @@ namespace vm {
         return true;
     }
 
-    bool VM::call(const Function &func, Value *return_val) {
-        push_frame(&func, func.args.size());
-        for (size_t i = 0; i < func.code.size(); ++i) {
-            if (!execute(func.code[i])) {
-                return false;
-            }
+    bool VM::run_function() {
+        StackFrame *frame = current_frame();
+        if (!frame) {
+            report_error("stack frame empty");
+            return false;
+        } else if (!frame->function) {
+            report_error("can't run native function");
+            return false;
         }
 
-        if (func.return_type) {
-            if (return_val) {
-                *return_val = Value(top(), *this, func.return_type);
-            } else {
-                pop();
+        while (frame && frame->function &&
+               frame->instruction_ptr < frame->function->code.size()) {
+            ++frame->instruction_ptr;
+            if (!execute(frame->function->code[frame->instruction_ptr])) {
+                return false;
             }
+
+            frame = current_frame();
         }
+
+        if (frame && !frame->function) {
+            report_error("can't run native function");
+            return false;
+        }
+
+        return true;
+    }
+
+    bool VM::call(const Function &func, Value *return_val) {
+        size_t frame_pos = stack_frames_.size();
+        push_frame(&func, func.args.size());
+        bool fail = false;
+
+        if (!run_function()) {
+            stack_frames_.resize(frame_pos);
+            return false;
+        }
+
+        if (func.return_type && return_val) {
+            *return_val = Value(top(), *this, func.return_type);
+        }
+        if (!pop_frame()) {
+            return false;
+        }
+
         return true;
     }
 
@@ -1021,65 +1125,33 @@ namespace vm {
             return false;
         }
 
-        func.handler(*this, args, func.userdata);
-        if (!func.return_type) {
-            if (!pop_frame()) {
-                return false;
-            }
-        } else {
-            if (stack_.size() < program.global_count + 1) {
+        Value ret;
+        func.handler(*this, args, ret, func.userdata);
+        if (!pop_frame()) {
+            return false;
+        }
+
+        if (func.return_type) {
+            if (ret.empty()) {
                 report_error("native function (name: ", func.name,
                              ") didn't return a value");
                 return false;
             }
-
-            bool is_ptr = is_pointer_[stack_.size() - 1];
-            uint64_t ret = pop();
-            if (!pop_frame()) {
+            if (ret.type() != func.return_type) {
+                report_error("native function return type mismatch");
                 return false;
             }
-            if (!return_val) {
-                return true;
+            if (return_val) {
+                push(ret.ptr_, true);
+                *return_val = ret;
             }
-
-            push(ret, is_ptr);
-
-            const TypeInfo *return_info = get_type_info(func.return_type);
-            if (!return_info) {
-                report_error("failed to find return type info");
-                return false;
-            }
-
-            uint64_t ptr = 0;
-            if (!allocate(return_info, 1, ptr)) {
-                report_error("failed to allocate return value");
-                return false;
-            }
-
-            pop();
-            push(ptr, true);
-
-            if (!(func.return_type->is_primitive() ||
-                  func.return_type->is_pointer())) {
-                if (!mem_copy(ret, ptr, func.return_type->size())) {
-                    report_error("failed to set return value");
-                    return false;
-                }
-            } else {
-                if (!mem_write(ptr, ret, func.return_type->size())) {
-                    report_error("failed to set return value");
-                    return false;
-                }
-            }
-
-            *return_val = Value(ptr, *this, func.return_type);
         }
 
         return true;
     }
 
     bool VM::mem_copy_const(uint64_t idx, uint64_t &ptr) {
-        const auto &strings = program.identifiers.strings();
+        const auto &strings = program_.identifiers.strings();
         if (idx >= strings.size()) {
             report_error("string index out of bounds: ", idx, " size is ",
                          strings.size());
@@ -1102,6 +1174,8 @@ namespace vm {
         ptr = std::bit_cast<uintptr_t>(raw_ptr);
         return true;
     }
+
+    const std::string &VM::get_error() const noexcept { return err_; }
 
     std::optional<uint64_t> Value::get_primitive(common::BuiltinTypes kind) {
         if (empty() || !type_->is_primitive()) {
@@ -1142,7 +1216,7 @@ namespace vm {
 
         const common::StructType
             *type = dynamic_cast<const common::StructType *>(type_);
-        const common::Field *data = type->get_field(vm_->program.data_name);
+        const common::Field *data = type->get_field(vm_->program_.data_name);
 
         const common::Type
             *data_type = dynamic_cast<const common::PointerType *>(data->type)
@@ -1161,7 +1235,7 @@ namespace vm {
         }
 
         auto size = vm_->read_struct_field(ptr_, *type->get_field(
-                                                     vm_->program.size_name));
+                                                     vm_->program_.size_name));
         if (!size) {
             return {};
         }
@@ -1218,7 +1292,7 @@ namespace vm {
                 *type = dynamic_cast<const common::StructType *>(type_);
             auto val = vm_->read_struct_field(ptr_,
                                               *type->get_field(
-                                                  vm_->program.size_name));
+                                                  vm_->program_.size_name));
             return val ? *val : 0;
         } else {
             return dynamic_cast<const common::ArrayType *>(type_)->size();
@@ -1236,13 +1310,13 @@ namespace vm {
                 *type = dynamic_cast<const common::StructType *>(type_);
             auto size = vm_->read_struct_field(ptr_,
                                                *type->get_field(
-                                                   vm_->program.size_name));
+                                                   vm_->program_.size_name));
             if (!size || idx >= size) {
                 return Value{};
             }
 
             const common::Field *data_field = type->get_field(
-                vm_->program.data_name);
+                vm_->program_.data_name);
             auto data = vm_->read_struct_field(ptr_, *data_field);
             if (!data) {
                 return {};
@@ -1275,7 +1349,7 @@ namespace vm {
         const common::StructType
             *type = dynamic_cast<const common::StructType *>(type_);
         const common::Field *field = type->get_field(
-            vm_->program.identifiers.get(name));
+            vm_->program_.identifiers.get(name));
 
         return Value{ptr_ + field->offset, *vm_, field->type};
     }
@@ -1289,7 +1363,7 @@ namespace vm {
         const common::StructType
             *type = dynamic_cast<const common::StructType *>(type_);
         const common::Field *field = type->get_field(
-            vm_->program.identifiers.get(name));
+            vm_->program_.identifiers.get(name));
 
         return field && !(field->has_flag(common::FieldFlags::HIDDEN) ||
                           field->has_flag(common::FieldFlags::READONLY));
@@ -1340,7 +1414,7 @@ namespace vm {
             *type = dynamic_cast<const common::StructType *>(type_);
 
         const common::Field *data_field = type->get_field(
-            vm_->program.data_name);
+            vm_->program_.data_name);
         const common::Type
             *data_type = dynamic_cast<const common::PointerType *>(
                              data_field->type)
@@ -1358,7 +1432,7 @@ namespace vm {
         }
 
         const common::Field *size_field = type->get_field(
-            vm_->program.size_name);
+            vm_->program_.size_name);
         auto size = vm_->read_struct_field(ptr_, *size_field);
         if (!size) {
             return {};
@@ -1366,7 +1440,9 @@ namespace vm {
 
         if (size < val.size()) {
             uint64_t new_data = 0;
-            if (!vm_->allocate(vm_->name_to_type_.at(vm_->program.char_name),
+            if (!vm_->allocate(vm_->get_type_info(
+                                   vm_->program_.types.get_by_name(
+                                       vm_->program_.char_name)),
                                val.size(), new_data)) {
                 return false;
             }
@@ -1379,7 +1455,7 @@ namespace vm {
             }
             if (!vm_->write_struct_field(ptr_,
                                          *type->get_field(
-                                             vm_->program.cap_name),
+                                             vm_->program_.cap_name),
                                          val.size())) {
                 return false;
             }
@@ -1447,7 +1523,7 @@ namespace vm {
             *type = dynamic_cast<const common::StructType *>(type_);
 
         const common::Field *data_field = type->get_field(
-            vm_->program.data_name);
+            vm_->program_.data_name);
         const common::Type
             *data_type = dynamic_cast<const common::PointerType *>(
                              data_field->type)
@@ -1457,8 +1533,8 @@ namespace vm {
             return false;
         }
 
-        auto cap_field = type->get_field(vm_->program.cap_name);
-        auto size_field = type->get_field(vm_->program.size_name);
+        auto cap_field = type->get_field(vm_->program_.cap_name);
+        auto size_field = type->get_field(vm_->program_.size_name);
 
         auto cap = vm_->read_struct_field(ptr_, *cap_field);
         if (!cap) {
@@ -1512,14 +1588,73 @@ namespace vm {
 
     const common::Type *Value::type() const noexcept { return type_; }
 
-    Value VM::make_value(const common::Type *type);
-    Value VM::make_slice(const common::Type *element);
-    Value VM::make_array(const common::Type *element, size_t size);
-    Value VM::make_ptr(const common::Type *pointee);
+    Value VM::make_value(const common::Type *type) {
+        err_.clear();
+        if (!type || type->size() == 0 || !type_to_info_.contains(type)) {
+            return Value{};
+        }
 
-    const common::Type *VM::get_type(const std::string &name) {}
+        const TypeInfo *info = get_type_info(type);
+        if (!info) {
+            return Value{};
+        }
+
+        uint64_t ptr = 0;
+        if (!allocate(info, 1, ptr)) {
+            return Value{};
+        }
+        push(ptr, true);
+
+        return Value{ptr, *this, type};
+    }
+
+    bool VM::bind_native(const std::string &name, NativeHandler func,
+                         void *userdata, bool override) {
+        err_.clear();
+        if (!name_to_func_.contains(name)) {
+            report_error("function '", name, "' not found");
+            return false;
+        }
+
+        auto [is_native, idx] = name_to_func_.at(name);
+        if (!is_native) {
+            report_error("function '", name, "' is not native");
+            return false;
+        }
+
+        NativeFunction &entry = program_.native_functions[idx];
+        if (entry.handler && !override) {
+            report_error("handler for function '", name, "' already provided");
+            return false;
+        }
+        entry.handler = func;
+        entry.userdata = userdata;
+        return true;
+    }
+
+    const common::Type *VM::get_type(const std::string &name) {
+        err_.clear();
+        return program_.types.get_by_name(program_.identifiers.get(name));
+    }
+
+    const common::Type *VM::get_ptr(const common::Type *to) {
+        err_.clear();
+        return program_.types.get_ptr(to);
+    }
+
+    const common::Type *VM::get_array(const common::Type *element,
+                                      size_t size) {
+        err_.clear();
+        return program_.types.get_array(element, size);
+    }
+
+    const common::Type *VM::get_slice(const common::Type *element) {
+        err_.clear();
+        return program_.types.get_slice(element);
+    }
 
     bool VM::try_pop() {
+        err_.clear();
         if (stack_.empty() || stack_frames_.empty()) {
             return false;
         }
@@ -1530,6 +1665,54 @@ namespace vm {
 
         pop();
         return true;
+    }
+
+    void VM::clear_memory() {
+        stack_.clear();
+        is_pointer_.clear();
+        stack_frames_.clear();
+
+        for (auto &[ptr, allocation] : allocations_) {
+            std::free(allocation.memory);
+        }
+    }
+
+    bool VM::reset() {
+        err_.clear();
+        clear_memory();
+
+        if (!name_to_func_.contains(global_init_name)) {
+            // nothing to initialize
+            return true;
+        }
+
+        auto [is_native, idx] = name_to_func_.at(global_init_name);
+        if (is_native) {
+            report_error("unexpected native function");
+            return false;
+        }
+        const auto &init = program_.functions[idx];
+
+        push_frame(&init, 0);
+
+        if (!run_function()) {
+            clear_memory();
+            return false;
+        }
+        // return from global inialization is special: the stack itself must be
+        // preserved, so don't call pop_frame() here
+        stack_frames_.clear();
+
+        return true;
+    }
+
+    std::unique_ptr<VM> VM::create(std::istream &in, std::ostream *err_out) {
+        auto program = compiler::compile(in, err_out);
+        if (!program) {
+            return nullptr;
+        }
+
+        return std::make_unique<VM>(std::move(*program));
     }
 
     void decompile(std::span<Instruction> instrs, std::ostream &out) {
@@ -1563,6 +1746,7 @@ namespace vm {
         NAME_TO_OP(GREATER_I),
         NAME_TO_OP(GREATER_F),
         NAME_TO_OP(NOT),
+        NAME_TO_OP(INV),
         NAME_TO_OP(GET_LOCAL),
         NAME_TO_OP(GET_GLOBAL),
         NAME_TO_OP(COPY_CONST),
@@ -1587,6 +1771,9 @@ namespace vm {
         NAME_TO_OP(NOP),
         NAME_TO_OP(INDEX_ARRAY),
         NAME_TO_OP(ASSERT_NOT_NULL),
+        NAME_TO_OP(SWAP),
+        NAME_TO_OP(INV),
+        NAME_TO_OP(APPEND),
     };
 #undef NAME_TO_OP
 
@@ -1622,9 +1809,18 @@ namespace vm {
             return instr;
         }
 
-        uint64_t val;
-        auto res = std::from_chars(param.data(), param.data() + param.size(),
-                                   val);
+        std::from_chars_result res;
+        uint64_t val = 0;
+        if (param[0] == 'f') {
+            double float_val = 0;
+            res = std::from_chars(param.data() + 1, param.data() + param.size(),
+                                  float_val);
+            val = std::bit_cast<uint64_t>(float_val);
+        } else {
+            res = std::from_chars(param.data(), param.data() + param.size(),
+                                  val);
+        }
+
         if (res.ec != std::errc{}) {
             return {};
         }

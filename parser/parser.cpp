@@ -18,6 +18,7 @@ namespace parser {
         while (!next().is_eof()) {
             switch (next().type()) {
             case common::TokenType::VAR: parse_global_variabe(); break;
+            case common::TokenType::EXTERNAL: [[fallthrough]];
             case common::TokenType::FUNC: parse_function(); break;
             case common::TokenType::STRUCT: parse_struct_decl(); break;
             case common::TokenType::SEMICOLON: consume(); break;
@@ -93,11 +94,11 @@ namespace parser {
                         next().pos());
                 }
 
-                result = std::make_unique<common::MemberAccess>(std::move(
-                                                                    result),
-                                                                std::move(
-                                                                    index),
-                                                                pos);
+                result = std::make_unique<common::IndexExpression>(std::move(
+                                                                       result),
+                                                                   std::move(
+                                                                       index),
+                                                                   pos);
             }
         }
 
@@ -561,6 +562,7 @@ namespace parser {
         }
         if (next().is(common::TokenType::RIGHT_BRACKET)) {
             // slice type
+            consume();
             std::unique_ptr<common::ParsedType> element_type = parse_type();
             if (element_type->is_error()) {
                 return std::make_unique<common::ParsedErrorType>();
@@ -685,6 +687,7 @@ namespace parser {
     }
 
     common::Variable Parser::parse_field() {
+        common::TokenPos pos = next().pos();
         common::IdentifierID name = match_identifier(
             "expected name of the field");
         if (name == common::IdentifierID{}) {
@@ -695,6 +698,8 @@ namespace parser {
         if (!type || type->is_error()) {
             return common::Variable{};
         }
-        return common::Variable{.name = name, .explicit_type = std::move(type)};
+        return common::Variable{.name = name,
+                                .explicit_type = std::move(type),
+                                .pos = pos};
     }
 } // namespace parser

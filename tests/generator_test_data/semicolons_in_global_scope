@@ -1,0 +1,10 @@
+func a();
+;;;;;;;;;;;;
+func b() int {return 1 + 2;};
+
+func c() bool {return cast<bool>(cast<float>(1) == cast<float>(2));}
+
+func d() float {return -1.1;}
+
+func main() {1;}
+;;;;;;;;;

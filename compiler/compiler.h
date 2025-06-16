@@ -1,11 +1,13 @@
 #ifndef COMPILER_V2_COMPILER_COMPILER_HDR_
 #define COMPILER_V2_COMPILER_COMPILER_HDR_
 
+#include "vm/vm.h"
 #include <iostream>
 
 namespace compiler {
 
-    void compile(std::istream &file, std::ostream &out, std::ostream &err, bool do_constant_folding = true);
+    [[nodiscard]] std::optional<vm::Program> compile(std::istream &file,
+                                                     std::ostream *err);
 }
 
 #endif

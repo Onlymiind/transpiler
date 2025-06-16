@@ -6,10 +6,27 @@
 #include <cctype>
 #include <cstdint>
 #include <optional>
+#include <stdexcept>
 #include <string_view>
 #include <unordered_map>
 
 namespace lexer {
+    common::TokenPos Lexer::make_pos() const {
+        if (current_pos_.empty()) {
+            throw std::runtime_error{"invalid call to make_pos()"};
+        }
+
+        common::TokenPos pos;
+        pos.line = current_line_;
+        pos.symbol = current_pos_.back();
+        if (current_pos_.size() > 1) {
+            size_t prev = current_pos_[current_pos_.size() - 2];
+            pos.symbol -= prev;
+            pos.line_start = prev;
+        }
+        return pos;
+    }
+
     std::optional<char> Lexer::get_char() {
         if (!file_ || !*file_) {
             return {};
@@ -20,20 +37,21 @@ namespace lexer {
         case EOF: return {};
         case '\n':
             ++current_line_;
-            current_pos_.push(0);
+            current_pos_.push_back(file_->tellg());
             return '\n';
         }
-        ++current_pos_.top();
+        current_pos_.back() = file_->tellg();
         return static_cast<char>(c);
     }
 
-    void Lexer::put_back(char c) {
-        file_->putback(c);
+    void Lexer::put_back() {
+        file_->unget();
         if (!current_pos_.empty()) {
-            if (current_pos_.top() > 0) {
-                --current_pos_.top();
-            } else {
-                current_pos_.pop();
+            if (current_pos_.back() == 0) {
+                current_pos_.pop_back();
+            }
+            if (!current_pos_.empty()) {
+                current_pos_.back() = file_->tellg();
             }
         }
     }
@@ -43,7 +61,7 @@ namespace lexer {
         for (; c && std::isspace(*c); c = get_char()) {
         }
         if (file_ && c) {
-            put_back(*c);
+            put_back();
         }
     }
 
@@ -83,7 +101,7 @@ namespace lexer {
     }
 
     common::Token Lexer::get_char_literal() {
-        common::TokenPos pos{current_line_, current_pos_.top()};
+        common::TokenPos pos = make_pos();
         auto c = get_char();
         if (!c || c != '\'') {
             return {};
@@ -121,7 +139,7 @@ namespace lexer {
     };
 
     common::Token Lexer::get_identifier() {
-        common::TokenPos pos{current_line_, current_pos_.top()};
+        common::TokenPos pos = make_pos();
         std::optional<char> c = get_char();
         if (!c || !std::isalpha(*c) && *c != '_') {
             report_error("exprected alphabetic character or _");
@@ -136,7 +154,7 @@ namespace lexer {
         }
 
         if (c) {
-            put_back(*c);
+            put_back();
         }
 
         auto it = g_keywords.find(buf);
@@ -152,7 +170,7 @@ namespace lexer {
     }
 
     common::Token Lexer::get_numeric() {
-        common::TokenPos pos{current_line_, current_pos_.top()};
+        common::TokenPos pos = make_pos();
         std::optional<char> c = get_char();
         if (!c || !std::isdigit(*c)) {
             return common::Token{};
@@ -166,7 +184,7 @@ namespace lexer {
 
         if (!c || (*c != '.' && !std::isalpha(*c))) {
             if (c) {
-                put_back(*c);
+                put_back();
             }
             return common::Token::with_value(static_cast<int64_t>(integer),
                                              pos);
@@ -189,7 +207,7 @@ namespace lexer {
         }
 
         if (c) {
-            put_back(*c);
+            put_back();
         }
 
         return common::Token::with_value(static_cast<double>(integer) +
@@ -200,7 +218,7 @@ namespace lexer {
 
     common::Token Lexer::get_op() {
         common::Token result;
-        result.pos(common::TokenPos{current_line_, current_pos_.top()});
+        result.pos(make_pos());
         std::optional<char> c = get_char();
         if (!c || !std::ispunct(*c)) {
             return result;
@@ -254,6 +272,7 @@ namespace lexer {
             const char next = static_cast<char>(file_->peek());
             if (next == '=') {
                 result.type(GREATER_EQUALS);
+                get_char();
             } else if (next == '>') {
                 result.type(SRA);
                 get_char();
@@ -269,7 +288,7 @@ namespace lexer {
         case '&': return handle_wide_op(BITWISE_AND, '&', AND);
         case '|': return handle_wide_op(BITWISE_OR, '|', OR);
         default:
-            put_back(*c);
+            put_back();
             report_error("unknown symbol");
             return result;
         }
@@ -279,7 +298,7 @@ namespace lexer {
 
     common::Token Lexer::get_string() {
         common::Token result;
-        common::TokenPos pos{current_line_, current_pos_.top()};
+        common::TokenPos pos = make_pos();
         if (file_->peek() != '"') {
             return result;
         }

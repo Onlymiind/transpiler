@@ -1,8 +1,0 @@
-func foo() [4]u64 {
-	var a [4]u64;
-	return a;
-}
-
-func main() {
-	foo()[0] = 1;
-}

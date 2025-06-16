@@ -10,6 +10,11 @@
 #include <unordered_set>
 
 namespace common {
+    struct ModifiedType {
+        const PointerType *ptr = nullptr;
+        const StructType *slice = nullptr;
+        std::unordered_map<size_t, const ArrayType *> arrays;
+    };
 
     // handles primitives, arrays and pointers
     class Global {
@@ -42,22 +47,19 @@ namespace common {
             return types_;
         }
 
-      private:
-        struct PairHash {
-            size_t
-            operator()(std::pair<size_t, const Type *> p) const noexcept {
-                return std::hash<size_t>{}(p.first) * 7919 +
-                       std::hash<const Type *>{}(p.second);
-            }
-        };
+        std::unordered_map<const Type *, ModifiedType> &type_mods() noexcept {
+            return type_to_mod_;
+        }
 
+        const std::unordered_map<const Type *, ModifiedType> &
+        type_mods() const noexcept {
+            return type_to_mod_;
+        }
+
+      private:
         std::vector<std::unique_ptr<common::Type>> types_;
+        std::unordered_map<const Type *, ModifiedType> type_to_mod_;
         std::unordered_map<IdentifierID, const PrimitiveType *> primitives_;
-        std::unordered_map<std::pair<size_t, const Type *>, const ArrayType *,
-                           PairHash>
-            arrays_;
-        std::unordered_map<const Type *, const PointerType *> pointers_;
-        std::unordered_map<const Type *, const StructType *> slices_;
     };
 
     class Module {
@@ -102,6 +104,11 @@ namespace common {
             return structs_;
         }
 
+        const std::unordered_map<IdentifierID, const Type *> &
+        named_types() const noexcept {
+            return named_types_;
+        }
+
       private:
         bool try_add_name(IdentifierID name);
 
@@ -113,6 +120,33 @@ namespace common {
         std::unordered_map<IdentifierID, FunctionID> functions_;
 
         std::vector<std::unique_ptr<StructType>> structs_;
+    };
+
+    class TypeStorage {
+      public:
+        TypeStorage() = default;
+        explicit TypeStorage(Global &&global);
+        TypeStorage(const TypeStorage &) = delete;
+        TypeStorage(TypeStorage &&) = default;
+
+        TypeStorage &operator=(const TypeStorage &) = delete;
+        TypeStorage &operator=(TypeStorage &&) = default;
+
+        const Type *get_by_name(IdentifierID name) const;
+        const Type *get_ptr(const Type *to) const;
+        const Type *get_slice(const Type *element) const;
+        const Type *get_array(const Type *element, size_t size) const;
+
+        const std::vector<std::unique_ptr<Type>> &types() const noexcept;
+
+        void import(Module &mod);
+
+      private:
+        void import(Global &&global);
+
+        std::vector<std::unique_ptr<Type>> types_;
+        std::unordered_map<IdentifierID, const Type *> name_to_type_;
+        std::unordered_map<const Type *, ModifiedType> type_to_mod_;
     };
 } // namespace common
 

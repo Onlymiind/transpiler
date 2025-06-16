@@ -151,6 +151,11 @@ TEST_CASE("lexer: operators", "[lexer]") {
         {ASSIGN, "="},
         {BITWISE_OR, "|"},
         {BITWISE_AND, "&"},
+        {XOR, "^"},
+        {SLA, "<<"},
+        {SRA, ">>"},
+        {SRL, ">>>"},
+        {INV, "~"},
     };
 
     for (auto c : cases) {
@@ -166,6 +171,7 @@ TEST_CASE("lexer: operators", "[lexer]") {
         l.set_file(in);
         t = l.get_op();
         REQUIRE(t.type() == c.first);
+        REQUIRE(in.tellg() == c.second.size());
     }
     for (auto c : fails) {
         INFO("Test case: ");

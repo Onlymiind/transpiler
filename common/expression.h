@@ -68,12 +68,12 @@ namespace common {
         switch (op) {
 
         case BITWISE_AND: [[fallthrough]];
-        case XOR: [[fallthrough]];
         case MUL: [[fallthrough]];
         case DIV: [[fallthrough]];
         case REMAINDER: return 8;
 
         case BITWISE_OR: [[fallthrough]];
+        case XOR: [[fallthrough]];
         case ADD: [[fallthrough]];
         case SUB: return 6;
 
@@ -88,8 +88,9 @@ namespace common {
         case NOT_EQUALS: [[fallthrough]];
         case EQUALS: return 4;
 
-        case AND: return 3;
+        case AND: [[fallthrough]];
         case OR: return 2;
+
         case ASSIGN: return 1;
         }
 

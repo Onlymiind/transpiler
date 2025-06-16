@@ -1,0 +1,28 @@
+PUSH 4
+ALLOCATE_ARRAY
+PUSH 4
+POP
+
+ALLOCATE
+GET_LOCAL 1
+PUSH 8
+ADD_I 8
+READ 8
+POP
+GET_LOCAL 1
+PUSH 0
+ADD_I 8
+READ 8
+POP
+
+RETURN
+
+@END
+func main() {
+    var a [4]int;
+    a.len;
+
+    var b []int;
+    b.len;
+    b.cap;
+}

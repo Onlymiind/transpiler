@@ -6,6 +6,7 @@
 #include <format>
 #include <functional>
 #include <string>
+#include <string_view>
 #include <type_traits>
 
 namespace common {
@@ -42,8 +43,14 @@ namespace common {
     };
 
     struct TokenPos {
+        constexpr TokenPos() noexcept = default;
+        constexpr TokenPos(size_t line_, size_t symbol_,
+                           size_t line_start_) noexcept
+            : line(line_), symbol(symbol_), line_start(line_start_) {}
+
         size_t line = 0;
         size_t symbol = 0;
+        size_t line_start = 0;
 
         constexpr auto operator<=>(TokenPos rhs) noexcept {
             return line == rhs.line ? symbol <=> rhs.symbol : line <=> rhs.line;
@@ -109,6 +116,31 @@ namespace common {
       private:
         ReleaseFunc release_func_;
     };
+
+    struct StringHash : std::hash<std::string>, std::hash<std::string_view> {
+        using is_transparent = int;
+        using std::hash<std::string>::operator();
+        using std::hash<std::string_view>::operator();
+    };
+
+    struct StringEquals : std::equal_to<std::string>,
+                          std::equal_to<std::string_view> {
+        using is_transparent = int;
+        using std::equal_to<std::string>::operator();
+        using std::equal_to<std::string_view>::operator();
+
+        bool operator()(const std::string &s, std::string_view sv) const {
+            return s == sv;
+        }
+
+        bool operator()(std::string_view sv, const std::string &s) const {
+            return s == sv;
+        }
+    };
+
+    template <typename StringType, typename T>
+    using StringMap = std::unordered_map<StringType, T, StringHash,
+                                         StringEquals>;
 
 } // namespace common
 

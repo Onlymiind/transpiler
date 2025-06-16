@@ -1,0 +1,5 @@
+var a float;
+
+func main() {
+    var a float;
+}

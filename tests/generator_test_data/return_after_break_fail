@@ -1,0 +1,10 @@
+func foo() int {
+    for {
+        break;
+        return 1;
+    }
+}
+
+func main() {
+    foo();
+}

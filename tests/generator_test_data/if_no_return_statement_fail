@@ -1,0 +1,14 @@
+
+func foo() int {
+    if(true) {
+        
+    } else if true {
+        return 1;
+    } else {
+        return 1;
+    }
+}
+
+func main() {
+    foo();
+}

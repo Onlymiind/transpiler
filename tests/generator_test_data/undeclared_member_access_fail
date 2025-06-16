@@ -1,0 +1,9 @@
+struct foo {
+    a int;
+    b char;
+}
+
+func main() {
+    var c foo;
+    c.d;
+}

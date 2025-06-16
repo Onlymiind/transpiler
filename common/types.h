@@ -110,7 +110,7 @@ namespace common {
     class StructType final : public Type {
       public:
         explicit StructType(IdentifierID name)
-            : Type(static_kind(), TypeTraits::NONE, 0, 0) {}
+            : Type(static_kind(), TypeTraits::NONE, 0, 0), name_(name) {}
 
         COMPILER_V2_DECLARE_SPECIAL_MEMBER_FUNCTIONS(StructType, TypeKind,
                                                      TypeKind::STRUCT, delete);
