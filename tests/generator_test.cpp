@@ -373,7 +373,9 @@ TEST_CASE("generator: fails", "[generator]") {
                         "wrong_member_access_fail",
                         "undeclared_member_access_fail",
                         "assign_in_expression_fail",
-                        "void_func_in_expression_fail");
+                        "void_func_in_expression_fail",
+                        "access_slice_data_fail", "assign_slice_cap_fail",
+                        "assign_slice_len_fail", "assign_array_len_fail");
 
     INFO(file);
 

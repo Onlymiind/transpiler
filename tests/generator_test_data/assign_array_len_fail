@@ -1,0 +1,4 @@
+func main() {
+    var a [4]int;
+    a.len = 1;
+}
