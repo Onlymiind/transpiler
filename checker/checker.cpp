@@ -69,6 +69,7 @@ namespace checker {
         len_name_ = identifiers_->add("len");
         data_name_ = identifiers_->add("data");
         append_name_ = identifiers_->add("append");
+        get_slice(builtin_types_[common::BuiltinTypes::CHAR]);
     }
 
     void Checker::add_declarations() {
@@ -84,6 +85,12 @@ namespace checker {
             structs_[ptr] = &record;
         }
 
+        for (auto [record, info] : structs_) {
+            if (!check_struct(*record, *info)) {
+                return;
+            }
+        }
+
         auto &functions = ast_->functions();
         for (auto &func : functions) {
             if (!check_function_decl(func)) {
@@ -95,13 +102,9 @@ namespace checker {
         for (common::VariableID var_id : variables) {
             common::Variable &var = *ast_->get_var(var_id);
             ERROR_GUARD(var.pos);
-            if (!check_variable(var)) {
-                return;
-            }
-            if (var.initial_value && !var.initial_value->is_error() &&
-                var.initial_value->kind() != common::ExpressionKind::LITERAL) {
-                report_error("global variable initializer must be a constant "
-                             "expression");
+            if (!module_.add_variable(var.name, var.id)) {
+                report_error("name " + *identifiers_->get(var.name) +
+                             " is already taken");
                 return;
             }
         }
@@ -113,8 +116,10 @@ namespace checker {
         if (!err_.empty()) {
             return;
         }
-        for (auto [record, info] : structs_) {
-            if (!check_struct(*record, *info)) {
+
+        auto &vars = ast_->global_variables();
+        for (auto var : vars) {
+            if (!check_variable(*ast_->get_var(var), true)) {
                 return;
             }
         }
@@ -562,6 +567,15 @@ namespace checker {
         }
 
         common::Variable &var = *ast_->get_var(var_id);
+        if (!var.type && var.explicit_type) {
+            var.type = get_type(*var.explicit_type);
+            if (!var.type) {
+                return false;
+            }
+        } else if (!var.type) {
+            report_error("reference to a variable without a type");
+            return false;
+        }
         name.id(var.id);
         name.type(var.type);
         return true;
@@ -729,8 +743,8 @@ namespace checker {
         return true;
     }
 
-    bool Checker::check_variable(common::Variable &var) {
-        if (!module_.add_variable(var.name, var.id)) {
+    bool Checker::check_variable(common::Variable &var, bool global) {
+        if (!global && !module_.add_variable(var.name, var.id)) {
             report_error("variable declaration: name already used");
             return false;
         }

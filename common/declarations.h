@@ -37,7 +37,7 @@ namespace common {
         std::unique_ptr<Expression> initial_value;
         TokenPos pos;
         const Type *type = nullptr;
-        bool is_gloabl = false;
+        bool is_global = false;
     };
 
 } // namespace common

@@ -20,14 +20,14 @@ namespace common {
         void add_global(Variable var) {
             var.id = VariableID{vars_.size()};
             global_variables_.push_back(var.id);
-            var.is_gloabl = true;
+            var.is_global = true;
             vars_.push_back(std::move(var));
         }
 
         VariableID add_local(Variable var) {
             VariableID result = VariableID{vars_.size()};
             var.id = result;
-            var.is_gloabl = false;
+            var.is_global = false;
             vars_.push_back(std::move(var));
             return result;
         }

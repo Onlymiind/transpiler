@@ -1,3 +1,7 @@
+GET_GLOBAL 0
+PUSH 1
+WRITE 8
+
 ALLOCATE
 GET_LOCAL 0
 PUSH 1
@@ -30,6 +34,12 @@ GET_LOCAL 5
 GET_LOCAL 6
 COPY 24
 
+ALLOCATE
+DUP
+COPY_CONST
+COPY 24
+
+POP 8
 RETURN
 @END
 struct foo {
@@ -37,7 +47,11 @@ struct foo {
     b float;
 }
 
+var global int = 10;
+
 func main() {
+    global = 1;
+
     var a int;
     a = 1;
 
@@ -56,4 +70,6 @@ func main() {
     var slice2 []int;
 
     slice = slice2;
+
+    var str = "abcdef";
 }

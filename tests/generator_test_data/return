@@ -1,0 +1,14 @@
+ALLOCATE
+DUP
+PUSH 1
+WRITE 8
+GET_LOCAL 0
+READ 8
+RETURN 1
+POP 1
+@END
+func main() int {
+    var a = 1;
+    return a;
+    10;
+}

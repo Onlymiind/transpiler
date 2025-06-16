@@ -321,6 +321,11 @@ namespace parser {
                    "expected ';' after global variable definition")) {
             return;
         }
+        if (!result.explicit_type) {
+            report_error("global variables must have explicit type");
+            err_.pos = result.pos;
+            return;
+        }
 
         ast_.add_global(std::move(result));
     }

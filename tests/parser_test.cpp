@@ -444,6 +444,7 @@ TEST_CASE("parser: global variables", "[parser]") {
         {.data = "a u64;", .should_fail = true},
         {.data = "var a", .should_fail = true},
         {.data = "var a u64", .should_fail = true},
+        {.data = "var a = 1;", .should_fail = true},
         {"var a u64 = 1;"},
         {.data = "var;", .should_fail = true},
         {.data = "var", .should_fail = true},

@@ -1,28 +1,89 @@
+PUSH 1
+POP 1
+JUMP 0
+ALLOCATE
+DUP
+PUSH 2
+WRITE 8
+ALLOCATE
+DUP
+PUSH 1
+WRITE 8
+POP 1
+JUMP 7
+POP 1
+ALLOCATE
+GET_LOCAL 0
+PUSH 3
+WRITE 8
+PUSH 1
+NOT
+BRANCH 24
+PUSH 1
+POP 1
+JUMP 18
+GET_LOCAL 0
+PUSH 0
+WRITE 8
+GET_LOCAL 0
+READ 8
+PUSH 100
+LESS_I
+NOT
+BRANCH 42
+PUSH 1
+POP 1
+GET_LOCAL 0
+GET_LOCAL 0
+READ 8
+PUSH 1
+ADD_I 8
+WRITE 8
+JUMP 27
+JUMP 44
+JUMP 42
+PUSH 1
+POP 1
+PUSH 1
+NOT
+BRANCH 55
+PUSH 3
+POP 1
+JUMP 52
+PUSH 2
+POP 1
+JUMP 46
+
+POP 1
+RETURN
+@END
 func main() {
     for {
-        var x = 1;
-        break;
+        1;
     }
 
     for var y = 2 {
-        var x = 2;
-        if(x == 2) {
-            break;
-        }
+        var a = 1;
     }
 
-    for var y = 3; true {
-        var x = 3;
-        if(y == x) {
-            break;
-        }
+    var a int;
+    for a = 3; true {
+        1;
     }
 
-    var x u64;
-    for var i = 0; i < 100; i = i + 1 {
-        if i % 2 == 0 {
-            continue;
-        }
-        x = x + 1;
+    for a = 0; a < 100; a = a + 1 {
+        1;
+    }
+
+    for {
+        break;
+        2;
+    }
+
+    for 1; true; 2 {
+        3;
+        continue;
+        var d int;
+        1;
     }
 }

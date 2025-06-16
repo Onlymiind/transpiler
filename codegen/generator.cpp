@@ -99,9 +99,12 @@ namespace codegen {
                 continue;
             }
 
+            push_op(vm::Op::GET_GLOBAL, var_to_idx_.at(varID));
+
             if (!codegen_expression(*var.initial_value)) {
                 return false;
             }
+
             push_assign(var.type);
         }
 
@@ -245,6 +248,10 @@ namespace codegen {
             value = vm::VM::null_value;
         } else if (const char *c = lit.get<char>(); c) {
             value = static_cast<uint64_t>(*c);
+        } else if (const common::StringID *str = lit.get<common::StringID>();
+                   str) {
+            push_op(vm::Op::COPY_CONST, **str);
+            return true;
         } else {
             report_error("unknown literal type");
             return false;
@@ -462,7 +469,7 @@ namespace codegen {
         } else {
             push_op(vm::Op::CALL, idx);
         }
-        return false;
+        return true;
     }
 
     bool Generator::push_allocate(const common::Type *type) {
@@ -482,6 +489,7 @@ namespace codegen {
     }
 
     bool Generator::codegen_var(const common::Variable &var) {
+        ++local_counts_.back();
         var_to_idx_[var.id] = local_idx_;
         ++local_idx_;
 
@@ -506,31 +514,32 @@ namespace codegen {
         }
 
         push_op(vm::Op::NOT);
-        vm::Instruction &false_branch = push_op(vm::Op::BRANCH);
+        size_t false_branch = push_op(vm::Op::BRANCH);
 
         if (!codegen_block(branch.true_branch())) {
             return false;
         }
 
-        vm::Instruction *end = nullptr;
+        size_t end = 0;
 
         if (branch.false_branch()) {
-            end = &push_op(vm::Op::JUMP);
+            end = push_op(vm::Op::JUMP);
         }
 
-        false_branch.arg = output_.size();
+        output_[false_branch].arg = output_.size();
 
         if (branch.false_branch()) {
             if (!codegen_block(*branch.false_branch())) {
                 return false;
             }
-            end->arg = output_.size();
+            output_[end].arg = output_.size();
         }
 
         return true;
     }
 
     bool Generator::codegen_block(const common::Block &block) {
+        local_counts_.push_back(0);
         if (!block.reachable()) {
             return true;
         }
@@ -544,19 +553,32 @@ namespace codegen {
                 return false;
             }
         }
+        pop_locals();
 
         return true;
     }
 
+    void Generator::pop_locals() {
+        size_t local_count = local_counts_.back();
+        local_counts_.pop_back();
+        if (local_count == 0) {
+            return;
+        }
+
+        local_idx_ -= local_count;
+        push_op(vm::Op::POP, local_count);
+    }
+
     bool Generator::codegen_loop(const common::Loop &loop) {
+        local_counts_.push_back(0);
         if (loop.init()) {
             if (!codegen_statement(*loop.init())) {
                 return false;
             }
         }
 
-        break_jumps_.push_back(std::vector<vm::Instruction *>{});
-        continue_jumps_.push_back(std::vector<vm::Instruction *>{});
+        break_jumps_.push_back(std::vector<size_t>{});
+        continue_jumps_.push_back(std::vector<size_t>{});
         uint64_t start = output_.size();
         if (loop.condition()) {
             if (!codegen_expression(*loop.condition())) {
@@ -564,7 +586,7 @@ namespace codegen {
             }
             push_op(vm::Op::NOT);
 
-            break_jumps_.back().push_back(&push_op(vm::Op::BRANCH));
+            break_jumps_.back().push_back(push_op(vm::Op::BRANCH));
         }
 
         if (!codegen_block(loop.body())) {
@@ -572,7 +594,7 @@ namespace codegen {
         }
 
         for (auto jump : continue_jumps_.back()) {
-            jump->arg = output_.size();
+            output_[jump].arg = output_.size();
         }
         continue_jumps_.pop_back();
 
@@ -580,13 +602,17 @@ namespace codegen {
             if (!codegen_expression(*loop.iteration())) {
                 return false;
             }
+            if (loop.iteration()->type()) {
+                push_op(vm::Op::POP, 1);
+            }
         }
 
         push_op(vm::Op::JUMP, start);
         for (auto jump : break_jumps_.back()) {
-            jump->arg = output_.size();
+            output_[jump].arg = output_.size();
         }
         break_jumps_.pop_back();
+        pop_locals();
         return true;
     }
 
@@ -610,9 +636,11 @@ namespace codegen {
             const common::Expression
                 *expr = dynamic_cast<const common::ExpressionStatement &>(smt)
                             .expression();
-            codegen_expression(*expr);
+            if (!codegen_expression(*expr)) {
+                return false;
+            }
             if (expr->type()) {
-                push_op(vm::Op::POP);
+                push_op(vm::Op::POP, 1);
             }
             break;
         }
@@ -627,10 +655,10 @@ namespace codegen {
             return codegen_loop(dynamic_cast<const common::Loop &>(smt));
             break;
         case common::StatementType::BREAK:
-            break_jumps_.back().push_back(&push_op(vm::Op::JUMP));
+            break_jumps_.back().push_back(push_op(vm::Op::JUMP));
             break;
         case common::StatementType::CONTINUE:
-            continue_jumps_.back().push_back(&push_op(vm::Op::JUMP));
+            continue_jumps_.back().push_back(push_op(vm::Op::JUMP));
             break;
         default: report_error("statement type not supported"); return false;
         }
@@ -693,7 +721,7 @@ namespace codegen {
 
         uint64_t idx = var_to_idx_.at(var.id);
 
-        if (var.is_gloabl) {
+        if (var.is_global) {
             push_op(vm::Op::GET_GLOBAL, idx);
         } else {
             push_op(vm::Op::GET_LOCAL, idx);

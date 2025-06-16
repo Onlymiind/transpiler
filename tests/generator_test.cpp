@@ -76,7 +76,7 @@ std::vector<FunctionalTestCase> cases{
 
 static const std::string base_dir = "generator_test_data/";
 
-void run_case(std::istream &in) {
+void run_case(std::istream &in, std::string_view func_name = "main") {
     std::vector<vm::Instruction> expected;
     std::string line;
     while (line != "@END") {
@@ -96,17 +96,18 @@ void run_case(std::istream &in) {
 
     std::string errors = err.str();
     INFO(errors);
-    INFO("----");
     if (should_fail) {
         REQUIRE(!errors.empty());
         return;
     }
+    REQUIRE(errors.empty());
+    INFO("----");
 
     REQUIRE(program);
 
     auto it = std::find_if(program->functions.begin(), program->functions.end(),
                            [&](const auto &func) {
-                               return func.name == "main";
+                               return func.name == func_name;
                            });
     REQUIRE(it != program->functions.end());
     const auto &code = it->code;
@@ -119,7 +120,8 @@ void run_case(std::istream &in) {
              std::to_string(i));
         REQUIRE(it->code[i].op == expected[i].op);
         if (kind != vm::Op::ALLOCATE && kind != vm::Op::ALLOCATE_ARRAY &&
-            kind != vm::Op::APPEND && kind != vm::Op::CALL) {
+            kind != vm::Op::APPEND && kind != vm::Op::CALL &&
+            kind != vm::Op::COPY_CONST) {
             REQUIRE(it->code[i].arg == expected[i].arg);
         }
     }
@@ -205,7 +207,7 @@ TEST_CASE("generator: binary ops", "[generator]") {
     stream << "ALLOCATE\nALLOCATE\nGET_LOCAL 0\nREAD " << c.type_size
            << "\nGET_LOCAL 1\nREAD " << c.type_size << "\n"
            << vm::to_string(c.op_instr) << ' ' << c.op_arg
-           << (c.push_not ? "\nNOT" : "") << "\nPOP\nRETURN\n@END\n"
+           << (c.push_not ? "\nNOT" : "") << "\nPOP 1\nPOP 2\nRETURN\n@END\n"
            << "func main() { \nvar a " << c.var_type << ";\nvar b "
            << c.var_type << ";\n"
            << "a" << c.op_str << "b;\n}\n";
@@ -237,7 +239,7 @@ TEST_CASE("generator: unary ops", "[generator]") {
     std::stringstream stream;
     stream << "ALLOCATE\nGET_LOCAL 0\nREAD " << c.type_size << '\n'
            << vm::to_string(c.op_instr) << ' ' << c.op_arg
-           << "\nPOP\nRETURN\n@END\n"
+           << "\nPOP 1\nPOP 1\nRETURN\n@END\n"
            << "func main() { \nvar a " << c.var_type << ";\n"
            << c.op_str << "a;\n}\n";
 
@@ -245,11 +247,41 @@ TEST_CASE("generator: unary ops", "[generator]") {
     run_case(stream);
 }
 
-TEST_CASE("generator: branches", "[generator]") {}
+TEST_CASE("generator: branches", "[generator]") {
+    std::filesystem::path data{base_dir + "branches"};
+    INFO(data.c_str());
+    std::ifstream in{data};
+    REQUIRE(in.is_open());
 
-TEST_CASE("generator: loops", "[generator]") {}
+    run_case(in);
+}
 
-TEST_CASE("generator: global vars", "[generator]") {}
+TEST_CASE("generator: return value", "[generator]") {
+    std::filesystem::path data{base_dir + "return"};
+    INFO(data.c_str());
+    std::ifstream in{data};
+    REQUIRE(in.is_open());
+
+    run_case(in);
+}
+
+TEST_CASE("generator: loops", "[generator]") {
+    std::filesystem::path data{base_dir + "loop_basic"};
+    INFO(data.c_str());
+    std::ifstream in{data};
+    REQUIRE(in.is_open());
+
+    run_case(in);
+}
+
+TEST_CASE("generator: global vars", "[generator]") {
+    std::filesystem::path data{base_dir + "global_vars"};
+    INFO(data.c_str());
+    std::ifstream in{data};
+    REQUIRE(in.is_open());
+
+    run_case(in, vm::VM::global_init_name);
+}
 
 TEST_CASE("generator: struct access", "[generator]") {
     std::filesystem::path data{base_dir + "member_access"};

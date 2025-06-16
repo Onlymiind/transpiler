@@ -60,6 +60,7 @@ TEST_CASE("lexer: keywords", "[lexer]") {
         {"cast", common::Token{common::TokenType::CAST}},
         {"null", common::Token{common::TokenType::NULLPTR}},
         {"struct", common::Token{common::TokenType::STRUCT}},
+        {"external", common::Token{common::TokenType::EXTERNAL}},
     };
 
     for (auto c : cases) {
@@ -292,5 +293,68 @@ TEST_CASE("lexer: multiple tokens", "[lexer]") {
                     *lit.get(*expected[i].get<common::IdentifierID>()));
             break;
         }
+    }
+}
+
+TEST_CASE("lexer: strings", "[lexer]") {
+    common::Identifiers lit;
+    std::vector<TestCase> cases = {
+        {"\"trueuyt\"", common::Token::with_value(lit.add_string("trueuyt"))},
+        {"\"\"", common::Token::with_value(lit.add_string(""))},
+        {"\"\\n\\ta\"", common::Token::with_value(lit.add_string("\n\ta"))},
+        {.str = "\"123\n4\"", .should_fail = true},
+        {.str = "", .should_fail = true},
+        {.str = "\"\\e\"", .other_type = true},
+        {.str = "\"hasdg", .other_type = true},
+    };
+
+    for (auto c : cases) {
+        INFO("Test case: ");
+        INFO(c.str);
+        std::stringstream in{std::string{c.str.data(), c.str.size()}};
+        lexer::Lexer l{in};
+        auto t = l.get_string();
+        if (c.should_fail) {
+            REQUIRE(t.is_error());
+            continue;
+        } else if (c.other_type) {
+            REQUIRE(t.type() != common::TokenType::STRING);
+            continue;
+        }
+
+        auto result = l.reset();
+        REQUIRE(t.type() == c.expected.type());
+        REQUIRE(*result.identifiers.get(*t.get<common::StringID>()) ==
+                *lit.get(*c.expected.get<common::StringID>()));
+    }
+}
+
+TEST_CASE("lexer: chars", "[lexer]") {
+    common::Identifiers lit;
+    std::vector<TestCase> cases = {
+        {"'a'", common::Token::with_value('a')},
+        {"'\\n'", common::Token::with_value('\n')},
+        {.str = "''", .should_fail = true},
+        {.str = "'\\e'", .other_type = true},
+        {.str = "'a", .other_type = true},
+    };
+
+    for (auto c : cases) {
+        INFO("Test case: ");
+        INFO(c.str);
+        std::stringstream in{std::string{c.str.data(), c.str.size()}};
+        lexer::Lexer l{in};
+        auto t = l.get_char_literal();
+        if (c.should_fail) {
+            REQUIRE(t.is_error());
+            continue;
+        } else if (c.other_type) {
+            REQUIRE(t.type() != common::TokenType::CHAR);
+            continue;
+        }
+
+        auto result = l.reset();
+        REQUIRE(t.type() == c.expected.type());
+        REQUIRE(*t.get<char>() == *c.expected.get<char>());
     }
 }

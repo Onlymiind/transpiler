@@ -42,7 +42,7 @@ namespace checker {
         bool check_function(common::Function &func);
         bool check_function_decl(common::Function &func);
         bool check_branch(common::Branch &branch);
-        bool check_variable(common::Variable &var);
+        bool check_variable(common::Variable &var, bool global = false);
         bool check_statement(common::Statement &smt);
         bool check_block(common::Block &block);
         bool check_loop(common::Loop &loop);

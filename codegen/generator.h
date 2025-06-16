@@ -73,9 +73,11 @@ namespace codegen {
 
         void push_arithmetic_op(const common::Type *typ, vm::Op int_op,
                                 vm::Op float_op);
-        vm::Instruction &push_op(vm::Op op, uint64_t arg = 0) {
-            return output_.emplace_back(vm::Instruction{.op = op, .arg = arg});
+        size_t push_op(vm::Op op, uint64_t arg = 0) {
+            output_.emplace_back(vm::Instruction{.op = op, .arg = arg});
+            return output_.size() - 1;
         }
+        void pop_locals();
         void push_equals(const common::Type *type);
         void push_assign(const common::Type *type);
         void push_read(const common::Type *type);
@@ -92,8 +94,9 @@ namespace codegen {
         std::vector<vm::Instruction> output_;
         uint64_t local_idx_ = 0;
 
-        std::vector<std::vector<vm::Instruction *>> break_jumps_;
-        std::vector<std::vector<vm::Instruction *>> continue_jumps_;
+        std::vector<std::vector<size_t>> break_jumps_;
+        std::vector<std::vector<size_t>> continue_jumps_;
+        std::vector<size_t> local_counts_;
 
         vm::Program program_;
         std::unordered_map<common::FunctionID, uint64_t> func_to_idx_;

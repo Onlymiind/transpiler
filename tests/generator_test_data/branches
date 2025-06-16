@@ -1,0 +1,40 @@
+PUSH 1
+NOT
+BRANCH 5
+PUSH 1
+POP 1
+PUSH 1
+NOT
+BRANCH 8
+PUSH 1
+NOT
+BRANCH 14
+PUSH 1
+POP 1
+JUMP 16
+PUSH 1
+POP 1
+PUSH 1
+NOT
+BRANCH 20
+JUMP 28
+PUSH 0
+NOT
+BRANCH 26
+PUSH 1
+POP 1
+JUMP 28
+PUSH 2
+POP 1
+RETURN
+@END
+
+func main() {
+    if true { 1; }
+
+    if true {}
+
+    if true { 1; } else { 1; }
+
+    if true {} else if false {1;} else {2;}
+}

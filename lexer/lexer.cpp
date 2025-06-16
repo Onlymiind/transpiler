@@ -79,7 +79,7 @@ namespace lexer {
             common::Token tok{};
             if (std::isdigit(c)) {
                 tok = get_numeric();
-            } else if (std::isalpha(c)) {
+            } else if (std::isalpha(c) || c == '_') {
                 tok = get_identifier();
             } else if (c == '"') {
                 tok = get_string();
@@ -297,10 +297,9 @@ namespace lexer {
     }
 
     common::Token Lexer::get_string() {
-        common::Token result;
         common::TokenPos pos = make_pos();
         if (file_->peek() != '"') {
-            return result;
+            return common::Token{};
         }
 
         get_char();
@@ -310,7 +309,7 @@ namespace lexer {
              c = static_cast<char>(file_->peek())) {
             std::optional<char> val = get_string_char();
             if (!val) {
-                return result;
+                return common::Token{};
             }
 
             value.push_back(*val);
@@ -318,8 +317,10 @@ namespace lexer {
 
         if (!file_) {
             report_error("string not terminated");
-            return result;
+            return common::Token{};
         }
+
+        get_char();
 
         return common::Token::with_value(result_.identifiers.add_string(
                                              std::move(value)),

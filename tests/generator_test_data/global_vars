@@ -1,0 +1,38 @@
+ALLOCATE
+ALLOCATE
+ALLOCATE
+ALLOCATE
+GET_GLOBAL 0
+GET_GLOBAL 1
+PUSH 0
+ADD_I 8
+READ 8
+WRITE 8
+GET_GLOBAL 1
+ALLOCATE
+DUP
+PUSH 10
+WRITE 8
+CALL
+COPY 8
+GET_GLOBAL 3
+PUSH 1
+WRITE 8
+@END
+
+var _1 int = a.a;
+var a bar = foo(10);
+var d int;
+var e int = 1;
+
+struct bar {
+    a int;
+}
+
+func foo(c int) bar {
+    var b bar;
+    b.a = c;
+    return b;
+}
+
+

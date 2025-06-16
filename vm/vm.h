@@ -239,6 +239,7 @@ namespace vm {
       private:
         uint64_t top(bool *is_ptr = nullptr);
         uint64_t pop(bool *is_ptr = nullptr);
+        bool pop_n(size_t count);
         void push(uint64_t val, bool is_ptr = false);
 
         std::optional<uint64_t> mem_read(uint64_t addr, uint64_t size);

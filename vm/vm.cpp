@@ -1,12 +1,8 @@
 #include "vm/vm.h"
-#include "checker/checker.h"
-#include "codegen/generator.h"
-#include "common/ast.h"
 #include "common/base_classes.h"
 #include "common/types.h"
+#include "common/util.h"
 #include "compiler/compiler.h"
-#include "lexer/lexer.h"
-#include "parser/parser.h"
 
 #include <bit>
 #include <cctype>
@@ -245,7 +241,10 @@ namespace vm {
             break;
         }
         case Op::POP: {
-            pop();
+            if (!pop_n(instr.arg)) {
+                report_error("failed to pop ", instr.arg, " values");
+                return false;
+            }
             break;
         }
         case Op::READ: {
@@ -709,6 +708,15 @@ namespace vm {
         return result;
     }
 
+    bool VM::pop_n(size_t count) {
+        if (stack_.size() < count) {
+            return false;
+        }
+
+        stack_.resize(stack_.size() - count);
+        return true;
+    }
+
     uint64_t VM::top(bool *is_ptr) {
         if (is_ptr) {
             *is_ptr = is_pointer_.back();
@@ -1151,27 +1159,47 @@ namespace vm {
     }
 
     bool VM::mem_copy_const(uint64_t idx, uint64_t &ptr) {
-        const auto &strings = program_.identifiers.strings();
-        if (idx >= strings.size()) {
-            report_error("string index out of bounds: ", idx, " size is ",
-                         strings.size());
+        const std::string *string = program_.identifiers.get(
+            common::StringID{idx});
+        if (!string) {
+            report_error("unknown string index: ", idx);
             return false;
         }
 
-        if (strings[idx]->empty()) {
-            ptr = 0;
+        auto type = program_.types.get_slice(
+            program_.types.get_by_name(program_.identifiers.get("char")));
+
+        const common::StructType
+            *slice = dynamic_cast<const common::StructType *>(type);
+
+        if (!allocate(type_to_info_.at(type), 1, ptr)) {
+            return false;
+        }
+
+        if (string->empty()) {
             return true;
         }
 
-        uint8_t *raw_ptr = static_cast<uint8_t *>(
-            std::malloc(strings[idx]->size()));
+        if (!write_struct_field(ptr, *slice->get_field(program_.cap_name),
+                                string->size())) {
+            return false;
+        }
+        if (!write_struct_field(ptr, *slice->get_field(program_.size_name),
+                                string->size())) {
+            return false;
+        }
+
+        uint8_t *raw_ptr = static_cast<uint8_t *>(std::malloc(string->size()));
         if (!raw_ptr) {
             report_error("failed to allcoate string");
             return false;
         }
 
-        std::memcpy(raw_ptr, strings[idx]->data(), strings[idx]->size());
-        ptr = std::bit_cast<uintptr_t>(raw_ptr);
+        std::memcpy(raw_ptr, string->data(), string->size());
+        if (!write_struct_field(ptr, *slice->get_field(program_.data_name),
+                                std::bit_cast<uintptr_t>(raw_ptr))) {
+            return false;
+        }
         return true;
     }
 
