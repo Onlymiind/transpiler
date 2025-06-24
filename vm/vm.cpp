@@ -1746,7 +1746,11 @@ namespace vm {
             return nullptr;
         }
 
-        return std::make_unique<VM>(std::move(*program));
+        auto vm = std::make_unique<VM>(std::move(*program));
+        if (!vm->reset()) {
+            return nullptr;
+        }
+        return vm;
     }
 
     void decompile(std::span<Instruction> instrs, std::ostream &out) {

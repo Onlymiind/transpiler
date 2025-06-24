@@ -30,47 +30,29 @@ namespace codegen {
         bool generate_pointer_maps();
 
         const vm::TypeInfo &generate_pointer_map(const common::Type *type);
-
         bool codegen_expression(const common::Expression &expr,
                                 bool want_ptr = false);
-
         bool codegen_literal(const common::Literal &lit);
-
         bool codegen_unary(const common::UnaryExpression &expr,
                            bool want_ptr = false);
-
         bool codegen_binary(const common::BinaryExpression &expr);
-
         bool codegen_cast(const common::Cast &cast);
-
         bool codegen_function(const common::Function &func);
-
         bool codegen_call(const common::FunctionCall &call);
-
         bool codegen_index_expression(const common::IndexExpression &expr,
                                       bool want_ptr = false);
-
         bool codegen_member_access(const common::MemberAccess &access,
                                    bool want_ptr = false);
-
         bool codegen_var_ref(const common::VariableReference &ref,
                              bool want_ptr = false);
-
         bool codegen_var(const common::Variable &var);
-
         bool codegen_branch(const common::Branch &branch);
-
         bool codegen_block(const common::Block &block);
-
         bool codegen_statement(const common::Statement &smt);
-
         bool codegen_loop(const common::Loop &loop);
-
         void report_error(std::string_view err) { err_ = err; }
         std::string_view get_error() const { return err_; }
-
         bool error_occured() { return !err_.empty(); }
-
         void push_arithmetic_op(const common::Type *typ, vm::Op int_op,
                                 vm::Op float_op);
         size_t push_op(vm::Op op, uint64_t arg = 0) {
@@ -82,9 +64,7 @@ namespace codegen {
         void push_assign(const common::Type *type);
         void push_read(const common::Type *type);
         bool push_allocate(const common::Type *type);
-
         void push_truncate(size_t bytes);
-
         [[nodiscard]] vm::Program get_result() {
             vm::Program program{std::move(program_)};
             return program;

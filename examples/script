@@ -1,0 +1,81 @@
+external func draw_rect(rect Rect);
+external func get_keystate() Keystate;
+external func get_window_size() Vec2;
+
+struct Vec2 {
+    x float;
+    y float;
+}
+
+struct Rect {
+    pos Vec2;
+    size Vec2;
+}
+
+struct State {}
+
+struct Keystate {
+    right bool;
+    left bool;
+    up bool;
+    down bool;
+}
+
+var player Rect;
+var speed float;
+
+func init() {
+    var window = get_window_size();
+
+    player.size = newVec(window.x * 0.1, window.y * 0.1);
+    player.pos = newVec(window.x / 2. - player.size.x / 2., window.y / 2. - player.size.y / 2.);
+    speed = min(window.x, window.y) / 6.;
+}
+
+func frame(delta float) {
+    var keys = get_keystate();
+    var window = get_window_size();
+
+    var pos_delta = speed * delta;
+    if(keys.right) {
+        player.pos.x = player.pos.x + pos_delta;
+    }
+    if(keys.left) {
+        player.pos.x = player.pos.x - pos_delta;
+    }
+    if(keys.up) {
+        player.pos.y = player.pos.y - pos_delta;
+    }
+    if(keys.down) {
+        player.pos.y = player.pos.y + pos_delta;
+    }
+
+    if(player.pos.x < 0.) {
+        player.pos.x = 0.;
+    } else if(player.pos.x > window.x - player.size.x) {
+        player.pos.x = window.x - player.size.x;
+    }
+
+    if(player.pos.y < 0.) {
+        player.pos.y = 0.;
+    } else if(player.pos.y > window.y - player.size.y) {
+        player.pos.y = window.y - player.size.y;
+    }
+
+    draw_rect(player);
+}
+
+func min(val1 float, val2 float) float {
+    if (val1 < val2) {
+        return val1;
+    }
+
+    return val2;
+}
+
+func newVec(x float, y float) Vec2 {
+    var res Vec2;
+    res.x = x;
+    res.y = y;
+    return res;
+}

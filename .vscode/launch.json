@@ -27,9 +27,9 @@
             "type": "codelldb",
             "request": "launch",
             "name": "tests",
-            "program": "${workspaceFolder}/build/tests",
-            "args": ["-n", "generator: fails"],
-            "cwd": "${workspaceFolder}/tests",
+            "program": "${workspaceFolder}/build/examples/example",
+            "args": [],
+            "cwd": "${workspaceFolder}/build/examples",
             "externalConsole": false,
             "MIMode": "gdb",
             "setupCommands": [

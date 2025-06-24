@@ -41,7 +41,7 @@ set(COMPILER_SRC
 )
 
 add_library(compiler_lib ${COMPILER_SRC})
-target_include_directories(compiler_lib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(compiler_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(TEST_SRCS
 	tests/common.h
@@ -62,4 +62,7 @@ include(CTest)
 include(Catch)
 catch_discover_tests(tests WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 
-
+if(${BUILD_EXAMPLES})
+    find_package(SDL3 REQUIRED CONFIG REQUIRED)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/examples)
+endif()

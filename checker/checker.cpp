@@ -1125,6 +1125,7 @@ namespace checker {
         checked_fields.reserve(info.fields().size());
 
         auto &fields = info.fields();
+        std::unordered_set<const common::Type *> field_types;
         for (auto &field : fields) {
             ERROR_GUARD(field.pos);
 
@@ -1147,10 +1148,12 @@ namespace checker {
             }
 
             if (!struct_ptr || struct_ptr->is_slice()) {
+                field_types.insert(field.type);
                 continue;
             }
 
-            if (in_progress->contains(struct_ptr)) {
+            if (in_progress->contains(struct_ptr) &&
+                !field_types.contains(struct_ptr)) {
                 report_error(
                     "infinite loop detected in struct field declaration");
                 return false;
@@ -1170,9 +1173,12 @@ namespace checker {
                 report_error("record fields cannot have zero-sized type");
                 return false;
             }
+
+            field_types.insert(field.type);
         }
 
         record.add_fields(std::move(info.fields()));
+        in_progress->erase(&record);
         return true;
     }
 
