@@ -10,7 +10,6 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <strings.h>
 #include <utility>
 
 namespace parser {

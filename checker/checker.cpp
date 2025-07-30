@@ -920,11 +920,15 @@ namespace checker {
             default: return {};
             }
         };
-        auto do_integer_op = [this](common::BinaryOp op, uint64_t lhs,
-                                    uint64_t rhs) -> std::optional<uint64_t> {
+        auto do_integer_op = [this](common::BinaryOp op, int64_t lhs,
+                                    int64_t rhs) -> std::optional<int64_t> {
             switch (op) {
             case common::BinaryOp::BITWISE_OR: return lhs | rhs;
             case common::BinaryOp::BITWISE_AND: return lhs & rhs;
+            case common::BinaryOp::SLA: return lhs << rhs;
+            case common::BinaryOp::SRA: return lhs >> rhs;
+            case common::BinaryOp::SRL:
+                return static_cast<int64_t>(static_cast<uint64_t>(lhs) >> rhs);
             case common::BinaryOp::REMAINDER:
                 if (rhs == 0) {
                     report_error("division by zero");

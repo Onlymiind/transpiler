@@ -18,7 +18,18 @@
 
 static const std::string base_dir = "generator_test_data/";
 
-void run_case(std::istream &in, std::string_view func_name = "main") {
+static std::ifstream open_file(const std::filesystem::path path) {
+    // this is needed because msvc is being mvsc and throws error when using
+    // INFO(path.string())
+    std::string path_str = path.string();
+    INFO(path_str);
+
+    std::ifstream file{path};
+    REQUIRE(file);
+    return file;
+}
+
+static void run_case(std::istream &in, std::string_view func_name = "main") {
     std::vector<vm::Instruction> expected;
     std::string line;
     while (line != "@END") {
@@ -70,10 +81,7 @@ void run_case(std::istream &in, std::string_view func_name = "main") {
 }
 
 TEST_CASE("generator: function calls", "[generator]") {
-    std::filesystem::path data{base_dir + "function_calls"};
-    INFO(data.c_str());
-    std::ifstream in{data};
-    REQUIRE(in.is_open());
+    std::ifstream in = open_file(base_dir + "function_calls");
 
     run_case(in);
 }
@@ -88,9 +96,9 @@ TEST_CASE("generator: binary ops", "[generator]") {
         bool push_not;
     };
 #define CASE(type, op, instr, arg, size)                                       \
-    Case { #type, #op, vm::Op::instr, arg, size, false }
+    Case{#type, #op, vm::Op::instr, arg, size, false}
 #define CASE_INV(type, op, instr, arg, size)                                   \
-    Case { #type, #op, vm::Op::instr, arg, size, true }
+    Case{#type, #op, vm::Op::instr, arg, size, true}
 
     std::vector<Case> cases{
         CASE(int, +, ADD_I, 8, 8),
@@ -167,7 +175,7 @@ TEST_CASE("generator: unary ops", "[generator]") {
         uint64_t type_size;
     };
 #define CASE(type, op, instr, arg, size)                                       \
-    Case { #type, #op, vm::Op::instr, arg, size }
+    Case{#type, #op, vm::Op::instr, arg, size}
 
     std::vector<Case> cases{
         CASE(int, ~, INV, 8, 8),        CASE(int, -, NEGATE_I, 8, 8),
@@ -190,82 +198,55 @@ TEST_CASE("generator: unary ops", "[generator]") {
 }
 
 TEST_CASE("generator: branches", "[generator]") {
-    std::filesystem::path data{base_dir + "branches"};
-    INFO(data.c_str());
-    std::ifstream in{data};
-    REQUIRE(in.is_open());
+    std::ifstream in = open_file(base_dir + "branches");
 
     run_case(in);
 }
 
 TEST_CASE("generator: return value", "[generator]") {
-    std::filesystem::path data{base_dir + "return"};
-    INFO(data.c_str());
-    std::ifstream in{data};
-    REQUIRE(in.is_open());
+    std::ifstream in = open_file(base_dir + "return");
 
     run_case(in);
 }
 
 TEST_CASE("generator: loops", "[generator]") {
-    std::filesystem::path data{base_dir + "loop_basic"};
-    INFO(data.c_str());
-    std::ifstream in{data};
-    REQUIRE(in.is_open());
+    std::ifstream in = open_file(base_dir + "loop_basic");
 
     run_case(in);
 }
 
 TEST_CASE("generator: global vars", "[generator]") {
-    std::filesystem::path data{base_dir + "global_vars"};
-    INFO(data.c_str());
-    std::ifstream in{data};
-    REQUIRE(in.is_open());
+    std::ifstream in = open_file(base_dir + "global_vars");
 
     run_case(in, vm::VM::global_init_name);
 }
 
 TEST_CASE("generator: struct access", "[generator]") {
-    std::filesystem::path data{base_dir + "member_access"};
-    INFO(data.c_str());
-    std::ifstream in{data};
-    REQUIRE(in.is_open());
+    std::ifstream in = open_file(base_dir + "member_access");
 
     run_case(in);
 }
 
 TEST_CASE("generator: append", "[generator]") {
-    std::filesystem::path data{base_dir + "append"};
-    INFO(data.c_str());
-    std::ifstream in{data};
-    REQUIRE(in.is_open());
+    std::ifstream in = open_file(base_dir + "append");
 
     run_case(in);
 }
 
 TEST_CASE("generator: indexing", "[generator]") {
-    std::filesystem::path data{base_dir + "array_indexing"};
-    INFO(data.c_str());
-    std::ifstream in{data};
-    REQUIRE(in.is_open());
+    std::ifstream in = open_file(base_dir + "array_indexing");
 
     run_case(in);
 }
 
 TEST_CASE("generator: array properties", "[generator]") {
-    std::filesystem::path data{base_dir + "array_properties"};
-    INFO(data.c_str());
-    std::ifstream in{data};
-    REQUIRE(in.is_open());
+    std::ifstream in = open_file(base_dir + "array_properties");
 
     run_case(in);
 }
 
 TEST_CASE("generator: assignment", "[generator]") {
-    std::filesystem::path data{base_dir + "assignment"};
-    INFO(data.c_str());
-    std::ifstream in{data};
-    REQUIRE(in.is_open());
+    std::ifstream in = open_file(base_dir + "assignment");
 
     run_case(in);
 }
@@ -275,10 +256,7 @@ TEST_CASE("generator: check_allowed", "[generator]") {
                                 "if_statement_return", "arrays",
                                 "use_before_declaration");
     std::stringstream err;
-    std::filesystem::path data{base_dir + file};
-    INFO(data.c_str());
-    std::ifstream in{data};
-    REQUIRE(in.is_open());
+    std::ifstream in = open_file(base_dir + file);
 
     auto program = compiler::compile(in, &err);
 
@@ -319,11 +297,8 @@ TEST_CASE("generator: fails", "[generator]") {
                         "access_slice_data_fail", "assign_slice_cap_fail",
                         "assign_slice_len_fail", "assign_array_len_fail");
 
-    INFO(file);
-
     std::stringstream err;
-    std::ifstream in{base_dir + file};
-    REQUIRE(in.is_open());
+    std::ifstream in = open_file(base_dir + file);
 
     auto program = compiler::compile(in, &err);
 
