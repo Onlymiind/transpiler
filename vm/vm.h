@@ -231,6 +231,8 @@ namespace vm {
 
         bool reset();
 
+        void dump(std::ostream &out) const;
+
         const std::string &get_error() const noexcept;
 
         static std::unique_ptr<VM> create(std::istream &in,
@@ -254,13 +256,13 @@ namespace vm {
         bool write_struct_field(uint64_t addr, const common::Field &field,
                                 uint64_t val);
 
-        const TypeInfo *get_type_info(uint64_t idx);
-        const TypeInfo *get_type_info(const common::Type *type);
-        const Function *get_function_info(uint64_t idx);
-        const NativeFunction *get_native_function(uint64_t idx);
-        const TypeInfo *get_allocation_type(uint64_t ptr);
+        const TypeInfo *get_type_info(uint64_t idx) const;
+        const TypeInfo *get_type_info(const common::Type *type) const;
+        const Function *get_function_info(uint64_t idx) const;
+        const NativeFunction *get_native_function(uint64_t idx) const;
+        const TypeInfo *get_allocation_type(uint64_t ptr) const;
 
-        uint8_t *to_raw_ptr(uint64_t ptr);
+        uint8_t *to_raw_ptr(uint64_t ptr) const;
 
         StackFrame *current_frame();
         bool pop_frame();
@@ -273,6 +275,7 @@ namespace vm {
         void report_error(Args... args);
 
         Allocation *find_allocation(uint8_t *ptr);
+        const Allocation *find_allocation(uint8_t *ptr) const;
 
         bool call(const Function &func, Value *return_val);
         bool call(const NativeFunction &func, std::span<Value> args,

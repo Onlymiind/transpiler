@@ -804,30 +804,30 @@ namespace vm {
         return mem_write(addr + field.offset, val, field.type->size());
     }
 
-    const TypeInfo *VM::get_type_info(uint64_t idx) {
+    const TypeInfo *VM::get_type_info(uint64_t idx) const {
         return idx >= program_.type_infos.size()
                    ? nullptr
                    : program_.type_infos[idx].get();
     }
 
-    const TypeInfo *VM::get_type_info(const common::Type *type) {
+    const TypeInfo *VM::get_type_info(const common::Type *type) const {
         auto it = type_to_info_.find(type);
 
         return it == type_to_info_.end() ? nullptr : it->second;
     }
 
-    const Function *VM::get_function_info(uint64_t idx) {
+    const Function *VM::get_function_info(uint64_t idx) const {
         return idx >= program_.functions.size() ? nullptr
                                                 : &program_.functions[idx];
     }
 
-    const NativeFunction *VM::get_native_function(uint64_t idx) {
+    const NativeFunction *VM::get_native_function(uint64_t idx) const {
         return idx >= program_.native_functions.size()
                    ? nullptr
                    : &program_.native_functions[idx];
     }
 
-    const TypeInfo *VM::get_allocation_type(uint64_t ptr) {
+    const TypeInfo *VM::get_allocation_type(uint64_t ptr) const {
         uint8_t *ptr_val = to_raw_ptr(ptr);
 
         const Allocation *allocation = find_allocation(ptr_val);
@@ -835,6 +835,20 @@ namespace vm {
     }
 
     Allocation *VM::find_allocation(uint8_t *ptr) {
+        auto it = allocations_.upper_bound(ptr);
+        if (it == allocations_.begin()) {
+            return nullptr;
+        }
+
+        --it;
+
+        return std::greater_equal<uint8_t *>{}(ptr, it->first) &&
+                       std::less<uint8_t *>{}(ptr, it->first + it->second.size)
+                   ? &it->second
+                   : nullptr;
+    }
+
+    const Allocation *VM::find_allocation(uint8_t *ptr) const {
         auto it = allocations_.upper_bound(ptr);
         if (it == allocations_.begin()) {
             return nullptr;
@@ -972,7 +986,7 @@ namespace vm {
         return true;
     }
 
-    uint8_t *VM::to_raw_ptr(uint64_t ptr) {
+    uint8_t *VM::to_raw_ptr(uint64_t ptr) const {
         return std::bit_cast<uint8_t *>(static_cast<uintptr_t>(ptr));
     }
 
@@ -1746,11 +1760,7 @@ namespace vm {
             return nullptr;
         }
 
-        auto vm = std::make_unique<VM>(std::move(*program));
-        if (!vm->reset()) {
-            return nullptr;
-        }
-        return vm;
+        return std::make_unique<VM>(std::move(*program));
     }
 
     void decompile(std::span<Instruction> instrs, std::ostream &out) {
@@ -1867,4 +1877,26 @@ namespace vm {
         return instr;
     }
 
+    void VM::dump(std::ostream &out) const {
+        bool first = true;
+        for (const Function &func : program_.functions) {
+            if (!first) {
+                out << '\n';
+            }
+            first = false;
+            out << func.name << ":\n";
+
+            for (Instruction instr : func.code) {
+                out << "    " << to_string(instr.op) << ' ';
+                switch (instr.op) {
+                case Op::CALL: out << get_function_info(instr.arg)->name; break;
+                case Op::NATIVE_CALL:
+                    out << get_native_function(instr.arg)->name;
+                    break;
+                default: out << "0x" << std::hex << instr.arg;
+                }
+                out << '\n';
+            }
+        }
+    }
 } // namespace vm

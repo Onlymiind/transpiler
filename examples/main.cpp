@@ -172,6 +172,15 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
     app->vm->bind_native("draw_rect", draw_rect, app->renderer);
     app->vm->bind_native("get_keystate", get_keystate);
     app->vm->bind_native("get_window_size", get_window_size, app->window);
+    if (!app->vm->reset()) {
+        std::cerr << "failed to reset VM: " << app->vm->get_error() << '\n';
+        return SDL_APP_FAILURE;
+    }
+
+    if (argc == 2) {
+        std::ofstream dump{argv[1]};
+        app->vm->dump(dump);
+    }
 
     std::string err;
     if (!app->vm->call_function("init", {}, &err, nullptr)) {
