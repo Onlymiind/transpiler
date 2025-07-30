@@ -63,6 +63,8 @@ include(Catch)
 catch_discover_tests(tests WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 
 if(${BUILD_EXAMPLES})
-    find_package(SDL3 REQUIRED CONFIG REQUIRED)
+    # SDL is used only for examples, so simplify build by using static linking
+    set(BUILD_SHARED_LIBS OFF)
+    add_subdirectory(SDL)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/examples)
 endif()
