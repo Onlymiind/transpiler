@@ -1,10 +1,10 @@
 ## About
 
-This is a work-in-progress implementation of custom compiled general-purpose language. For up-to-date examples check files in ```tests/functional/data``` directory (files with ```_fail``` postfix are examples of invalid programs, files with ```_expected``` postfix contain expected C output). Supported syntax is described in ```design_doc.md``` file.
+This is a work-in-progress implementation of custom compiled general-purpose language. For up-to-date examples check files in `tests/generator_test_data` directory (files with `_fail` postfix are examples of invalid programs, files with `_expected` postfix contain expected C output), as well as `tests/vm_tests` file. Supported syntax is described in `design_doc.md` file.
 
 ## Current Status
 
-The compiler in it's current state implements a significant part of basic programming laguage features, although the language remains quite simplistic (for now). The compiler also takes a number of shortcuts by transpiling source code into C instead of machine language (e.g. there is no optimization pass whatsoever).
+The compiler in it's current state implements most of basic programming laguage features, although the language remains quite simplistic (for now).
 
 Currently inmplemented:
 - Basic static strict type system
