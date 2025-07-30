@@ -31,10 +31,7 @@ cmake --build .
 
 ## Usage
 
-```
-compiler <path-to-input-file> [path-to-output-file]
-gcc <path-to-output-file>
-```
+!TODO
 
 ## TODO next (roadmap):
 - add more built-in types
