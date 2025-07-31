@@ -2,7 +2,6 @@
 Checks:          'clang-diagnostic-*,clang-analyzer-*,cppcoreguidelines-*,readability-identifier-naming,-cppcoreguidelines-avoid-magic-numbers,-cppcoreguidelines-avoid-do-while'
 WarningsAsErrors: ''
 HeaderFilterRegex: ''
-AnalyzeTemporaryDtors: false
 User:            onlymind
 CheckOptions:
   llvm-else-after-return.WarnOnConditionVariables: 'false'
